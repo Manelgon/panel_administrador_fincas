@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { ArrowLeft, User, FileText } from 'lucide-react';
-import { supabaseServer } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import ClientHistoryTable from '@/components/dashboard/ClientHistoryTable';
 
 export default async function HistorialCertificadoRentaPage() {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

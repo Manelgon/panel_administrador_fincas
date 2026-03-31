@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { supabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/logActivity";
 
 export async function POST() {
-    const supabase = await supabaseServer();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ ok: false }, { status: 401 });
 
