@@ -159,11 +159,39 @@ export default function DataTable<T extends Record<string, any>>({
         if (!rowActions && !onRowClick) return;
         const rect = e.currentTarget.getBoundingClientRect();
         const DROPDOWN_WIDTH = 192; // w-48
+
+        // Estimate dropdown height: ~34px per item + 8px padding
+        const actions = rowActions ? rowActions(row) : [];
+        const visibleActions = actions.filter((a: RowAction<T>) => !a.hidden);
+        const itemCount = visibleActions.length + (onRowClick ? 1 : 0);
+        const DROPDOWN_HEIGHT = itemCount * 34 + 8;
+
+        // Horizontal positioning
         let left = e.clientX;
         if (left + DROPDOWN_WIDTH > window.innerWidth - 8) left = window.innerWidth - DROPDOWN_WIDTH - 8;
         if (left < 8) left = 8;
+
+        // Vertical positioning: open upward if not enough space below
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        let top: number;
+        if (spaceBelow >= DROPDOWN_HEIGHT + 8) {
+            // Enough space below
+            top = rect.bottom + 4;
+        } else if (spaceAbove >= DROPDOWN_HEIGHT + 8) {
+            // Not enough below, open upward
+            top = rect.top - DROPDOWN_HEIGHT - 4;
+        } else {
+            // Neither fits perfectly — align to whichever side has more space
+            if (spaceBelow >= spaceAbove) {
+                top = rect.bottom + 4;
+            } else {
+                top = Math.max(8, rect.top - DROPDOWN_HEIGHT - 4);
+            }
+        }
+
         const key = keyExtractor(row);
-        setActiveRow({ row, key, pos: { top: rect.bottom + 4, left } });
+        setActiveRow({ row, key, pos: { top, left } });
     };
 
     const searchFilteredData = data.filter((row) => {

@@ -14,8 +14,10 @@ import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
 import { getSecureUrl } from '@/lib/storage';
 import { Morosidad, deudaFormSchema, validateForm, Profile, ComunidadOption, DeleteCredentials } from '@/lib/schemas';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 export default function MorosidadPage() {
+    const { withLoading } = useGlobalLoading();
     const [morosos, setMorosos] = useState<Morosidad[]>([]);
     const [comunidades, setComunidades] = useState<ComunidadOption[]>([]);
     const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -144,23 +146,18 @@ export default function MorosidadPage() {
     };
 
     const handleFileUpload = async (file: File) => {
+        setUploading(true);
         try {
-            setUploading(true);
             const formData = new FormData();
             formData.append('file', file);
             formData.append('path', 'morosidad');
             formData.append('bucket', 'documentos');
 
-            const res = await fetch('/api/storage/upload', {
-                method: 'POST',
-                body: formData
-            });
-
+            const res = await fetch('/api/storage/upload', { method: 'POST', body: formData });
             if (!res.ok) {
                 const error = await res.json();
                 throw new Error(error.error || 'Error al subir archivo');
             }
-
             const data = await res.json();
             return data.publicUrl;
         } catch (error: any) {
@@ -190,173 +187,114 @@ export default function MorosidadPage() {
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
-        setIsSubmitting(true);
-        const loadingToastId = toast.loading(editingId ? 'Actualizando deuda...' : 'Guardando deuda... espere');
+        const label = editingId ? 'Actualizando deuda...' : 'Guardando deuda...';
+        await withLoading(async () => {
+            setIsSubmitting(true);
+            const loadingToastId = toast.loading(label);
 
-        let docUrl = formData.documento;
-        if (file) {
-            const url = await handleFileUpload(file);
-            if (!url) return;
-            docUrl = url;
-        }
-
-        if (editingId) {
-            // Update existing
-            try {
-                const { error } = await supabase.from('morosidad').update({
-                    ...formData,
-                    comunidad_id: parseInt(formData.comunidad_id),
-                    importe: parseFloat(formData.importe.toString().replace(',', '.')),
-                    documento: docUrl,
-                    id_email_deuda: formData.id_email_deuda || null,
-                    gestor: formData.gestor || null,
-                }).eq('id', editingId);
-
-                if (error) throw error;
-
-                toast.success('Registro actualizado');
-
-                // Log activity
-                const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
-                await logActivity({
-                    action: 'update',
-                    entityType: 'morosidad',
-                    entityId: editingId,
-                    entityName: `${formData.nombre_deudor} ${formData.apellidos}`,
-                    details: {
-                        comunidad: comunidad?.nombre_cdad,
-                        importe: formData.importe,
-                        estado: formData.importe // Note: keeping state management simple, though update usually implies changes
-                    }
-                });
-
-                setShowForm(false);
-                setFormErrors({});
-                setEditingId(null);
-                setFormData({
-                    comunidad_id: '',
-                    nombre_deudor: '',
-                    apellidos: '',
-                    telefono_deudor: '',
-                    email_deudor: '',
-                    titulo_documento: '',
-                    fecha_notificacion: '',
-                    importe: '',
-                    observaciones: '',
-                    gestor: '',
-                    documento: '',
-                    aviso: null,
-                    id_email_deuda: '',
-                });
-                setFile(null);
-                fetchMorosidad();
-            } catch (error: any) {
-                toast.error('Error al actualizar: ' + error.message);
-            } finally {
-                toast.dismiss(loadingToastId);
-                setIsSubmitting(false);
+            let docUrl = formData.documento;
+            if (file) {
+                const url = await handleFileUpload(file);
+                if (!url) return;
+                docUrl = url;
             }
-        } else {
-            // Create new
-            try {
-                // Generate automatic Ref
-                const now = new Date();
-                const timestamp = now.getFullYear().toString() +
-                    (now.getMonth() + 1).toString().padStart(2, '0') +
-                    now.getDate().toString().padStart(2, '0') + '-' +
-                    now.getHours().toString().padStart(2, '0') +
-                    now.getMinutes().toString().padStart(2, '0') +
-                    now.getSeconds().toString().padStart(2, '0');
-                const initials = (formData.nombre_deudor || '').substring(0, 3).toUpperCase();
-                const autoRef = `DEV-${timestamp}-${initials}`;
 
-                const { data: newDebt, error } = await supabase.from('morosidad').insert([{
-                    ...formData,
-                    comunidad_id: parseInt(formData.comunidad_id),
-                    importe: parseFloat(formData.importe.replace(',', '.')),
-                    documento: docUrl,
-                    id_email_deuda: formData.id_email_deuda || null,
-                    gestor: formData.gestor || null,
-                    ref: autoRef || null,
-                }]).select().single();
+            if (editingId) {
+                try {
+                    const { error } = await supabase.from('morosidad').update({
+                        ...formData,
+                        comunidad_id: parseInt(formData.comunidad_id),
+                        importe: parseFloat(formData.importe.toString().replace(',', '.')),
+                        documento: docUrl,
+                        id_email_deuda: formData.id_email_deuda || null,
+                        gestor: formData.gestor || null,
+                    }).eq('id', editingId);
 
-                if (error) throw error;
+                    if (error) throw error;
+                    toast.success('Registro actualizado');
 
-                toast.success('Registro de morosidad creado');
+                    const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
+                    await logActivity({
+                        action: 'update', entityType: 'morosidad', entityId: editingId,
+                        entityName: `${formData.nombre_deudor} ${formData.apellidos}`,
+                        details: { comunidad: comunidad?.nombre_cdad, importe: formData.importe }
+                    });
 
-                // Log activity
-                const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
-                await logActivity({
-                    action: 'create',
-                    entityType: 'morosidad',
-                    entityId: newDebt.id,
-                    entityName: `${formData.nombre_deudor} ${formData.apellidos}`,
-                    details: {
-                        comunidad: comunidad?.nombre_cdad,
-                        importe: formData.importe,
-                        concepto: formData.titulo_documento
-                    }
-                });
-
-                const gestorProfile = profiles.find(p => p.user_id === formData.gestor);
-
-                // Trigger Webhook (Fire and forget, don't block UI)
-                const webhookPayload = new FormData();
-                Object.entries(formData).forEach(([key, value]) => {
-                    webhookPayload.append(key, value || '');
-                });
-                webhookPayload.append('id', newDebt.id.toString());
-                webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
-                webhookPayload.append('comunidad_codigo', comunidad?.codigo || '');
-                webhookPayload.append('comunidad_direccion', comunidad?.direccion || '');
-                webhookPayload.append('gestor_nombre', gestorProfile?.nombre || 'Desconocido');
-                webhookPayload.append('documento_url', docUrl || '');
-                webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
-
-                const count = file ? 1 : 0;
-                webhookPayload.append('adjuntos_count', count.toString());
-
-                if (file) {
-                    webhookPayload.append('adjunto', file);
+                    setShowForm(false); setFormErrors({}); setEditingId(null);
+                    setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
+                    setFile(null);
+                    fetchMorosidad();
+                } catch (error: any) {
+                    toast.error('Error al actualizar: ' + error.message);
+                } finally {
+                    toast.dismiss(loadingToastId);
+                    setIsSubmitting(false);
                 }
+            } else {
+                try {
+                    const now = new Date();
+                    const timestamp = now.getFullYear().toString() +
+                        (now.getMonth() + 1).toString().padStart(2, '0') +
+                        now.getDate().toString().padStart(2, '0') + '-' +
+                        now.getHours().toString().padStart(2, '0') +
+                        now.getMinutes().toString().padStart(2, '0') +
+                        now.getSeconds().toString().padStart(2, '0');
+                    const initials = (formData.nombre_deudor || '').substring(0, 3).toUpperCase();
+                    const autoRef = `DEV-${timestamp}-${initials}`;
 
-                fetch('/api/webhooks/trigger-debt', {
-                    method: 'POST',
-                    body: webhookPayload
-                }).catch(err => console.error('Webhook trigger error:', err));
+                    const { data: newDebt, error } = await supabase.from('morosidad').insert([{
+                        ...formData,
+                        comunidad_id: parseInt(formData.comunidad_id),
+                        importe: parseFloat(formData.importe.replace(',', '.')),
+                        documento: docUrl,
+                        id_email_deuda: formData.id_email_deuda || null,
+                        gestor: formData.gestor || null,
+                        ref: autoRef || null,
+                    }]).select().single();
 
-                setShowForm(false);
-                setFormErrors({});
-                setFormData({
-                    comunidad_id: '',
-                    nombre_deudor: '',
-                    apellidos: '',
-                    telefono_deudor: '',
-                    email_deudor: '',
-                    titulo_documento: '',
-                    fecha_notificacion: '',
-                    importe: '',
-                    observaciones: '',
-                    gestor: '',
-                    documento: '',
-                    aviso: null,
-                    id_email_deuda: '',
-                });
-                setEnviarNotificacion(null);
-                setFile(null);
-                fetchMorosidad();
-            } catch (error: any) {
-                toast.error('Error: ' + error.message);
-            } finally {
-                toast.dismiss(loadingToastId);
-                setIsSubmitting(false);
+                    if (error) throw error;
+                    toast.success('Registro de morosidad creado');
+
+                    const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
+                    await logActivity({
+                        action: 'create', entityType: 'morosidad', entityId: newDebt.id,
+                        entityName: `${formData.nombre_deudor} ${formData.apellidos}`,
+                        details: { comunidad: comunidad?.nombre_cdad, importe: formData.importe, concepto: formData.titulo_documento }
+                    });
+
+                    const gestorProfile = profiles.find(p => p.user_id === formData.gestor);
+                    const webhookPayload = new FormData();
+                    Object.entries(formData).forEach(([key, value]) => { webhookPayload.append(key, value || ''); });
+                    webhookPayload.append('id', newDebt.id.toString());
+                    webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
+                    webhookPayload.append('comunidad_codigo', comunidad?.codigo || '');
+                    webhookPayload.append('comunidad_direccion', comunidad?.direccion || '');
+                    webhookPayload.append('gestor_nombre', gestorProfile?.nombre || 'Desconocido');
+                    webhookPayload.append('documento_url', docUrl || '');
+                    webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
+                    webhookPayload.append('adjuntos_count', file ? '1' : '0');
+                    if (file) webhookPayload.append('adjunto', file);
+                    fetch('/api/webhooks/trigger-debt', { method: 'POST', body: webhookPayload })
+                        .catch(err => console.error('Webhook trigger error:', err));
+
+                    setShowForm(false); setFormErrors({});
+                    setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
+                    setEnviarNotificacion(null); setFile(null);
+                    fetchMorosidad();
+                } catch (error: any) {
+                    toast.error('Error: ' + error.message);
+                } finally {
+                    toast.dismiss(loadingToastId);
+                    setIsSubmitting(false);
+                }
             }
-        }
+        }, label);
     };
 
     const handleDetailFileUpload = async (file: File) => {
         if (!selectedDetailMorosidad) return;
 
+        await withLoading(async () => {
         setIsUpdatingRecord(true);
         const loadingToast = toast.loading('Subiendo archivo...');
 
@@ -400,10 +338,12 @@ export default function MorosidadPage() {
         } finally {
             setIsUpdatingRecord(false);
         }
+        }, 'Subiendo documento...');
     };
 
     const markAsPaid = async (id: number) => {
         if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
         setIsUpdatingStatus(id);
         try {
             const moroso = morosos.find(m => m.id === id);
@@ -460,10 +400,12 @@ export default function MorosidadPage() {
         } finally {
             setIsUpdatingStatus(null);
         }
+        }, 'Marcando como pagado...');
     };
 
     const reopenDebt = async (id: number) => {
         if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
         setIsUpdatingStatus(id);
         try {
             const moroso = morosos.find(m => m.id === id);
@@ -512,6 +454,7 @@ export default function MorosidadPage() {
         } finally {
             setIsUpdatingStatus(null);
         }
+        }, 'Reabriendo deuda...');
     };
 
     const handleDeleteClick = (id: number) => {
@@ -523,48 +466,35 @@ export default function MorosidadPage() {
     const handleConfirmDelete = async ({ email, password }: DeleteCredentials) => {
         if (deleteId === null || !email || !password) return;
 
-        setIsDeleting(true);
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: deleteId, email, password, type: 'morosidad' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
 
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: deleteId,
-                    email,
-                    password,
-                    type: 'morosidad'
-                })
-            });
+                toast.success('Registro eliminado');
+                setMorosos(prev => prev.filter(m => m.id !== deleteId));
 
-            const data = await res.json();
+                const deleted = morosos.find(m => m.id === deleteId);
+                await logActivity({
+                    action: 'delete', entityType: 'morosidad', entityId: deleteId,
+                    entityName: `${deleted?.nombre_deudor} ${deleted?.apellidos}`,
+                    details: { comunidad: deleted?.comunidades?.nombre_cdad, importe: deleted?.importe, deleted_by_admin: email }
+                });
 
-            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-
-            toast.success('Registro eliminado');
-            setMorosos(prev => prev.filter(m => m.id !== deleteId));
-
-            // Log activity
-            const deleted = morosos.find(m => m.id === deleteId);
-            await logActivity({
-                action: 'delete',
-                entityType: 'morosidad',
-                entityId: deleteId,
-                entityName: `${deleted?.nombre_deudor} ${deleted?.apellidos}`,
-                details: {
-                    comunidad: deleted?.comunidades?.nombre_cdad,
-                    importe: deleted?.importe,
-                    deleted_by_admin: email
-                }
-            });
-
-            setShowDeleteModal(false);
-            setDeleteId(null);
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setIsDeleting(false);
-        }
+                setShowDeleteModal(false);
+                setDeleteId(null);
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsDeleting(false);
+            }
+        }, 'Eliminando deuda...');
     };
 
     const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[], includeNotesFromModal?: boolean) => {
@@ -583,6 +513,8 @@ export default function MorosidadPage() {
 
         const includeNotes = includeNotesFromModal !== undefined ? includeNotesFromModal : false;
 
+        const label = type === 'pdf' ? 'Generando PDF...' : 'Exportando CSV...';
+        await withLoading(async () => {
         setExporting(true);
         try {
             const res = await fetch('/api/morosidad/export', {
@@ -626,6 +558,7 @@ export default function MorosidadPage() {
         } finally {
             setExporting(false);
         }
+        }, label);
     };
 
     const handleEdit = (moroso: Morosidad) => {

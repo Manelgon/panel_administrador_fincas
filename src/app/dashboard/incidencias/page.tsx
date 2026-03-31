@@ -177,29 +177,30 @@ export default function IncidenciasPage() {
     };
 
     const handleImportPdf = async (file: File) => {
-        setImportingPdf(true);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No hay sesión activa');
-            const receptorProfile = profiles.find(p => p.user_id === user.id);
-            const payload = new FormData();
-            payload.append('pdf', file);
-            payload.append('receptor_id', user.id);
-            // Primero: dry-run para mostrar preview antes de insertar
-            const response = await fetch('/api/incidencias/import-pdf?dryRun=true', { method: 'POST', body: payload });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Error al procesar el PDF');
-            setPendingImportFile(file);
-            setImportPreviewData(result);
-            setImportReceptorName(receptorProfile?.nombre ?? user.email ?? '');
-            setShowImportPreviewModal(true);
-        } catch (error) {
-            console.error('Error al importar PDF:', error);
-            toast.error(error instanceof Error ? error.message : 'Error al procesar el PDF');
-            if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
-        } finally {
-            setImportingPdf(false);
-        }
+        await withLoading(async () => {
+            setImportingPdf(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('No hay sesión activa');
+                const receptorProfile = profiles.find(p => p.user_id === user.id);
+                const payload = new FormData();
+                payload.append('pdf', file);
+                payload.append('receptor_id', user.id);
+                const response = await fetch('/api/incidencias/import-pdf?dryRun=true', { method: 'POST', body: payload });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al procesar el PDF');
+                setPendingImportFile(file);
+                setImportPreviewData(result);
+                setImportReceptorName(receptorProfile?.nombre ?? user.email ?? '');
+                setShowImportPreviewModal(true);
+            } catch (error) {
+                console.error('Error al importar PDF:', error);
+                toast.error(error instanceof Error ? error.message : 'Error al procesar el PDF');
+                if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
+            } finally {
+                setImportingPdf(false);
+            }
+        }, 'Procesando PDF...');
     };
 
     const handleConfirmImport = async () => {
@@ -702,6 +703,7 @@ export default function IncidenciasPage() {
 
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
         if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
         setIsUpdatingStatus(id);
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -766,6 +768,7 @@ export default function IncidenciasPage() {
         } finally {
             setIsUpdatingStatus(null);
         }
+        }, currentStatus ? 'Reabriendo incidencia...' : 'Resolviendo incidencia...');
     };
 
     const openAplazarModal = (id: number) => {
@@ -781,6 +784,7 @@ export default function IncidenciasPage() {
     const aplazarTicket = async () => {
         if (!aplazarIncidenciaId || !aplazarDate) return;
 
+        await withLoading(async () => {
         const loadingToast = toast.loading('Aplazando ticket...');
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -850,6 +854,7 @@ export default function IncidenciasPage() {
             console.error(error);
             toast.error('Error al aplazar el ticket', { id: loadingToast });
         }
+        }, 'Aplazando ticket...');
     };
 
     const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[], includeNotesFromModal?: boolean) => {

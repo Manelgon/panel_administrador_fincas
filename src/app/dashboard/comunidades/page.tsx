@@ -10,10 +10,12 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 import { Comunidad, comunidadFormSchema, validateForm, DeleteCredentials } from '@/lib/schemas';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import ImportComunidadesModal from '@/components/ImportComunidadesModal';
 import SearchableSelect from '@/components/SearchableSelect';
 
 export default function ComunidadesPage() {
+    const { withLoading } = useGlobalLoading();
     const [comunidades, setComunidades] = useState<Comunidad[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -118,93 +120,86 @@ export default function ComunidadesPage() {
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
-        if (editingId) {
-            // Update existing
-            try {
-                const { data: updatedData, error } = await supabase
-                    .from('comunidades')
-                    .update(dataToSubmit)
-                    .eq('id', editingId)
-                    .select();
+        const label = editingId ? 'Actualizando comunidad...' : 'Creando comunidad...';
+        await withLoading(async () => {
+            if (editingId) {
+                // Update existing
+                try {
+                    const { data: updatedData, error } = await supabase
+                        .from('comunidades')
+                        .update(dataToSubmit)
+                        .eq('id', editingId)
+                        .select();
 
-                if (error) throw error;
-                if (!updatedData || updatedData.length === 0) {
-                    toast.error('No se pudo actualizar. Verifica permisos o que el registro exista.');
-                    return;
-                }
-
-                toast.success('Comunidad actualizada correctamente');
-
-                // Log activity
-                await logActivity({
-                    action: 'update',
-                    entityType: 'comunidad',
-                    entityId: editingId,
-                    entityName: dataToSubmit.nombre_cdad,
-                    details: { codigo: dataToSubmit.codigo }
-                });
-
-                setShowForm(false);
-                setFormErrors({});
-                setEditingId(null);
-                setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '', tipo: 'comunidad de propietarios' });
-                window.dispatchEvent(new Event('communitiesChanged'));
-                fetchComunidades();
-            } catch (error: unknown) {
-                console.error('Error al actualizar comunidad:', error);
-                const msg = error instanceof Error ? error.message : (error as { message?: string })?.message || 'Error al actualizar';
-                toast.error('Error al actualizar: ' + msg);
-            }
-        } else {
-            // Create new
-            try {
-                const { data, error } = await supabase
-                    .from('comunidades')
-                    .insert([{
-                        ...dataToSubmit,
-                        activo: true
-                    }])
-                    .select();
-
-                if (error) {
-                    console.error('Supabase error:', error);
-
-                    // Check if it's a duplicate key error
-                    if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
-                        toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
+                    if (error) throw error;
+                    if (!updatedData || updatedData.length === 0) {
+                        toast.error('No se pudo actualizar. Verifica permisos o que el registro exista.');
                         return;
                     }
 
-                    throw error;
+                    toast.success('Comunidad actualizada correctamente');
+
+                    await logActivity({
+                        action: 'update',
+                        entityType: 'comunidad',
+                        entityId: editingId,
+                        entityName: dataToSubmit.nombre_cdad,
+                        details: { codigo: dataToSubmit.codigo }
+                    });
+
+                    setShowForm(false);
+                    setFormErrors({});
+                    setEditingId(null);
+                    setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '', tipo: 'comunidad de propietarios' });
+                    window.dispatchEvent(new Event('communitiesChanged'));
+                    fetchComunidades();
+                } catch (error: unknown) {
+                    console.error('Error al actualizar comunidad:', error);
+                    const msg = error instanceof Error ? error.message : (error as { message?: string })?.message || 'Error al actualizar';
+                    toast.error('Error al actualizar: ' + msg);
                 }
+            } else {
+                // Create new
+                try {
+                    const { data, error } = await supabase
+                        .from('comunidades')
+                        .insert([{ ...dataToSubmit, activo: true }])
+                        .select();
 
-                toast.success('Comunidad creada correctamente');
+                    if (error) {
+                        console.error('Supabase error:', error);
+                        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('unique')) {
+                            toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
+                            return;
+                        }
+                        throw error;
+                    }
 
-                // Log activity
-                await logActivity({
-                    action: 'create',
-                    entityType: 'comunidad',
-                    entityName: dataToSubmit.nombre_cdad,
-                    details: { codigo: dataToSubmit.codigo }
-                });
+                    toast.success('Comunidad creada correctamente');
 
-                setShowForm(false);
-                setFormErrors({});
-                setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '', tipo: 'comunidad de propietarios' });
-                window.dispatchEvent(new Event('communitiesChanged'));
-                fetchComunidades();
-            } catch (error: unknown) {
-                const errObj = error as { code?: string; message?: string };
-                console.error('Error completo:', error);
+                    await logActivity({
+                        action: 'create',
+                        entityType: 'comunidad',
+                        entityName: dataToSubmit.nombre_cdad,
+                        details: { codigo: dataToSubmit.codigo }
+                    });
 
-                // Check for duplicate key error
-                if (errObj.code === '23505' || errObj.message?.includes('duplicate') || errObj.message?.includes('unique')) {
-                    toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
-                } else {
-                    toast.error('Error al crear: ' + (errObj.message || 'Error desconocido'));
+                    setShowForm(false);
+                    setFormErrors({});
+                    setFormData({ codigo: '', nombre_cdad: '', direccion: '', cp: '', ciudad: '', provincia: '', cif: '', tipo: 'comunidad de propietarios' });
+                    window.dispatchEvent(new Event('communitiesChanged'));
+                    fetchComunidades();
+                } catch (error: unknown) {
+                    const errObj = error as { code?: string; message?: string };
+                    console.error('Error completo:', error);
+                    if (errObj.code === '23505' || errObj.message?.includes('duplicate') || errObj.message?.includes('unique')) {
+                        toast.error('El código de comunidad ya existe. Por favor, usa un código diferente.');
+                    } else {
+                        toast.error('Error al crear: ' + (errObj.message || 'Error desconocido'));
+                    }
                 }
             }
-        }
+        }, label);
     };
 
     const handleDeleteClick = (id: number) => {
@@ -216,73 +211,68 @@ export default function ComunidadesPage() {
     const handleConfirmDelete = async ({ email, password }: DeleteCredentials) => {
         if (deleteId === null || !email || !password) return;
 
-        setIsDeleting(true);
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: deleteId,
-                    email,
-                    password,
-                    type: 'comunidad'
-                })
-            });
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: deleteId, email, password, type: 'comunidad' })
+                });
 
-            const data = await res.json();
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
 
-            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+                toast.success('Comunidad eliminada correctamente');
+                setComunidades(comunidades.filter(c => c.id !== deleteId));
+                setShowDeleteModal(false);
+                setDeleteId(null);
+                window.dispatchEvent(new Event('communitiesChanged'));
 
-            toast.success('Comunidad eliminada correctamente');
-            setComunidades(comunidades.filter(c => c.id !== deleteId));
-            setShowDeleteModal(false);
-            setDeleteId(null);
-            window.dispatchEvent(new Event('communitiesChanged'));
-
-            // Log activity
-            const deleted = comunidades.find(c => c.id === deleteId);
-            await logActivity({
-                action: 'delete',
-                entityType: 'comunidad',
-                entityId: deleteId,
-                entityName: deleted?.nombre_cdad,
-                details: { codigo: deleted?.codigo, deleted_by_admin: email }
-            });
-
-        } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Error al eliminar';
-            toast.error(msg);
-        } finally {
-            setIsDeleting(false);
-        }
+                const deleted = comunidades.find(c => c.id === deleteId);
+                await logActivity({
+                    action: 'delete',
+                    entityType: 'comunidad',
+                    entityId: deleteId,
+                    entityName: deleted?.nombre_cdad,
+                    details: { codigo: deleted?.codigo, deleted_by_admin: email }
+                });
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : 'Error al eliminar';
+                toast.error(msg);
+            } finally {
+                setIsDeleting(false);
+            }
+        }, 'Eliminando comunidad...');
     };
 
     const toggleActive = async (id: number, currentStatus: boolean) => {
-        try {
-            const { error } = await supabase
-                .from('comunidades')
-                .update({ activo: !currentStatus })
-                .eq('id', id);
+        await withLoading(async () => {
+            try {
+                const { error } = await supabase
+                    .from('comunidades')
+                    .update({ activo: !currentStatus })
+                    .eq('id', id);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            toast.success(currentStatus ? 'Comunidad desactivada' : 'Comunidad activada');
-            setComunidades(prev => prev.map(c => c.id === id ? { ...c, activo: !currentStatus } : c));
-            window.dispatchEvent(new Event('communitiesChanged'));
+                toast.success(currentStatus ? 'Comunidad desactivada' : 'Comunidad activada');
+                setComunidades(prev => prev.map(c => c.id === id ? { ...c, activo: !currentStatus } : c));
+                window.dispatchEvent(new Event('communitiesChanged'));
 
-            // Log activity
-            const comunidad = comunidades.find(c => c.id === id);
-            await logActivity({
-                action: 'toggle_active',
-                entityType: 'comunidad',
-                entityId: id,
-                entityName: comunidad?.nombre_cdad,
-                details: { activo: !currentStatus }
-            });
-        } catch (error: unknown) {
-            const msg = error instanceof Error ? error.message : 'Error al actualizar estado';
-            toast.error(msg);
-        }
+                const comunidad = comunidades.find(c => c.id === id);
+                await logActivity({
+                    action: 'toggle_active',
+                    entityType: 'comunidad',
+                    entityId: id,
+                    entityName: comunidad?.nombre_cdad,
+                    details: { activo: !currentStatus }
+                });
+            } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : 'Error al actualizar estado';
+                toast.error(msg);
+            }
+        }, currentStatus ? 'Desactivando comunidad...' : 'Activando comunidad...');
     };
 
     const handleEdit = (comunidad: Comunidad) => {

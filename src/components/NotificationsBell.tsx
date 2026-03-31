@@ -44,10 +44,14 @@ export default function NotificationsBell({ align = 'right' }: NotificationsBell
         }
 
         // Initialize audio with error handling
+        // Note: ERR_CACHE_OPERATION_NOT_SUPPORTED is a Turbopack dev-only quirk, not a real error
         const audio = new Audio("/sounds/notification.mp3");
         audio.preload = "auto";
-        audio.onerror = (e) => {
-            console.error("Audio failed to load:", e);
+        audio.onerror = function () {
+            const mediaErr = (audioRef.current)?.error;
+            // Suppress cache-related errors that only occur in Turbopack dev mode
+            if (!mediaErr || mediaErr.code === 0) return;
+            console.warn("Audio failed to load:", mediaErr.message);
         };
         audioRef.current = audio;
 
