@@ -1,0 +1,126 @@
+[
+  {
+    "bucket": "documentos",
+    "items": [
+      {
+        "name": ".emptyFolderPlaceholder",
+        "id": "33403a00-bba2-43c3-8d9c-f6f1a7db02b0",
+        "updated_at": "2026-01-22T10:26:17.426Z",
+        "created_at": "2026-01-22T10:26:17.426Z",
+        "last_accessed_at": "2026-01-22T10:26:17.426Z",
+        "metadata": {
+          "eTag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+          "size": 0,
+          "mimetype": "application/octet-stream",
+          "cacheControl": "max-age=3600",
+          "lastModified": "2026-01-22T10:26:17.424Z",
+          "contentLength": 0,
+          "httpStatusCode": 200
+        }
+      }
+    ]
+  },
+  {
+    "bucket": "documentos_administrativos",
+    "items": [
+      {
+        "name": "certificados",
+        "id": null,
+        "updated_at": null,
+        "created_at": null,
+        "last_accessed_at": null,
+        "metadata": null
+      },
+      {
+        "name": "suplidos",
+        "id": null,
+        "updated_at": null,
+        "created_at": null,
+        "last_accessed_at": null,
+        "metadata": null
+      },
+      {
+        "name": "varios",
+        "id": null,
+        "updated_at": null,
+        "created_at": null,
+        "last_accessed_at": null,
+        "metadata": null
+      }
+    ]
+  },
+  {
+    "bucket": "doc-assets",
+    "items": [
+      {
+        "name": "certificados",
+        "id": null,
+        "updated_at": null,
+        "created_at": null,
+        "last_accessed_at": null,
+        "metadata": null
+      },
+      {
+        "name": "logo-retenciones.png",
+        "id": "1d8872fb-f802-4be2-819e-56888b3a0868",
+        "updated_at": "2026-01-14T10:55:29.312Z",
+        "created_at": "2026-01-14T10:55:29.312Z",
+        "last_accessed_at": "2026-01-14T10:55:29.312Z",
+        "metadata": {
+          "eTag": "\"4143e27b1d74ce2f47c88e047319f7e9-1\"",
+          "size": 15788,
+          "mimetype": "image/png",
+          "cacheControl": "max-age=3600",
+          "lastModified": "2026-01-14T10:55:30.000Z",
+          "contentLength": 15788,
+          "httpStatusCode": 200
+        }
+      },
+      {
+        "name": "sello-retenciones.png",
+        "id": "76032349-0f9d-4e34-8451-8e454436afb0",
+        "updated_at": "2026-01-14T10:56:44.471Z",
+        "created_at": "2026-01-14T10:56:44.471Z",
+        "last_accessed_at": "2026-01-14T10:56:44.471Z",
+        "metadata": {
+          "eTag": "\"ef44001e2d325c4da5f3a72bb911c47a-1\"",
+          "size": 120406,
+          "mimetype": "image/png",
+          "cacheControl": "max-age=3600",
+          "lastModified": "2026-01-14T10:56:45.000Z",
+          "contentLength": 120406,
+          "httpStatusCode": 200
+        }
+      }
+    ]
+  },
+  {
+    "bucket": "FACTURAS",
+    "items": [
+      {
+        "name": "069",
+        "id": null,
+        "updated_at": null,
+        "created_at": null,
+        "last_accessed_at": null,
+        "metadata": null
+      },
+      {
+        "name": ".emptyFolderPlaceholder",
+        "id": "3113e9b1-52ac-471b-b47b-c5dbe81b850e",
+        "updated_at": "2026-01-28T10:07:23.417Z",
+        "created_at": "2026-01-28T10:07:23.417Z",
+        "last_accessed_at": "2026-01-28T10:07:23.417Z",
+        "metadata": {
+          "eTag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+          "size": 0,
+          "mimetype": "application/octet-stream",
+          "cacheControl": "max-age=3600",
+          "lastModified": "2026-01-28T10:07:23.418Z",
+          "contentLength": 0,
+          "httpStatusCode": 200
+        }
+      }
+    ]
+  }
+]

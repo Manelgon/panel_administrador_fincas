@@ -1,0 +1,28 @@
+{
+  "items": [
+    {
+      "name": "069",
+      "id": null,
+      "updated_at": null,
+      "created_at": null,
+      "last_accessed_at": null,
+      "metadata": null
+    },
+    {
+      "name": ".emptyFolderPlaceholder",
+      "id": "3113e9b1-52ac-471b-b47b-c5dbe81b850e",
+      "updated_at": "2026-01-28T10:07:23.417Z",
+      "created_at": "2026-01-28T10:07:23.417Z",
+      "last_accessed_at": "2026-01-28T10:07:23.417Z",
+      "metadata": {
+        "eTag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+        "size": 0,
+        "mimetype": "application/octet-stream",
+        "cacheControl": "max-age=3600",
+        "lastModified": "2026-01-28T10:07:23.418Z",
+        "contentLength": 0,
+        "httpStatusCode": 200
+      }
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+﻿M  src/app/api/documentos/certificado-renta/generate/route.ts
+M  src/app/api/documentos/suplidos/generate/route.ts
+M  src/app/api/documentos/varios/generate/route.ts
+M  src/app/api/facturas-comunidades/upload/route.ts
+M  src/app/api/incidencias/export/route.ts
+M  src/app/dashboard/deudas/page.tsx
+M  src/app/dashboard/incidencias/page.tsx
+M  src/components/TimelineChat.tsx
+M  src/lib/logActivity.ts

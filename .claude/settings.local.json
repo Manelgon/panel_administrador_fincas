@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__supabase__execute_sql",
+      "Bash(find 'c:/Users/manel/.000.Proyectos.DEV/003. Panel Maria Jose Martos de Dios' -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx -o -name *.md -o -name *.sql -o -name *.json \\\\\\))",
+      "Bash(grep -r documentos_administrativos 'c:/Users/manel/.000.Proyectos.DEV/003. Panel Maria Jose Martos de Dios' --include=*.ts --include=*.tsx --include=*.js)",
+      "Bash(find 'c:/Users/manel/.000.Proyectos.DEV/003. Panel Maria Jose Martos de Dios' -name *.sql -exec grep -l \"CREATE\\\\|INSERT\" {})",
+      "Bash(2)",
+      "Bash(xargs grep:*)"
+    ]
+  }
+}

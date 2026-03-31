@@ -1,0 +1,8 @@
+{
+    "crons": [
+        {
+            "path": "/api/cron/fichaje-autoclose",
+            "schedule": "0 17 * * *"
+        }
+    ]
+}

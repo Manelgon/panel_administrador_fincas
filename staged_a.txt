@@ -1,0 +1,12 @@
+﻿A  src/app/api/reports/email/delete/route.ts
+A  src/app/api/reports/email/generate/route.ts
+A  src/app/api/storage/upload/route.ts
+A  src/app/api/storage/view/route.ts
+A  src/app/dashboard/informes/page.tsx
+A  src/lib/storage.ts
+A  src/lib/supabaseAdminSecondary.ts
+A  src/lib/supabaseSecondaryClient.ts
+A  supabase/migrations/20260210_secure_storage.sql
+A  supabase/migrations/20260210_secure_tables.sql
+A  supabase/migrations/20260211_email_reports.sql
+A  supabase/migrations/20260212_audit_indexes.sql

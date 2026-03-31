@@ -1,0 +1,17 @@
+﻿?? diff_sidebar.txt
+?? git_status.txt
+?? git_status_utf8.txt
+?? src/app/api/admin/vacations/
+?? src/app/api/onedrive/
+?? src/app/api/sofia/
+?? src/app/api/vacations/
+?? src/app/dashboard/fichaje/admin/AdminSettingsPanel.tsx
+?? src/app/dashboard/fichaje/admin/UserBalancesPanel.tsx
+?? src/app/dashboard/fichaje/admin/VacationManager.tsx
+?? src/app/dashboard/sofia/
+?? src/components/DeleteConfirmationModal.tsx
+?? src/components/vacations/
+?? staged_a.txt
+?? staged_m.txt
+?? supabase/migrations/20260212_vacations.sql
+?? unstaged.txt

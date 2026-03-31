@@ -1,0 +1,84 @@
+﻿diff --git a/src/components/Sidebar.tsx b/src/components/Sidebar.tsx
+index 80ef41f..898d3d6 100644
+--- a/src/components/Sidebar.tsx
++++ b/src/components/Sidebar.tsx
+@@ -2,9 +2,10 @@
+ 
+ import Link from 'next/link';
+ import { usePathname } from 'next/navigation';
+-import { Home, Building, AlertCircle, FileText, LogOut, Activity, Users, Clock, X, Folder } from 'lucide-react';
++import { Home, Building, AlertCircle, FileText, LogOut, Activity, Users, Clock, X, Folder, Mail } from 'lucide-react';
+ import { useEffect, useState } from 'react';
+ import { supabase } from '@/lib/supabaseClient';
++import { supabaseSecondary } from '@/lib/supabaseSecondaryClient';
+ import NotificationsBell from '@/components/NotificationsBell';
+ 
+ interface SidebarProps {
+@@ -17,6 +18,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+     const [isAdmin, setIsAdmin] = useState(false);
+     const [userName, setUserName] = useState('');
+     const [userEmail, setUserEmail] = useState('');
++    const [sofiaPendingCount, setSofiaPendingCount] = useState(0);
+ 
+     useEffect(() => {
+         const checkRole = async () => {
+@@ -44,13 +46,46 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+         checkRole();
+     }, []);
+ 
++    useEffect(() => {
++        const fetchSofiaCount = async () => {
++            const { count, error } = await supabaseSecondary
++                .from('incidencias_serincobot')
++                .select('*', { count: 'exact', head: true })
++                .eq('resuelto', false);
++
++            if (!error && count !== null) {
++                setSofiaPendingCount(count);
++            }
++        };
++
++        fetchSofiaCount();
++
++        // Real-time subscription for Sofia tickets
++        const channel = supabaseSecondary
++            .channel('sofia-sidebar-count')
++            .on(
++                'postgres_changes',
++                { event: '*', schema: 'public', table: 'incidencias_serincobot' },
++                () => {
++                    fetchSofiaCount();
++                }
++            )
++            .subscribe();
++
++        return () => {
++            supabaseSecondary.removeChannel(channel);
++        };
++    }, []);
++
+     const menuItems = [
+         { name: 'Dashboard', href: '/dashboard', icon: Home },
+         { name: 'Comunidades', href: '/dashboard/comunidades', icon: Building },
+         { name: 'Proveedores', href: '/dashboard/proveedores', icon: Users },
+         { name: 'Gesti├│n de Tickets', href: '/dashboard/incidencias', icon: AlertCircle },
+-        { name: 'Gesti├│n de Deudas', href: '/dashboard/deudas', icon: FileText },
++        { name: 'Gesti├│n de Deudas', href: '/dashboard/deudas', icon: Activity },
+         { name: 'Fichaje', href: '/dashboard/fichaje', icon: Clock },
++        { name: 'Informes Email', href: '/dashboard/informes', icon: Mail },
++        { name: 'Sofia', href: '/dashboard/sofia', icon: Users },
+         { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
+         { name: 'Facturas Comunidades', href: '/dashboard/facturas-comunidades', icon: Folder },
+         { name: 'Avisos', href: '/dashboard/avisos', icon: AlertCircle },
+@@ -145,6 +180,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+                                     isActive ? 'bg-neutral-950' : 'bg-white/30 group-hover:bg-yellow-400/80'
+                                 ].join(' ')} />
+                                 {item.name}
++                                {item.name === 'Sofia' && sofiaPendingCount > 0 && (
++                                    <span className="ml-auto inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-bold leading-none text-neutral-900 bg-yellow-400 rounded-full group-hover:bg-neutral-900 group-hover:text-yellow-400 border border-neutral-900 transition-colors">
++                                        {sofiaPendingCount}
++                                    </span>
++                                )}
+                             </Link>
+                         );
+                     })}

@@ -1,0 +1,269 @@
+[ 2311845ms] [ERROR] ./src/app/dashboard/incidencias/page.tsx:1085:32
+Parsing ecmascript source code failed
+  1083 |                             {estado === 'Aplazado' && <Pause className="w-3 h-3 inline mr-0.5" />}
+  1084 |                             {estado}
+> 1085 |                         </span>
+       |                                ^
+> 1086 |                         {estado === 'Aplazado' && row.fecha_recordatorio && (
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1087 |                             <span className="text-[10px] text-orange-500 font-medium flex items-center gap-1">
+  1088 |                                 <CalendarClock className="w-3 h-3" />
+  1089 |                                 {new Date(row.fecha_recordatorio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+
+Expected '</', got 'jsx text (
+                        )'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component Browser]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component SSR]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 2312088ms] [ERROR] ./src/app/dashboard/incidencias/page.tsx:1085:32
+Parsing ecmascript source code failed
+  1083 |                             {estado === 'Aplazado' && <Pause className="w-3 h-3 inline mr-0.5" />}
+  1084 |                             {estado}
+> 1085 |                         </span>
+       |                                ^
+> 1086 |                         {estado === 'Aplazado' && row.fecha_recordatorio && (
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1087 |                             <span className="text-[10px] text-orange-500 font-medium flex items-center gap-1">
+  1088 |                                 <CalendarClock className="w-3 h-3" />
+  1089 |                                 {new Date(row.fecha_recordatorio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+
+Expected '</', got 'jsx text (
+                        )'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component Browser]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component SSR]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 2312232ms] [ERROR] ./src/app/dashboard/incidencias/page.tsx:1085:32
+Parsing ecmascript source code failed
+  1083 |                             {estado === 'Aplazado' && <Pause className="w-3 h-3 inline mr-0.5" />}
+  1084 |                             {estado}
+> 1085 |                         </span>
+       |                                ^
+> 1086 |                         {estado === 'Aplazado' && row.fecha_recordatorio && (
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^
+  1087 |                             <span className="text-[10px] text-orange-500 font-medium flex items-center gap-1">
+  1088 |                                 <CalendarClock className="w-3 h-3" />
+  1089 |                                 {new Date(row.fecha_recordatorio).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+
+Expected '</', got 'jsx text (
+                        )'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component Browser]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/dashboard/incidencias/page.tsx [Client Component SSR]
+    ./src/app/dashboard/incidencias/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5183425ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5184340ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5184418ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5184984ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5245931ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5263606ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5396741ms] [ERROR] ./src/app/api/notifications/read-all/route.ts:2:1
+Export supabaseServer doesn't exist in target module
+  1 | import { NextResponse } from "next/server";
+> 2 | import { supabaseServer } from "@/lib/supabase/server";
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  3 | import { logActivity } from "@/lib/logActivity";
+  4 |
+  5 | export async function POST() {
+
+The export supabaseServer was not found in module [project]/src/lib/supabase/server.ts [app-route] (ecmascript).
+Did you mean to import createClient?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist. @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[ 5572230ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=esnv97LM6xf38Azxs1ajo' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10876
+[ 5575591ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=esnv97LM6xf38Azxs1ajo' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10876
+[ 5578950ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=esnv97LM6xf38Azxs1ajo' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10876
+[ 5582336ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=esnv97LM6xf38Azxs1ajo' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10876
+[ 5585710ms] [ERROR] WebSocket connection to 'ws://localhost:3000/_next/webpack-hmr?id=esnv97LM6xf38Azxs1ajo' failed: Error in connection establishment: net::ERR_CONNECTION_REFUSED @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_client_17643121._.js:10876
+[17759748ms] [ERROR] ./src/app/dashboard/deudas/page.tsx:1189:43
+Parsing ecmascript source code failed
+  1187 |                                             </div>
+  1188 |                                         )}
+> 1189 |                                     </div>
+       |                                           ^
+> 1190 |                                 </div>
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  1191 |                             </form>
+  1192 |                         </div>
+  1193 |
+
+Expected '</', got 'jsx text (
+                                )'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/dashboard/deudas/page.tsx [Client Component Browser]
+    ./src/app/dashboard/deudas/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/dashboard/deudas/page.tsx [Client Component SSR]
+    ./src/app/dashboard/deudas/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[18151595ms] [ERROR] ./src/app/dashboard/deudas/page.tsx:1134:39
+Parsing ecmascript source code failed
+  1132 |                                         </div>
+  1133 |                                     </div>
+> 1134 |                                 </div>
+       |                                       ^
+> 1135 |
+       | ^
+> 1136 |                                 {/* Sección: Archivos */}
+       | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  1137 |                                 <div>
+  1138 |                                     <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Archivos</h3>
+  1139 |                                     <div>
+
+Expected '</', got 'jsx text (
+
+                                )'
+
+Import traces:
+  Client Component Browser:
+    ./src/app/dashboard/deudas/page.tsx [Client Component Browser]
+    ./src/app/dashboard/deudas/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/app/dashboard/deudas/page.tsx [Client Component SSR]
+    ./src/app/dashboard/deudas/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[18543687ms] [ERROR] ./src/components/cronometraje/AddOldTaskModal.tsx:264:1
+Parsing ecmascript source code failed
+  262 |         </div>
+  263 |     );
+> 264 | }
+      | ^
+  265 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/components/cronometraje/AddOldTaskModal.tsx [Client Component Browser]
+    ./src/app/dashboard/cronometraje/page.tsx [Client Component Browser]
+    ./src/app/dashboard/cronometraje/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/cronometraje/AddOldTaskModal.tsx [Client Component SSR]
+    ./src/app/dashboard/cronometraje/page.tsx [Client Component SSR]
+    ./src/app/dashboard/cronometraje/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[18569775ms] [ERROR] ./src/components/cronometraje/AddOldTaskModal.tsx:264:1
+Parsing ecmascript source code failed
+  262 |         </div>
+  263 |     );
+> 264 | }
+      | ^
+  265 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/components/cronometraje/AddOldTaskModal.tsx [Client Component Browser]
+    ./src/app/dashboard/cronometraje/page.tsx [Client Component Browser]
+    ./src/app/dashboard/cronometraje/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/cronometraje/AddOldTaskModal.tsx [Client Component SSR]
+    ./src/app/dashboard/cronometraje/page.tsx [Client Component SSR]
+    ./src/app/dashboard/cronometraje/page.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
+[18642644ms] [ERROR] ./src/components/cronometraje/StartTaskModal.tsx:203:1
+Parsing ecmascript source code failed
+  201 |         </div>
+  202 |     );
+> 203 | }
+      | ^
+  204 |
+
+Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+
+Import traces:
+  Client Component Browser:
+    ./src/components/cronometraje/StartTaskModal.tsx [Client Component Browser]
+    ./src/components/Navbar.tsx [Client Component Browser]
+    ./src/app/dashboard/layout.tsx [Client Component Browser]
+    ./src/app/dashboard/layout.tsx [Server Component]
+
+  Client Component SSR:
+    ./src/components/cronometraje/StartTaskModal.tsx [Client Component SSR]
+    ./src/components/Navbar.tsx [Client Component SSR]
+    ./src/app/dashboard/layout.tsx [Client Component SSR]
+    ./src/app/dashboard/layout.tsx [Server Component] @ http://localhost:3000/_next/static/chunks/node_modules_next_dist_f3530cac._.js:3127
