@@ -273,7 +273,8 @@ export function useDashboardData() {
             // Charts: Top Comunidades
             const comMap = new Map<string, number>();
             pendingTickets?.forEach(inc => {
-                const name = (inc.comunidades as Record<string, unknown>)?.nombre_cdad as string || 'Desconocida';
+                const com = inc.comunidades as unknown as Record<string, unknown>;
+                const name = com?.nombre_cdad as string || 'Desconocida';
                 comMap.set(name, (comMap.get(name) || 0) + 1);
             });
             const topComunidades = Array.from(comMap.entries())
@@ -319,7 +320,8 @@ export function useDashboardData() {
             const debtByCom = new Map<string, number>();
             morosidad?.forEach(m => {
                 if (m.estado !== 'Pagado') {
-                    const name = (m.comunidades as Record<string, unknown>)?.nombre_cdad as string || 'Desconocida';
+                    const mCom = m.comunidades as unknown as Record<string, unknown>;
+                    const name = mCom?.nombre_cdad as string || 'Desconocida';
                     debtByCom.set(name, (debtByCom.get(name) || 0) + (m.importe || 0));
                 }
             });
@@ -373,7 +375,8 @@ export function useDashboardData() {
                     if (t.comunidad_id === null) {
                         cronoSharedSeconds += t.duration_seconds;
                     } else {
-                        const name = (t.comunidades as Record<string, unknown>)?.nombre_cdad as string || communityNames.get(t.comunidad_id) || 'Desconocida';
+                        const tCom = t.comunidades as unknown as Record<string, unknown>;
+                        const name = tCom?.nombre_cdad as string || communityNames.get(t.comunidad_id) || 'Desconocida';
                         cronoSpecificMap.set(name, (cronoSpecificMap.get(name) || 0) + t.duration_seconds);
                     }
                 }
@@ -396,7 +399,8 @@ export function useDashboardData() {
             // Performance by gestor
             const cronoGestorMap = new Map<string, { tasks: number; seconds: number }>();
             taskTimers?.forEach(t => {
-                const name = (t.profiles as Record<string, unknown>)?.nombre as string || 'Sin asignar';
+                const tProf = t.profiles as unknown as Record<string, unknown>;
+                const name = tProf?.nombre as string || 'Sin asignar';
                 const existing = cronoGestorMap.get(name) || { tasks: 0, seconds: 0 };
                 existing.tasks++;
                 existing.seconds += t.duration_seconds || 0;
