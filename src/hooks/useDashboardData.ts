@@ -233,7 +233,7 @@ export function useDashboardData() {
                 evolutionData.push({ date: dateStr, count: runningPending });
                 const createdCount = createdMap.get(dateStr) || 0;
                 const resolvedCount = resolvedMap.get(dateStr) || 0;
-                runningPending -= (createdCount - resolvedCount);
+                runningPending = Math.max(0, runningPending - (createdCount - resolvedCount));
             }
             evolutionData.reverse();
 
