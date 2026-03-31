@@ -251,7 +251,8 @@ export default function IncidenciasPage() {
                 gestor:profiles!gestor_asignado (nombre),
                 resolver:profiles!resuelto_por (nombre)
             `)
-            .order('created_at', { ascending: false });
+            .order('created_at', { ascending: false })
+            .limit(5000);
 
         if (error) {
             toast.error('Error cargando incidencias');
