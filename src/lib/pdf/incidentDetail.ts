@@ -269,9 +269,13 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
     const gestorName = incident.gestor?.nombre || incident.gestor_asignado || '-';
     const receptorName = incident.receptor?.nombre || incident.quien_lo_recibe || '-';
     const sentimento = incident.sentimiento || '-';
+    const entrada = incident.source || '-';
+    const motivoTicket = incident.motivo_ticket || '-';
 
     rightY = drawRow("Recibido por", receptorName, rightColX, rightY);
     rightY = drawRow("Gestor", gestorName, rightColX, rightY);
+    rightY = drawRow("Entrada", entrada, rightColX, rightY);
+    rightY = drawRow("Motivo ticket", motivoTicket, rightColX, rightY);
     rightY = drawRow("Sentimiento", sentimento, rightColX, rightY);
     rightY = drawRow("Fecha Creación", new Date(incident.created_at).toLocaleString('es-ES'), rightColX, rightY);
 

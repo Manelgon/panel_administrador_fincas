@@ -143,15 +143,17 @@ export async function generateIncidentsPdf({
 
     // Columns
     const cols = [
-        { label: "ID", x: margin, w: 30 },
-        { label: "Fecha", x: margin + 30, w: 60 },
-        { label: "Comunidad", x: margin + 90, w: 120 },
-        { label: "Cliente", x: margin + 210, w: 100 },
-        { label: "Telf.", x: margin + 310, w: 60 },
-        { label: "Email", x: margin + 370, w: 120 },
-        { label: "Mensaje", x: margin + 490, w: 160 },
-        { label: "Estado", x: margin + 650, w: 50 },
-        { label: "Gestor", x: margin + 700, w: 80 },
+        { label: "ID", x: margin, w: 25 },
+        { label: "Fecha", x: margin + 25, w: 50 },
+        { label: "Comunidad", x: margin + 75, w: 100 },
+        { label: "Cliente", x: margin + 175, w: 80 },
+        { label: "Entrada", x: margin + 255, w: 60 },
+        { label: "Motivo", x: margin + 315, w: 110 },
+        { label: "Mensaje", x: margin + 425, w: 130 },
+        { label: "Estado", x: margin + 555, w: 50 },
+        { label: "Gestor", x: margin + 605, w: 80 },
+        { label: "Telf.", x: margin + 685, w: 60 },
+        { label: "Email", x: margin + 745, w: 36 },
     ];
 
     // Helper to draw Table Header (Yellow Bar)
@@ -174,6 +176,8 @@ export async function generateIncidentsPdf({
         const fecha = new Date(inc.created_at).toLocaleDateString('es-ES');
         const comunidad = inc.comunidad || inc.comunidades?.nombre_cdad || '-';
         const cliente = inc.nombre_cliente || '-';
+        const entrada = inc.source || '-';
+        const motivo = inc.motivo_ticket || '-';
         const telefono = inc.telefono || '-';
         const email = inc.email || '-';
         const mensaje = inc.mensaje || '-';
@@ -183,8 +187,11 @@ export async function generateIncidentsPdf({
         // Logic for Row Height based on Messaging
         const messageWidth = cols[6].w - 4;
         const messageLines = wrapText(mensaje, messageWidth, font, fontSize);
+        const motivoWidth = cols[5].w - 4;
+        const motivoLinesCount = wrapText(motivo, motivoWidth, font, fontSize).length;
         const lineHeight = fontSize + 4; // Spacing
-        const textBlockHeight = Math.max(minRowHeight, (messageLines.length * lineHeight) + 6); // +6 for padding
+        const maxLines = Math.max(messageLines.length, motivoLinesCount);
+        const textBlockHeight = Math.max(minRowHeight, (maxLines * lineHeight) + 6); // +6 for padding
 
         // Check Page Break
         if (y - textBlockHeight < 40) {
@@ -212,10 +219,15 @@ export async function generateIncidentsPdf({
 
         page.drawText(id, { x: cols[0].x + 2, y: commonY, size: fontSize, font });
         page.drawText(fecha, { x: cols[1].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(comunidad.substring(0, 25), { x: cols[2].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(cliente.substring(0, 20), { x: cols[3].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(telefono.substring(0, 12), { x: cols[4].x + 2, y: commonY, size: fontSize, font });
-        page.drawText(email.substring(0, 25), { x: cols[5].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(comunidad.substring(0, 20), { x: cols[2].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(cliente.substring(0, 16), { x: cols[3].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(entrada.substring(0, 12), { x: cols[4].x + 2, y: commonY, size: fontSize, font });
+
+        // Multiline Motivo
+        const motivoLines = wrapText(motivo, cols[5].w - 4, font, fontSize);
+        motivoLines.forEach((line, i) => {
+            page.drawText(line, { x: cols[5].x + 2, y: commonY - (i * lineHeight), size: fontSize, font });
+        });
 
         // Multiline Message
         messageLines.forEach((line, i) => {
@@ -228,7 +240,9 @@ export async function generateIncidentsPdf({
         });
 
         page.drawText(estado, { x: cols[7].x + 2, y: commonY, size: fontSize, font, color: inc.resuelto ? rgb(0, 0.5, 0) : rgb(0.8, 0.5, 0) });
-        page.drawText(gestorName.substring(0, 15), { x: cols[8].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(gestorName.substring(0, 14), { x: cols[8].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(telefono.substring(0, 11), { x: cols[9].x + 2, y: commonY, size: fontSize, font });
+        page.drawText(email.substring(0, 8), { x: cols[10].x + 2, y: commonY, size: fontSize, font });
 
         y -= textBlockHeight;
     }
