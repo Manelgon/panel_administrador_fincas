@@ -77,7 +77,7 @@ export default function DashboardPage() {
     const [pdfCommunity, setPdfCommunity] = useState('all');
     const [pdfDateFrom, setPdfDateFrom] = useState('');
     const [pdfDateTo, setPdfDateTo] = useState('');
-    const [pdfIncludeCharts, setPdfIncludeCharts] = useState(true);
+    const [pdfMode, setPdfMode] = useState<'both' | 'charts' | 'data'>('both');
     const [pdfSections, setPdfSections] = useState<string[]>(['incidencias', 'cronometraje', 'rendimiento', 'deudas']);
     const [portalReady, setPortalReady] = useState(false);
     useEffect(() => setPortalReady(true), []);
@@ -94,8 +94,8 @@ export default function DashboardPage() {
                 stats, cronoStats, chartData, period,
                 selectedCommunity: pdfCommunity,
                 communities,
-                includeCharts: pdfIncludeCharts,
-                sections: pdfSections,
+                includeCharts: pdfMode !== 'data',
+                sections: pdfMode !== 'charts' ? pdfSections : [],
                 dateFrom: pdfDateFrom || undefined,
                 dateTo: pdfDateTo || undefined,
             });
@@ -408,8 +408,8 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Secciones */}
-                        <div>
+                        {/* Secciones — solo visible si hay datos */}
+                        <div className={pdfMode === 'charts' ? 'opacity-40 pointer-events-none' : ''}>
                             <label className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400 block">Estadísticas a incluir</label>
                             <div className="grid grid-cols-5 gap-2">
                                 {[
@@ -438,18 +438,25 @@ export default function DashboardPage() {
                             </div>
                         </div>
 
-                        {/* Incluir gráficas */}
-                        <div className="flex items-center justify-between p-3 bg-neutral-50/60 rounded-lg border border-neutral-200">
-                            <div>
-                                <p className="text-sm font-semibold text-neutral-800">Incluir gráficas</p>
-                                <p className="text-xs text-neutral-400">Añade los gráficos visuales al informe</p>
+                        {/* Modo de contenido */}
+                        <div>
+                            <label className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400 block">Contenido del PDF</label>
+                            <div className="grid grid-cols-3 gap-2">
+                                {([
+                                    { key: 'both', label: 'Gráficas + Datos', desc: 'Todo el informe' },
+                                    { key: 'charts', label: 'Solo gráficas', desc: 'Visualizaciones' },
+                                    { key: 'data', label: 'Solo datos', desc: 'Estadísticas' },
+                                ] as const).map(({ key, label, desc }) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setPdfMode(key)}
+                                        className={`py-2.5 px-2 rounded-lg text-xs font-bold border transition text-center ${pdfMode === key ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-white text-neutral-400 border-neutral-200 hover:border-neutral-300 hover:text-neutral-600'}`}
+                                    >
+                                        <div>{label}</div>
+                                        <div className={`text-[10px] font-normal mt-0.5 ${pdfMode === key ? 'text-yellow-600' : 'text-neutral-300'}`}>{desc}</div>
+                                    </button>
+                                ))}
                             </div>
-                            <button
-                                onClick={() => setPdfIncludeCharts(v => !v)}
-                                className={`relative w-11 h-6 rounded-full transition-colors ${pdfIncludeCharts ? 'bg-yellow-400' : 'bg-neutral-200'}`}
-                            >
-                                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${pdfIncludeCharts ? 'translate-x-5.5' : 'translate-x-0.5'}`} />
-                            </button>
                         </div>
                     </div>
 

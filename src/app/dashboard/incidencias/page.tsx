@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil } from 'lucide-react';
@@ -110,6 +111,8 @@ export default function IncidenciasPage() {
     const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
     const [aplazarDate, setAplazarDate] = useState('');
 
+    const { withLoading } = useGlobalLoading();
+
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
         setShowDetailModal(true);
@@ -201,39 +204,41 @@ export default function IncidenciasPage() {
 
     const handleConfirmImport = async () => {
         if (!pendingImportFile || !importPreviewData) return;
-        setImportingPdf(true);
         setShowImportPreviewModal(false);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('No hay sesión activa');
+        await withLoading(async () => {
+            setImportingPdf(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('No hay sesión activa');
 
-            const estadosArray = importPreviewData.records
-                .map((rec, idx) => rec.status === 'ok' ? (importRecordEstados[idx] || 'Pendiente') : null)
-                .filter(Boolean);
+                const estadosArray = importPreviewData.records
+                    .map((rec, idx) => rec.status === 'ok' ? (importRecordEstados[idx] || 'Pendiente') : null)
+                    .filter(Boolean);
 
-            const payload = new FormData();
-            payload.append('pdf', pendingImportFile);
-            payload.append('receptor_id', user.id);
-            payload.append('estados', JSON.stringify(estadosArray));
+                const payload = new FormData();
+                payload.append('pdf', pendingImportFile);
+                payload.append('receptor_id', user.id);
+                payload.append('estados', JSON.stringify(estadosArray));
 
-            const response = await fetch('/api/incidencias/import-pdf', { method: 'POST', body: payload });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.error || 'Error al importar el PDF');
-            toast.success(
-                `PDF importado: ${result.inserted} registros insertados de ${result.total_parsed} encontrados` +
-                (result.skipped > 0 ? ` (${result.skipped} omitidos)` : '')
-            );
-            fetchIncidencias();
-        } catch (error) {
-            console.error('Error al importar PDF:', error);
-            toast.error(error instanceof Error ? error.message : 'Error al importar el PDF');
-        } finally {
-            setImportingPdf(false);
-            setPendingImportFile(null);
-            setImportPreviewData(null);
-            setImportRecordEstados({});
-            if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
-        }
+                const response = await fetch('/api/incidencias/import-pdf', { method: 'POST', body: payload });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al importar el PDF');
+                toast.success(
+                    `PDF importado: ${result.inserted} registros insertados de ${result.total_parsed} encontrados` +
+                    (result.skipped > 0 ? ` (${result.skipped} omitidos)` : '')
+                );
+                fetchIncidencias();
+            } catch (error) {
+                console.error('Error al importar PDF:', error);
+                toast.error(error instanceof Error ? error.message : 'Error al importar el PDF');
+            } finally {
+                setImportingPdf(false);
+                setPendingImportFile(null);
+                setImportPreviewData(null);
+                setImportRecordEstados({});
+                if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
+            }
+        }, 'Importando incidencias...');
     };
 
     const fetchComunidades = async () => {
@@ -350,6 +355,8 @@ export default function IncidenciasPage() {
         setFormErrors({});
 
         if (isSubmitting) return;
+
+        await withLoading(async () => {
         setIsSubmitting(true);
         const loadingToastId = toast.loading(editingId ? 'Actualizando ticket...' : 'Creando ticket... espere');
 
@@ -514,11 +521,13 @@ export default function IncidenciasPage() {
             toast.dismiss(loadingToastId);
             setIsSubmitting(false);
         }
+        }, 'Guardando incidencia...');
     };
 
     const handleDetailFileUpload = async (files: FileList) => {
         if (!selectedDetailIncidencia) return;
 
+        await withLoading(async () => {
         setIsUpdatingRecord(true);
         const loadingToast = toast.loading('Subiendo archivos...');
 
@@ -596,6 +605,7 @@ export default function IncidenciasPage() {
         } finally {
             setIsUpdatingRecord(false);
         }
+        }, 'Subiendo archivos...');
     };
 
     const handleDeleteAttachment = async () => {
@@ -605,6 +615,7 @@ export default function IncidenciasPage() {
         const urlToDelete = urlToConfirmDelete;
         setUrlToConfirmDelete(null);
 
+        await withLoading(async () => {
         setIsUpdatingRecord(true);
         const loadingToast = toast.loading('Eliminando archivo...');
 
@@ -686,6 +697,7 @@ export default function IncidenciasPage() {
         } finally {
             setIsUpdatingRecord(false);
         }
+        }, 'Eliminando adjunto...');
     };
 
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
@@ -856,6 +868,8 @@ export default function IncidenciasPage() {
 
         const includeNotes = includeNotesFromModal !== undefined ? includeNotesFromModal : false;
 
+        const label = type === 'pdf' ? 'Generando PDF...' : 'Exportando CSV...';
+        await withLoading(async () => {
         setExporting(true);
         try {
             const res = await fetch('/api/incidencias/export', {
@@ -901,6 +915,7 @@ export default function IncidenciasPage() {
         } finally {
             setExporting(false);
         }
+        }, label);
     };
 
     const handleDeleteClick = (id: number) => {
@@ -913,6 +928,7 @@ export default function IncidenciasPage() {
     const handleConfirmDelete = async ({ email, password }: any) => {
         if (!itemToDelete || !email || !password) return;
 
+        await withLoading(async () => {
         setIsDeleting(true);
         try {
             const res = await fetch('/api/admin/universal-delete', {
@@ -954,11 +970,13 @@ export default function IncidenciasPage() {
         } finally {
             setIsDeleting(false);
         }
+        }, 'Eliminando incidencia...');
     };
 
     const handleUpdateGestor = async () => {
         if (!selectedDetailIncidencia || !newGestorId) return;
 
+        await withLoading(async () => {
         setIsUpdatingGestor(true);
         try {
             // Obtener info del usuario actual
@@ -1042,6 +1060,7 @@ export default function IncidenciasPage() {
         } finally {
             setIsUpdatingGestor(false);
         }
+        }, 'Reasignando gestor...');
     };
 
     const filteredIncidencias = incidencias.filter(inc => {

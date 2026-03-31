@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
@@ -49,6 +50,7 @@ export default function LoginPage() {
 
             if (error) {
                 toast.error('Credenciales incorrectas');
+                setLoading(false);
                 return;
             }
 
@@ -65,6 +67,7 @@ export default function LoginPage() {
                     'Tu cuenta no tiene un perfil asignado. Contacta con el administrador.',
                     { duration: 6000 }
                 );
+                setLoading(false);
                 return;
             }
 
@@ -74,6 +77,7 @@ export default function LoginPage() {
                     'Tu cuenta está desactivada. Contacta con el administrador.',
                     { duration: 6000 }
                 );
+                setLoading(false);
                 return;
             }
             // ────────────────────────────────────────────────────────────────────
@@ -87,16 +91,31 @@ export default function LoginPage() {
                 localStorage.removeItem('remembered_credentials');
             }
 
+            // Overlay se mantiene visible durante la navegación al dashboard
             toast.success('Bienvenido');
             router.push('/dashboard');
         } catch {
             toast.error('Ocurrió un error inesperado');
-        } finally {
             setLoading(false);
         }
     };
 
     return (
+        <>
+        {loading && createPortal(
+            <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-neutral-900/80 backdrop-blur-md">
+                <div className="relative w-24 h-24 mb-6">
+                    <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                    <LogIn className="absolute inset-0 m-auto w-10 h-10 text-yellow-400 animate-pulse" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h3 className="text-xl font-bold text-white tracking-tight">Iniciando sesión</h3>
+                    <p className="text-neutral-400 text-sm">Verificando credenciales...</p>
+                </div>
+            </div>,
+            document.body
+        )}
         <div
             className="relative rounded-2xl p-8"
             style={{
@@ -297,5 +316,6 @@ export default function LoginPage() {
                 </span>
             </p>
         </div>
+        </>
     );
 }
