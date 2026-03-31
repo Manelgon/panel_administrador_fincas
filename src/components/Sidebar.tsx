@@ -68,6 +68,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const [userName, setUserName] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [isLocal, setIsLocal] = useState(false);
+    const [companyName, setCompanyName] = useState('');
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -88,7 +89,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 }
             }
         };
+        const loadCompanyName = async () => {
+            const { data } = await supabase
+                .from('company_settings')
+                .select('setting_key, setting_value')
+                .eq('setting_key', 'emisor_name')
+                .single();
+            if (data?.setting_value) setCompanyName(data.setting_value);
+        };
         checkRole();
+        loadCompanyName();
     }, []);
 
     const handleLogout = async () => {
@@ -146,7 +156,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             aria-hidden="true"
                         />
                         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: '#fbbf24' }}>
-                            Serincosol
+                            {companyName || 'Serincosol'}
                         </span>
                     </div>
                     <div className="flex items-center gap-1">

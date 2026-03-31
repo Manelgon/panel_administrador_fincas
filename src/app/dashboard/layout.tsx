@@ -5,6 +5,7 @@ import Sidebar from '@/components/Sidebar';
 import Navbar from '@/components/Navbar';
 import { Menu } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { GlobalLoadingProvider } from '@/lib/globalLoading';
 
 function Greeting() {
     const [name, setName] = useState('');
@@ -47,6 +48,7 @@ export default function DashboardLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
+        <GlobalLoadingProvider>
         <div className="h-screen overflow-hidden flex bg-neutral-100">
             {/* Sidebar — dark, stays as liquid glass */}
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
@@ -80,5 +82,6 @@ export default function DashboardLayout({
                 </main>
             </div>
         </div>
+        </GlobalLoadingProvider>
     );
 }
