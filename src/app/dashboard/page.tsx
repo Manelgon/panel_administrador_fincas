@@ -280,7 +280,7 @@ export default function DashboardPage() {
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E5E5" />
                                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#525252' }} tickLine={false} axisLine={false} interval={0} />
                                     <YAxis tick={{ fontSize: 11, fill: '#525252' }} tickLine={false} axisLine={false} />
-                                    <Tooltip cursor={{ fill: '#f5f5f5' }} formatter={(v: number | string) => [`${(v as number).toLocaleString()}€`, 'Deuda']} />
+                                    <Tooltip cursor={{ fill: '#f5f5f5' }} formatter={(value) => [`${Number(value ?? 0).toLocaleString()}€`, 'Deuda']} />
                                     <Bar dataKey="value" fill="#CA8A04" radius={[4, 4, 0, 0]} barSize={36} />
                                 </BarChart>
                             </ResponsiveContainer>
@@ -296,7 +296,7 @@ export default function DashboardPage() {
                                             <Cell key={index} fill={entry.name === 'Pagado' ? '#10b981' : '#eab308'} />
                                         ))}
                                     </Pie>
-                                    <Tooltip formatter={(v: number | string, n: string) => [`${(v as number).toLocaleString()}€`, n]} />
+                                    <Tooltip formatter={(value: any, name: any) => [`${Number(value).toLocaleString()}€`, name]} />
                                     <Legend verticalAlign="bottom" height={30} iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
                                 </PieChart>
                             </ResponsiveContainer>

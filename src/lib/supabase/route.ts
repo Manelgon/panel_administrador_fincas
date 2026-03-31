@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 /**
  * Create Supabase client for API routes (App Router)
@@ -16,7 +16,7 @@ export async function supabaseRouteClient() {
                 getAll() {
                     return cookieStore.getAll();
                 },
-                setAll(cookiesToSet) {
+                setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) =>
                             cookieStore.set(name, value, options)

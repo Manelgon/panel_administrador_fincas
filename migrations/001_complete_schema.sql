@@ -806,11 +806,16 @@ to authenticated
 with check (public.is_admin());
 
 drop policy if exists "comunidades: admin update" on public.comunidades;
-create policy "comunidades: admin update"
+drop policy if exists "comunidades: gestor update" on public.comunidades;
+create policy "comunidades: gestor update"
 on public.comunidades for update
 to authenticated
-using (public.is_admin())
-with check (public.is_admin());
+using (
+  (select rol from public.profiles where user_id = auth.uid()) in ('gestor', 'admin')
+)
+with check (
+  (select rol from public.profiles where user_id = auth.uid()) in ('gestor', 'admin')
+);
 
 drop policy if exists "comunidades: admin delete" on public.comunidades;
 create policy "comunidades: admin delete"

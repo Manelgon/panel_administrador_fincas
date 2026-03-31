@@ -121,12 +121,17 @@ export default function ComunidadesPage() {
         if (editingId) {
             // Update existing
             try {
-                const { error } = await supabase
+                const { data: updatedData, error } = await supabase
                     .from('comunidades')
                     .update(dataToSubmit)
-                    .eq('id', editingId);
+                    .eq('id', editingId)
+                    .select();
 
                 if (error) throw error;
+                if (!updatedData || updatedData.length === 0) {
+                    toast.error('No se pudo actualizar. Verifica permisos o que el registro exista.');
+                    return;
+                }
 
                 toast.success('Comunidad actualizada correctamente');
 
@@ -146,7 +151,8 @@ export default function ComunidadesPage() {
                 window.dispatchEvent(new Event('communitiesChanged'));
                 fetchComunidades();
             } catch (error: unknown) {
-                const msg = error instanceof Error ? error.message : 'Error al actualizar';
+                console.error('Error al actualizar comunidad:', error);
+                const msg = error instanceof Error ? error.message : (error as { message?: string })?.message || 'Error al actualizar';
                 toast.error('Error al actualizar: ' + msg);
             }
         } else {

@@ -689,8 +689,8 @@ export default function SofiaPage() {
             key: 'urgencia',
             label: 'Urgencia',
             render: (row) => {
-                const urgency = row.urgencia?.toLowerCase();
-                const colors: any = {
+                const urgency = row.urgencia?.toLowerCase() ?? '';
+                const colors: Record<string, string> = {
                     alta: 'bg-red-100 text-red-700 border-red-200',
                     media: 'bg-amber-100 text-amber-700 border-amber-200',
                     baja: 'bg-emerald-100 text-emerald-700 border-emerald-200'
@@ -711,12 +711,13 @@ export default function SofiaPage() {
             key: 'sentimiento',
             label: 'Sentimiento',
             render: (row) => {
-                const colors: any = {
+                const colors: Record<string, string> = {
                     positivo: 'text-emerald-600',
                     negativo: 'text-red-600',
                     neutral: 'text-neutral-400'
                 };
-                return <span className={`text-[11px] font-bold uppercase ${colors[row.sentimiento?.toLowerCase()] || 'text-neutral-400'}`}>{row.sentimiento || '-'}</span>;
+                const sentKey = row.sentimiento?.toLowerCase() ?? '';
+                return <span className={`text-[11px] font-bold uppercase ${colors[sentKey] || 'text-neutral-400'}`}>{row.sentimiento || '-'}</span>;
             }
         },
         { key: 'nombre_cliente', label: 'Cliente' },

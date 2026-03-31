@@ -94,13 +94,13 @@ export default function CronometrajeSection({ cronoStats, chartData, embedded = 
                                     />
                                     <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#525252' }} axisLine={false} tickLine={false} width={120} />
                                     <Tooltip
-                                        formatter={(value: number | string) => {
-                                            const s = Math.round(value as number);
+                                        formatter={(value) => {
+                                            const s = Math.round(Number(value ?? 0));
                                             return [formatTime(s), 'Tiempo'];
                                         }}
-                                        labelFormatter={(label: string) => {
-                                            const item = chartData.cronoTopCommunities.find(d => d.name === label);
-                                            return item?.fullName || label;
+                                        labelFormatter={(label) => {
+                                            const item = chartData.cronoTopCommunities.find(d => d.name === String(label));
+                                            return item?.fullName || String(label);
                                         }}
                                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e5e5', fontSize: '12px' }}
                                     />
@@ -135,12 +135,12 @@ export default function CronometrajeSection({ cronoStats, chartData, embedded = 
                                     />
                                     <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#737373' }} axisLine={false} tickLine={false} />
                                     <Tooltip
-                                        formatter={(value: number | string, name: string) => {
+                                        formatter={(value, name) => {
                                             if (name === 'Tiempo') {
-                                                const s = Math.round(value as number);
+                                                const s = Math.round(Number(value ?? 0));
                                                 return [formatTime(s), 'Tiempo'];
                                             }
-                                            return [value, name];
+                                            return [value ?? 0, String(name)];
                                         }}
                                         contentStyle={{ borderRadius: '8px', border: '1px solid #e5e5e5', fontSize: '12px' }}
                                     />
@@ -173,9 +173,9 @@ export default function CronometrajeSection({ cronoStats, chartData, embedded = 
                                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#737373' }} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 11, fill: '#737373' }} axisLine={false} tickLine={false} />
                                 <Tooltip
-                                    formatter={(value: number | string, name: string) => {
-                                        if (name === 'Horas') return [`${value}h`, 'Horas'];
-                                        return [value, name];
+                                    formatter={(value, name) => {
+                                        if (name === 'Horas') return [`${value ?? 0}h`, 'Horas'];
+                                        return [value ?? 0, String(name)];
                                     }}
                                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e5e5', fontSize: '12px' }}
                                 />
