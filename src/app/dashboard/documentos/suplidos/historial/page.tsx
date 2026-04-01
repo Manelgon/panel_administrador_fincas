@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { ArrowLeft, Calendar, User, FileText } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server';
 import ClientHistoryTable from '@/components/dashboard/ClientHistoryTable';
 
@@ -30,23 +30,14 @@ export default async function HistorialSuplidosPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div className="flex items-center gap-3">
-                    <FileText className="w-6 h-6 text-yellow-500" />
-                    <div>
-                        <h1 className="text-xl font-bold text-neutral-900">Historial · Suplidos</h1>
-                        <p className="text-sm text-neutral-600 mt-1">
-                            Todos los documentos generados. Todos los usuarios pueden verlos.
-                        </p>
-                    </div>
-                </div>
-
+            <div className="flex justify-between items-center gap-3">
+                <h1 className="text-xl font-bold text-neutral-900">Historial de Documentos</h1>
                 <Link
                     href="/dashboard/documentos"
-                    className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 rounded-md text-sm font-semibold text-neutral-900 hover:bg-neutral-50 transition"
+                    className="flex items-center gap-2 px-3 py-2 bg-neutral-200 hover:bg-neutral-300 text-neutral-800 rounded-md text-sm font-semibold transition"
                 >
                     <ArrowLeft className="w-4 h-4" />
-                    Volver
+                    <span className="hidden sm:inline">Volver</span>
                 </Link>
             </div>
 

@@ -1377,7 +1377,7 @@ export default function IncidenciasPage() {
 
             {/* Filters and Actions */}
             <div className="flex flex-col gap-3">
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2">
                     <button
                         onClick={() => setFilterEstado('pendiente')}
                         className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
@@ -1386,7 +1386,7 @@ export default function IncidenciasPage() {
                     </button>
                     <button
                         onClick={() => setFilterEstado('aplazado')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition flex items-center gap-1.5 ${filterEstado === 'aplazado' ? 'bg-orange-400 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition flex items-center justify-center gap-1.5 ${filterEstado === 'aplazado' ? 'bg-orange-400 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
                     >
                         <Pause className="w-3 h-3" />
                         Aplazadas

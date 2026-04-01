@@ -40,6 +40,10 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
 
     const isAdminSession = userRole === 'admin';
 
+    // Detail Modal State
+    const [selectedDoc, setSelectedDoc] = useState<any>(null);
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+
     // Delete State
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [docToDelete, setDocToDelete] = useState<any>(null);
@@ -53,10 +57,16 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
     const [targetEmail, setTargetEmail] = useState("");
     const [isSending, setIsSending] = useState(false);
 
+    const handleRowClick = (doc: any) => {
+        setSelectedDoc(doc);
+        setDetailModalOpen(true);
+    };
+
     const handleDeleteClick = (doc: any) => {
         setDocToDelete(doc);
         setAdminEmail("");
         setAdminPass("");
+        setDetailModalOpen(false);
         setDeleteModalOpen(true);
     };
 
@@ -93,6 +103,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
     const handleSendClick = (doc: any) => {
         setDocToSend(doc);
         setTargetEmail("");
+        setDetailModalOpen(false);
         setSendModalOpen(true);
     };
 
@@ -177,6 +188,36 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         }
     };
 
+    // Helper: obtener campos clave del doc para mostrar en el modal
+    const getDocFields = (doc: any) => {
+        if (type === "suplidos") return [
+            { label: "Código", value: doc.payload?.["Código"] || "-" },
+            { label: "Nombre Cliente", value: doc.payload?.["Nombre Cliente"] || "-" },
+            { label: "NIF", value: doc.payload?.["NIF"] || "-" },
+            { label: "Descripción", value: doc.payload?.Descripcion || "-" },
+            { label: "Total", value: doc.payload?.["Suma final"] ? parseFloat(doc.payload["Suma final"]).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+            { label: "Fecha Emisión", value: doc.payload?.["Fecha emisión"] ? new Date(doc.payload["Fecha emisión"]).toLocaleDateString("es-ES") : new Date(doc.created_at).toLocaleDateString("es-ES") },
+        ];
+        if (type === "certificado-renta") return [
+            { label: "Código", value: doc.payload?.["Código"] || doc.payload?.codigo || "-" },
+            { label: "Comunidad", value: doc.payload?.["Nombre Comunidad"] || doc.payload?.nombre_comunidad || "-" },
+            { label: "Declarante", value: `${doc.payload?.Apellidos || ""} ${doc.payload?.Nombre || ""}`.trim() || "-" },
+            { label: "NIF", value: doc.payload?.Nif || doc.payload?.NIF || "-" },
+            { label: "Dirección", value: doc.payload?.["Dirección 2"] || "-" },
+            { label: "Piso / Puerta", value: [doc.payload?.Piso, doc.payload?.Puerta].filter(Boolean).join(" / ") || "-" },
+            { label: "Fecha", value: new Date(doc.created_at).toLocaleDateString("es-ES") },
+        ];
+        // varios
+        return [
+            { label: "Código", value: doc.payload?.codigo || "-" },
+            { label: "Comunidad", value: doc.payload?.nombre_comunidad || "-" },
+            { label: "Cliente", value: doc.payload?.cliente || doc.payload?.nombre_apellidos || "-" },
+            { label: "NIF", value: doc.payload?.nif || "-" },
+            { label: "Tipo Inmueble", value: doc.payload?.tipo_inmueble || "-" },
+            { label: "Total", value: doc.payload?.suma_final ? `${doc.payload.suma_final} €` : "-" },
+        ];
+    };
+
     const columns: Column<any>[] = useMemo(() => {
         const idCol: Column<any> = {
             key: "id",
@@ -187,11 +228,11 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
 
         const tipoCol: Column<any> = {
             key: "tipo",
-            label: "tipo",
+            label: "Tipo",
             sortable: true,
             width: "120px",
             render: (r) => {
-                let label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certificado Renta" : "Varios";
+                let label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certif. Renta" : "Varios";
                 let bgColor = type === "suplidos" ? "bg-amber-50 text-amber-700 border-amber-100" : type === "certificado-renta" ? "bg-indigo-50 text-indigo-700 border-indigo-100" : "bg-blue-50 text-blue-700 border-blue-100";
 
                 if (type === "varios") {
@@ -213,7 +254,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
 
         const creadoPorCol: Column<any> = {
             key: "profiles",
-            label: "generado por",
+            label: "Generado por",
             sortable: true,
             render: (r) => {
                 const u = r.profiles;
@@ -243,7 +284,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 },
                 {
                     key: "nombre_comunidad",
-                    label: "nombre comunidad",
+                    label: "Nombre Comunidad",
                     sortable: true,
                     render: (r) => r.payload?.["Nombre Cliente"] || "-",
                 },
@@ -260,13 +301,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     render: (r) => r.payload?.["NIF"] || "-",
                 },
                 {
-                    key: "descripcion",
-                    label: "Descripción",
-                    render: (r) => <div className="max-w-xs truncate" title={r.payload?.Descripcion}>{r.payload?.Descripcion || "-"}</div>,
-                },
-                {
                     key: "total",
-                    label: "TOTAL",
+                    label: "Total",
                     sortable: true,
                     align: 'right',
                     width: "110px",
@@ -274,7 +310,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 },
                 {
                     key: "fecha_emision",
-                    label: "FECHA emision",
+                    label: "Fecha Emisión",
                     sortable: true,
                     render: (r) => r.payload?.["Fecha emisión"] ? new Date(r.payload["Fecha emisión"]).toLocaleDateString("es-ES") : new Date(r.created_at).toLocaleDateString("es-ES"),
                 },
@@ -290,13 +326,13 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 },
                 {
                     key: "nombre_comunidad",
-                    label: "nombre comunidad",
+                    label: "Nombre Comunidad",
                     sortable: true,
                     render: (r) => r.payload?.["Nombre Comunidad"] || r.payload?.nombre_comunidad || "-",
                 },
                 {
                     key: "declarante",
-                    label: "(Declarante) nombre y apellidos",
+                    label: "Declarante",
                     sortable: true,
                     render: (r) => `${r.payload?.Apellidos || ""} ${r.payload?.Nombre || ""}`.trim() || "-",
                 },
@@ -307,23 +343,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     render: (r) => r.payload?.Nif || r.payload?.NIF || "-",
                 },
                 {
-                    key: "direccion",
-                    label: "Direccion",
-                    render: (r) => r.payload?.["Dirección 2"] || "-",
-                },
-                {
-                    key: "piso_puerta",
-                    label: "piso/puerta",
-                    render: (r) => {
-                        const p = r.payload?.Piso || "";
-                        const pt = r.payload?.Puerta || "";
-                        if (!p && !pt) return "-";
-                        return `${p}${pt ? ` / ${pt}` : ""}`;
-                    }
-                },
-                {
                     key: "created_at",
-                    label: "FECHA",
+                    label: "Fecha",
                     sortable: true,
                     render: (r) => new Date(r.created_at).toLocaleDateString("es-ES"),
                 },
@@ -339,13 +360,13 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 },
                 {
                     key: "nombre_comunidad",
-                    label: "nombre comunidad",
+                    label: "Nombre Comunidad",
                     sortable: true,
                     render: (r) => r.payload?.nombre_comunidad || "-",
                 },
                 {
                     key: "cliente",
-                    label: "cliente (nombre y apellidos)",
+                    label: "Cliente",
                     sortable: true,
                     render: (r) => r.payload?.cliente || r.payload?.nombre_apellidos || "-",
                 },
@@ -356,13 +377,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     render: (r) => r.payload?.nif || "-",
                 },
                 {
-                    key: "tipo_inmueble",
-                    label: "tipo inmueble",
-                    render: (r) => r.payload?.tipo_inmueble || "-",
-                },
-                {
                     key: "total",
-                    label: "total",
+                    label: "Total",
                     sortable: true,
                     align: 'right',
                     width: "110px",
@@ -372,67 +388,54 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             ];
         }
 
-        const baseResult = [idCol, tipoCol, ...typeCols];
-
-        const actionCol: Column<any> = {
-            key: "acciones",
-            label: type === "varios" ? "acciones" : "ACCIONES",
-            sortable: false,
-            align: 'right',
-            width: "120px",
-            render: (r) => (
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => handleDownload(r)}
-                        className="p-1.5 rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
-                        title="Descargar PDF"
-                    >
-                        <Download className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => handleSendClick(r)}
-                        className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
-                        title="Enviar por Email"
-                    >
-                        <Send className="w-4 h-4" />
-                    </button>
-                    <button
-                        onClick={() => handleDeleteClick(r)}
-                        className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                        title="Eliminar Documento"
-                    >
-                        <Trash2 className="w-4 h-4" />
-                    </button>
-                </div>
-            )
-        };
-
-        return [...baseResult, actionCol];
-    }, [type, isAdminSession]);
+        return [idCol, tipoCol, ...typeCols];
+    }, [type]);
 
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
 
     return (
-        <div className="space-y-4">
-            <div className="flex gap-2">
-                <Link
-                    href="/dashboard/documentos/suplidos/historial"
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'suplidos' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Suplidos
-                </Link>
-                <Link
-                    href="/dashboard/documentos/certificado-renta/historial"
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'certificado-renta' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Certificados Renta
-                </Link>
-                <Link
-                    href="/dashboard/documentos/varios/historial"
-                    className={`px-4 py-1.5 rounded-full text-sm font-semibold transition ${type === 'varios' ? 'bg-yellow-400 text-neutral-950 shadow-sm' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Certificados de estar al dia y Factura
-                </Link>
+        <div className="space-y-6">
+            {/* Filtros de tipo + acciones de selección */}
+            <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                    <Link
+                        href="/dashboard/documentos/suplidos/historial"
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition text-center ${type === 'suplidos' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Suplidos
+                    </Link>
+                    <Link
+                        href="/dashboard/documentos/certificado-renta/historial"
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition text-center ${type === 'certificado-renta' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Certif. Renta
+                    </Link>
+                    <Link
+                        href="/dashboard/documentos/varios/historial"
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition text-center ${type === 'varios' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Certif. Estar al Día y Factura
+                    </Link>
+                </div>
+
+                {/* Acciones de selección (visible solo si hay selección) */}
+                {selectedIds.size > 0 && (
+                    <div className="flex gap-2 items-center animate-in fade-in slide-in-from-bottom-2">
+                        <span className="text-sm font-medium text-neutral-500 mr-2">{selectedIds.size} seleccionados</span>
+                        <button
+                            onClick={() => {
+                                selectedIds.forEach((id) => {
+                                    const doc = entries.find((e) => e.id === id);
+                                    if (doc) handleDownload(doc);
+                                });
+                            }}
+                            className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition"
+                        >
+                            <Download className="w-4 h-4 text-blue-600" />
+                            Descargar
+                        </button>
+                    </div>
+                )}
             </div>
 
             <DataTable
@@ -444,7 +447,126 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 selectable={true}
                 selectedKeys={selectedIds}
                 onSelectionChange={setSelectedIds}
+                onRowClick={handleRowClick}
+                rowActions={(row) => [
+                    {
+                        label: "Descargar PDF",
+                        icon: <Download className="w-4 h-4" />,
+                        onClick: (r) => handleDownload(r),
+                    },
+                    {
+                        label: "Enviar por Email",
+                        icon: <Send className="w-4 h-4" />,
+                        onClick: (r) => handleSendClick(r),
+                    },
+                    {
+                        label: "Eliminar",
+                        icon: <Trash2 className="w-4 h-4" />,
+                        onClick: (r) => handleDeleteClick(r),
+                        variant: "danger" as const,
+                        separator: true,
+                    },
+                ]}
             />
+
+            {/* DETAIL MODAL */}
+            {detailModalOpen && selectedDoc && (
+                <ModalPortal>
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
+                        onClick={() => setDetailModalOpen(false)}
+                    >
+                        <div
+                            className="bg-white w-full max-w-2xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="px-6 py-4 border-b border-neutral-100 flex items-start justify-between bg-white shrink-0">
+                                <div>
+                                    <h2 className="text-xl font-black text-neutral-900 tracking-tight">
+                                        Documento #{selectedDoc.id}
+                                    </h2>
+                                    <p className="text-xs text-neutral-500 mt-0.5">
+                                        Generado el {new Date(selectedDoc.created_at).toLocaleDateString("es-ES")}
+                                        {selectedDoc.profiles && (
+                                            <> · por {`${selectedDoc.profiles.nombre ?? ""} ${selectedDoc.profiles.apellido ?? ""}`.trim()}</>
+                                        )}
+                                    </p>
+                                    <div className="mt-2">
+                                        {/* Badge tipo */}
+                                        {(() => {
+                                            let label = type === "suplidos" ? "Suplido" : type === "certificado-renta" ? "Certif. Renta" : "Varios";
+                                            let cls = type === "suplidos" ? "bg-amber-100 text-amber-700" : type === "certificado-renta" ? "bg-indigo-100 text-indigo-700" : "bg-blue-100 text-blue-700";
+                                            if (type === "varios") {
+                                                const isFactura = selectedDoc.title?.toLowerCase().includes("factura");
+                                                if (isFactura) { label = "Factura"; cls = "bg-emerald-100 text-emerald-700"; }
+                                                else { label = "Certificado"; }
+                                            }
+                                            return <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold ${cls}`}>{label}</span>;
+                                        })()}
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setDetailModalOpen(false)}
+                                    className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="p-5 overflow-y-auto flex-1">
+                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">
+                                    Datos del Documento
+                                </h3>
+                                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                                    {getDocFields(selectedDoc).map((field) => (
+                                        <div key={field.label}>
+                                            <dt className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-0.5">{field.label}</dt>
+                                            <dd className="text-sm text-neutral-900 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2">{field.value}</dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="px-5 py-4 border-t border-neutral-100 flex justify-between items-center gap-3 bg-neutral-50 shrink-0">
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleDownload(selectedDoc)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
+                                    >
+                                        <Download className="w-4 h-4 text-blue-600" />
+                                        Descargar PDF
+                                    </button>
+                                    <button
+                                        onClick={() => handleSendClick(selectedDoc)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
+                                    >
+                                        <Send className="w-4 h-4 text-yellow-600" />
+                                        Enviar
+                                    </button>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => handleDeleteClick(selectedDoc)}
+                                        className="flex items-center gap-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Eliminar
+                                    </button>
+                                    <button
+                                        onClick={() => setDetailModalOpen(false)}
+                                        className="px-4 py-2 bg-yellow-400 text-neutral-950 rounded-lg text-sm font-semibold hover:bg-yellow-500 transition"
+                                    >
+                                        Cerrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ModalPortal>
+            )}
 
             {/* DELETE MODAL */}
             {deleteModalOpen && (
@@ -459,8 +581,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     >
                         <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirmar Eliminación</h3>
                         <p className="text-neutral-600 mb-4 text-sm">
-                            Estás a punto de eliminar el documento: <span className="font-semibold">{docToDelete?.title}</span>. <br />
-                            Esta acción no se puede deshacer. {isAdminSession ? "¿Estás seguro de que deseas eliminar este registro?" : "Para confirmar, ingresa credenciales de administrador:"}
+                            Estás a punto de eliminar el documento <span className="font-semibold">#{docToDelete?.id}</span>.<br />
+                            Esta acción no se puede deshacer. {isAdminSession ? "¿Estás seguro?" : "Para confirmar, ingresa credenciales de administrador:"}
                         </p>
                         <form onSubmit={confirmDelete} className="space-y-4" autoComplete="off">
                             {!isAdminSession && (
@@ -470,7 +592,6 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                                         <input
                                             type="email"
                                             required
-                                            placeholder=""
                                             autoComplete="off"
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm"
                                             value={adminEmail}
@@ -482,7 +603,6 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                                         <input
                                             type="password"
                                             required
-                                            placeholder=""
                                             autoComplete="new-password"
                                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm"
                                             value={adminPass}
@@ -526,7 +646,7 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     >
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-bold text-neutral-900">Enviar Documento</h3>
-                            <button onClick={() => setSendModalOpen(false)} className="text-neutral-400 hover:text-neutral-600 text-sm">
+                            <button onClick={() => setSendModalOpen(false)} className="text-neutral-400 hover:text-neutral-600">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -537,9 +657,8 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                                 <input
                                     type="email"
                                     required
-                                    placeholder=""
                                     autoComplete="off"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:yellow-400 outline-none"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-yellow-400 outline-none"
                                     value={targetEmail}
                                     onChange={e => setTargetEmail(e.target.value)}
                                 />

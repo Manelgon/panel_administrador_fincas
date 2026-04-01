@@ -821,7 +821,7 @@ export default function SofiaPage() {
             </div>
 
             <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                <div className="flex gap-2">
+                <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
                     {['pendiente', 'aplazado', 'resuelto', 'all'].map(status => (
                         <button
                             key={status}
