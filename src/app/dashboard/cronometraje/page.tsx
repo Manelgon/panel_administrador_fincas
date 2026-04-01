@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { toast } from 'react-hot-toast';
 import { Timer, Play, Square, Plus, BarChart2, Clock, Building, Trash2, FileText, User, X } from 'lucide-react';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -49,6 +50,7 @@ function formatDurationShort(seconds: number): string {
 }
 
 export default function CronometrajePage() {
+    const { withLoading } = useGlobalLoading();
     const [activeTask, setActiveTask] = useState<TaskTimer | null>(null);
     const [history, setHistory] = useState<TaskTimer[]>([]);
     const [communities, setCommunities] = useState<Community[]>([]);
@@ -73,24 +75,26 @@ export default function CronometrajePage() {
 
     const handleDeleteTask = async (credentials: { email: string; password: string }) => {
         if (!taskToDelete) return;
-        setIsDeleting(true);
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: taskToDelete.id, type: 'task_timer', email: credentials.email, password: credentials.password }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-            toast.success('Tarea eliminada correctamente');
-            setTaskToDelete(null);
-            setSelectedTask(null);
-            await fetchData();
-        } catch (err: any) {
-            toast.error(err.message);
-        } finally {
-            setIsDeleting(false);
-        }
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: taskToDelete.id, type: 'task_timer', email: credentials.email, password: credentials.password }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+                toast.success('Tarea eliminada correctamente');
+                setTaskToDelete(null);
+                setSelectedTask(null);
+                await fetchData();
+            } catch (err: any) {
+                toast.error(err.message);
+            } finally {
+                setIsDeleting(false);
+            }
+        }, 'Eliminando tarea...');
     };
 
     const fetchData = useCallback(async () => {
@@ -152,32 +156,29 @@ export default function CronometrajePage() {
     }, [activeTask]);
 
     const handleStop = async () => {
-        setStopping(true);
-        try {
-            const { data, error } = await supabase.rpc('stop_task_timer');
-            if (error) throw error;
-
-            await logActivity({
-                action: 'stop_task',
-                entityType: 'task_timer',
-                entityId: data?.id,
-                entityName: (activeTask?.comunidades as any)?.nombre_cdad || 'Comunidad',
-                details: {
-                    duration: formatDurationShort(data?.duration_seconds || 0),
-                    nota: activeTask?.nota || null,
-                },
-            });
-
-            toast.success('Tarea finalizada');
-            setActiveTask(null);
-            setElapsed(0);
-            window.dispatchEvent(new Event('taskTimerChanged'));
-            await fetchData();
-        } catch (error: any) {
-            toast.error(error.message || 'Error al parar la tarea');
-        } finally {
-            setStopping(false);
-        }
+        await withLoading(async () => {
+            setStopping(true);
+            try {
+                const { data, error } = await supabase.rpc('stop_task_timer');
+                if (error) throw error;
+                await logActivity({
+                    action: 'stop_task',
+                    entityType: 'task_timer',
+                    entityId: data?.id,
+                    entityName: (activeTask?.comunidades as any)?.nombre_cdad || 'Comunidad',
+                    details: { duration: formatDurationShort(data?.duration_seconds || 0), nota: activeTask?.nota || null },
+                });
+                toast.success('Tarea finalizada');
+                setActiveTask(null);
+                setElapsed(0);
+                window.dispatchEvent(new Event('taskTimerChanged'));
+                await fetchData();
+            } catch (error: any) {
+                toast.error(error.message || 'Error al parar la tarea');
+            } finally {
+                setStopping(false);
+            }
+        }, 'Finalizando tarea...');
     };
 
     // ---- Filtered Data (by period + global community filter) ----
@@ -237,6 +238,7 @@ export default function CronometrajePage() {
 
     // ---- PDF Report Generator ----
     const generatePDFReport = async (includeCharts: boolean, community: string, dateFrom: string, dateTo: string) => {
+        await withLoading(async () => {
         setGeneratingPDF(true);
         try {
             const { default: jsPDF } = await import('jspdf');
@@ -383,10 +385,12 @@ export default function CronometrajePage() {
         } finally {
             setGeneratingPDF(false);
         }
+        }, 'Generando PDF...');
     };
 
     // ---- XLS Report Generator ----
     const generateXLSReport = async (community: string, dateFrom: string, dateTo: string) => {
+        await withLoading(async () => {
         setGeneratingXLS(true);
         try {
             const { utils, writeFile } = await import('xlsx');
@@ -420,6 +424,7 @@ export default function CronometrajePage() {
         } finally {
             setGeneratingXLS(false);
         }
+        }, 'Generando Excel...');
     };
 
 

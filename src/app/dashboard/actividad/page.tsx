@@ -6,6 +6,7 @@ import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { FileDown, Download, Calendar } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface ActivityLog {
     id: number;
@@ -19,6 +20,7 @@ interface ActivityLog {
 }
 
 export default function ActividadPage() {
+    const { withLoading } = useGlobalLoading();
     const [logs, setLogs] = useState<ActivityLog[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -75,37 +77,38 @@ export default function ActividadPage() {
         if (selectedIds.size === 0) return toast.error('Selecciona al menos un registro');
 
         setIsExporting(true);
-        const loadingToast = toast.loading(`Generando ${type.toUpperCase()}...`);
+        await withLoading(async () => {
+            const loadingToast = toast.loading(`Generando ${type.toUpperCase()}...`);
+            try {
+                const response = await fetch('/api/actividad/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ids: Array.from(selectedIds),
+                        type
+                    })
+                });
 
-        try {
-            const response = await fetch('/api/actividad/export', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ids: Array.from(selectedIds),
-                    type
-                })
-            });
+                if (!response.ok) throw new Error('Error al exportar');
 
-            if (!response.ok) throw new Error('Error al exportar');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            const now = new Date();
-            const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
-            a.download = `actividad_${dateStr}.${type}`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            toast.success('Exportación completada', { id: loadingToast });
-        } catch (error) {
-            console.error(error);
-            toast.error('Error al exportar', { id: loadingToast });
-        } finally {
-            setIsExporting(false);
-        }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                const now = new Date();
+                const dateStr = `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`;
+                a.download = `actividad_${dateStr}.${type}`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                toast.success('Exportación completada', { id: loadingToast });
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al exportar', { id: loadingToast });
+            } finally {
+                setIsExporting(false);
+            }
+        }, `Generando ${type.toUpperCase()}...`);
     };
 
     // ... getActionLabel, getEntityLabel, getActionColor ...

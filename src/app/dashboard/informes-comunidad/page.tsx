@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { createPortal } from 'react-dom';
 import { Plus, Mail, Building, FileText, Loader2, Download, ExternalLink, CheckCircle2, AlertCircle, Trash2, ChevronUp, ChevronDown, Filter, CreditCard, TicketCheck, Eye, Clock, X, BarChart2, ChevronRight } from 'lucide-react';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -25,6 +26,7 @@ interface HistoricalReport {
 }
 
 export default function InformesComunidadPage() {
+    const { withLoading } = useGlobalLoading();
     // State for folders (generator)
     const [folders, setFolders] = useState<Folder[]>([]);
     const [selectedFolder, setSelectedFolder] = useState<string>('');
@@ -139,6 +141,7 @@ export default function InformesComunidadPage() {
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
+        await withLoading(async () => {
         setIsGenerating(true);
         try {
             const folder = folders.find(f => f.id === selectedFolder);
@@ -188,6 +191,7 @@ export default function InformesComunidadPage() {
         } finally {
             setIsGenerating(false);
         }
+        }, 'Generando informe de comunidad...');
     };
 
     const handleViewPdf = async (path: string) => {
@@ -230,28 +234,28 @@ export default function InformesComunidadPage() {
 
     const handleConfirmDelete = async ({ email, password }: any) => {
         if (!reportToDelete) return;
-        setIsDeleting(true);
-        try {
-            const response = await fetch('/api/reports/email/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: reportToDelete, email, password })
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Error al eliminar');
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const response = await fetch('/api/reports/email/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: reportToDelete, email, password })
+                });
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Error al eliminar');
+                }
+                toast.success('Informe eliminado');
+                setShowDeleteModal(false);
+                setReportToDelete(null);
+                fetchHistory();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsDeleting(false);
             }
-
-            toast.success('Informe eliminado');
-            setShowDeleteModal(false);
-            setReportToDelete(null);
-            fetchHistory();
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setIsDeleting(false);
-        }
+        }, 'Eliminando informe...');
     };
 
     const requestSort = (key: keyof HistoricalReport) => {
