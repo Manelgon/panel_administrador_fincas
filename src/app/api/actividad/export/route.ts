@@ -40,7 +40,8 @@ export async function POST(req: Request) {
             clock_in: 'Fichaje Entrada',
             clock_out: 'Fichaje Salida',
             generate: 'Generar',
-            read: 'Leído'
+            read: 'Leído',
+            import_pdf: 'Importar PDF'
         };
         return labels[action] || action;
     };
@@ -53,7 +54,8 @@ export async function POST(req: Request) {
             profile: 'Perfil',
             fichaje: 'Fichaje',
             documento: 'Documento',
-            aviso: 'Aviso'
+            aviso: 'Aviso',
+            importacion_pdf: 'Importación PDF'
         };
         return labels[entityType] || entityType;
     };

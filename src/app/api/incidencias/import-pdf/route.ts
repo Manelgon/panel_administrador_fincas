@@ -368,6 +368,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Log activity: who imported, how many, communities breakdown, status counts
+    if (inserted.length > 0 && receptorId) {
+      const { data: receptorProfile } = await supabaseAdmin
+        .from('profiles')
+        .select('nombre')
+        .eq('user_id', receptorId)
+        .single()
+
+      // Build community breakdown: { [comunidad_name]: { Pendiente: n, Resuelto: n } }
+      const communityBreakdown: Record<string, Record<string, number>> = {}
+      let okIdx = 0
+      for (const incident of incidents) {
+        const community = matchCommunity(incident.comunidad_name, allComunidades)
+        if (!community) continue
+        const name = community.nombre_cdad
+        const estado = estadosArray[okIdx] ?? 'Pendiente'
+        okIdx++
+        if (!communityBreakdown[name]) communityBreakdown[name] = {}
+        communityBreakdown[name][estado] = (communityBreakdown[name][estado] ?? 0) + 1
+      }
+
+      const communityList = Object.entries(communityBreakdown)
+        .map(([cdad, counts]) => `${cdad}: ${Object.entries(counts).map(([e, n]) => `${e}(${n})`).join(', ')}`)
+        .join(' | ')
+
+      await supabaseAdmin.from('activity_logs').insert({
+        user_id: receptorId,
+        user_name: receptorProfile?.nombre ?? receptorId,
+        action: 'import_pdf',
+        entity_type: 'importacion_pdf',
+        entity_name: `Importación PDF (${inserted.length} incidencias)`,
+        details: JSON.stringify({
+          total_parseadas: incidents.length,
+          insertadas: inserted.length,
+          saltadas: skipped.length,
+          errores: errors.length,
+          comunidades: communityList,
+        }),
+      })
+    }
+
     return NextResponse.json({
       ok: true,
       total_parsed: incidents.length,

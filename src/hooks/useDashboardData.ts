@@ -27,7 +27,7 @@ export interface Community {
 }
 
 export interface ChartData {
-    incidenciasEvolution: { date: string; count: number }[];
+    incidenciasEvolution: { date: string; count: number; aplazadas: number }[];
     urgencyDistribution: { name: string; value: number }[];
     topComunidades: { name: string; count: number }[];
     userPerformance: { name: string; assigned: number; resolved: number; pending: number; efficiency: number }[];
@@ -116,7 +116,7 @@ export function useDashboardData() {
 
             // 2. Fetch Incidencias
             let query = supabase.from('incidencias').select(`
-                id, created_at, resuelto, dia_resuelto, urgencia, sentimiento, gestor_asignado, comunidad_id,
+                id, created_at, resuelto, dia_resuelto, urgencia, sentimiento, gestor_asignado, comunidad_id, estado,
                 comunidades (nombre_cdad),
                 profiles:gestor_asignado (nombre)
             `);
@@ -214,6 +214,7 @@ export function useDashboardData() {
             const daysToShow = period === 'all' ? 30 : parseInt(period);
             const createdMap = new Map<string, number>();
             const resolvedMap = new Map<string, number>();
+            const aplazadasMap = new Map<string, number>();
 
             incidencias?.forEach(inc => {
                 const cDate = new Date(inc.created_at).toLocaleDateString();
@@ -222,18 +223,29 @@ export function useDashboardData() {
                     const rDate = new Date(inc.dia_resuelto).toLocaleDateString();
                     resolvedMap.set(rDate, (resolvedMap.get(rDate) || 0) + 1);
                 }
+                if ((inc as Record<string, unknown>).estado === 'Aplazado') {
+                    const aDate = new Date(inc.created_at).toLocaleDateString();
+                    aplazadasMap.set(aDate, (aplazadasMap.get(aDate) || 0) + 1);
+                }
             });
 
             let runningPending = pendientes;
+            let runningAplazadas = aplazadas;
             const evolutionData = [];
             for (let i = 0; i < daysToShow; i++) {
                 const d = new Date();
                 d.setDate(d.getDate() - i);
                 const dateStr = d.toLocaleDateString();
-                evolutionData.push({ date: dateStr, count: runningPending });
+                evolutionData.push({
+                    date: dateStr,
+                    count: runningPending,
+                    aplazadas: runningAplazadas,
+                });
                 const createdCount = createdMap.get(dateStr) || 0;
                 const resolvedCount = resolvedMap.get(dateStr) || 0;
+                const aplazadasCount = aplazadasMap.get(dateStr) || 0;
                 runningPending = Math.max(0, runningPending - (createdCount - resolvedCount));
+                runningAplazadas = Math.max(0, runningAplazadas - aplazadasCount);
             }
             evolutionData.reverse();
 

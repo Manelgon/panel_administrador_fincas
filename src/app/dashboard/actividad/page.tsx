@@ -131,6 +131,7 @@ export default function ActividadPage() {
             clock_out: 'Fichaje Salida',
             generate: 'Generar',
             read: 'Leído',
+            import_pdf: 'Importar PDF',
         };
         return labels[action] || action;
     };
@@ -144,6 +145,7 @@ export default function ActividadPage() {
             fichaje: 'Control Horario',
             documento: 'Documento',
             aviso: 'Aviso',
+            importacion_pdf: 'Importación PDF',
         };
         return labels[entityType] || entityType;
     };
@@ -161,6 +163,7 @@ export default function ActividadPage() {
             clock_out: 'bg-amber-100 text-amber-800',
             generate: 'bg-indigo-100 text-indigo-800',
             read: 'bg-neutral-100 text-neutral-800',
+            import_pdf: 'bg-orange-100 text-orange-800',
         };
         return colors[action] || 'bg-gray-100 text-gray-800';
     };

@@ -84,6 +84,10 @@ export default function DashboardPage() {
     const [portalReady, setPortalReady] = useState(false);
     useEffect(() => setPortalReady(true), []);
 
+    const [visibleLines, setVisibleLines] = useState({ pendientes: true, aplazadas: true });
+    const toggleLine = (key: keyof typeof visibleLines) =>
+        setVisibleLines(prev => ({ ...prev, [key]: !prev[key] }));
+
     const toggleSection = (s: string) =>
         setPdfSections(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
@@ -195,21 +199,48 @@ export default function DashboardPage() {
                 <Section id="incidencias" title="Incidencias" icon={AlertCircle} iconColor="text-red-500" defaultOpen>
                     {/* Evolución */}
                     <div className="mb-6">
-                        <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Evolución</p>
+                        <div className="flex items-center justify-between mb-3">
+                            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest">Evolución</p>
+                            <div className="flex items-center gap-4">
+                                {([
+                                    { key: 'pendientes', label: 'Pendientes', color: '#EAB308' },
+                                    { key: 'aplazadas',  label: 'Aplazadas',  color: '#F97316' },
+                                ] as const).map(({ key, label, color }) => (
+                                    <label key={key} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <input
+                                            type="checkbox"
+                                            checked={visibleLines[key]}
+                                            onChange={() => toggleLine(key)}
+                                            className="sr-only"
+                                        />
+                                        <span
+                                            className="w-3 h-3 rounded-sm flex-shrink-0 border-2 transition-colors"
+                                            style={{ backgroundColor: visibleLines[key] ? color : 'transparent', borderColor: color }}
+                                        />
+                                        <span className="text-xs text-neutral-500">{label}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
                         <div className="h-[220px] w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={chartData.incidenciasEvolution}>
                                     <defs>
-                                        <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#FACC15" stopOpacity={0.8} />
+                                        <linearGradient id="colorPendientes" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#FACC15" stopOpacity={0.5} />
                                             <stop offset="95%" stopColor="#FACC15" stopOpacity={0} />
+                                        </linearGradient>
+<linearGradient id="colorAplazadas" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#F97316" stopOpacity={0.5} />
+                                            <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E5E5" />
                                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#737373' }} tickLine={false} axisLine={false} dy={8} />
                                     <YAxis tick={{ fontSize: 11, fill: '#737373' }} tickLine={false} axisLine={false} />
                                     <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e5e5' }} />
-                                    <Area type="monotone" dataKey="count" stroke="#EAB308" fillOpacity={1} fill="url(#colorCount)" activeDot={{ r: 5 }} />
+                                    {visibleLines.pendientes && <Area type="monotone" dataKey="count"     name="Pendientes" stroke="#EAB308" fill="url(#colorPendientes)" activeDot={{ r: 5 }} />}
+                                    {visibleLines.aplazadas  && <Area type="monotone" dataKey="aplazadas" name="Aplazadas"  stroke="#F97316" fill="url(#colorAplazadas)"  activeDot={{ r: 5 }} />}
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
