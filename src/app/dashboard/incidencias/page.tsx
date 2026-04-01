@@ -2292,8 +2292,8 @@ export default function IncidenciasPage() {
                                 <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">
                                     Detalle de registros
                                 </h3>
-                                <div className="border border-neutral-200 rounded-lg overflow-hidden">
-                                    <table className="w-full text-xs">
+                                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
+                                    <table className="w-full text-xs min-w-[900px]">
                                         <thead>
                                             <tr className="bg-neutral-50 border-b border-neutral-200">
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest w-6"></th>
