@@ -7,6 +7,7 @@ import { CheckCheck, X, Paperclip, Loader2, Download } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 import { useGlobalLoading } from '@/lib/globalLoading';
+import ModalPortal from '@/components/ModalPortal';
 
 interface Notification {
     id: string;
@@ -276,6 +277,7 @@ export default function AvisosPage() {
 
             {/* Detail Modal */}
             {showDetailModal && selectedNotification && (
+            <ModalPortal>
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
@@ -480,6 +482,7 @@ export default function AvisosPage() {
                         </div>
                     </div>
                 </div>
+            </ModalPortal>
             )}
         </div>
     );
