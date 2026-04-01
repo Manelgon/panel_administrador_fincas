@@ -1154,6 +1154,26 @@ export default function IncidenciasPage() {
             render: (row) => <span className="text-xs">{row.email || '-'}</span>,
         },
         {
+            key: 'source',
+            label: 'Entrada',
+            render: (row) => {
+                if (!row.source) return <span className="text-neutral-400">-</span>;
+                const icons: Record<string, string> = {
+                    'Llamada': '📞',
+                    'Presencial': '🤝',
+                    'Email': '📧',
+                    'Whatsapp': '💬',
+                    'App 360': '📱',
+                    'Acuerdo Junta': '📋',
+                };
+                return (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium capitalize">
+                        {icons[row.source] || ''} {row.source}
+                    </span>
+                );
+            },
+        },
+        {
             key: 'motivo_ticket',
             label: 'Motivo Ticket',
             render: (row) => (
@@ -1309,26 +1329,6 @@ export default function IncidenciasPage() {
             render: (row) => row.resolver?.nombre || '-',
             defaultVisible: false,
         },
-        {
-            key: 'source',
-            label: 'Entrada',
-            render: (row) => {
-                if (!row.source) return <span className="text-neutral-400">-</span>;
-                const icons: Record<string, string> = {
-                    'Llamada': '📞',
-                    'Presencial': '🤝',
-                    'Email': '📧',
-                    'Whatsapp': '💬',
-                    'App 360': '📱',
-                    'Acuerdo Junta': '📋',
-                };
-                return (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium capitalize">
-                        {icons[row.source] || ''} {row.source}
-                    </span>
-                );
-            },
-        },
     ];
 
     return (
@@ -1402,30 +1402,6 @@ export default function IncidenciasPage() {
                     >
                         Todas
                     </button>
-                </div>
-
-                {/* Selectores de comunidad y gestor */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <SearchableSelect
-                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
-                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
-                        options={comunidades.map(c => ({
-                            value: c.id,
-                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
-                        }))}
-                        placeholder="Todas las Comunidades"
-                        className="w-full sm:w-[240px]"
-                    />
-                    <SearchableSelect
-                        value={filterGestor === 'all' ? '' : filterGestor}
-                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                        options={profiles.map(p => ({
-                            value: p.user_id,
-                            label: p.nombre
-                        }))}
-                        placeholder="Todos los Gestores"
-                        className="w-full sm:w-[200px]"
-                    />
                 </div>
 
                 {/* Export Actions (Visible only if selection) */}
@@ -1866,6 +1842,24 @@ export default function IncidenciasPage() {
                 selectedKeys={selectedIds}
                 onSelectionChange={(keys) => setSelectedIds(keys)}
                 onRowClick={handleRowClick}
+                extraFilters={
+                    <>
+                        <SearchableSelect
+                            value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                            onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                            options={comunidades.map(c => ({ value: c.id, label: `${c.codigo || ''} - ${c.nombre_cdad}` }))}
+                            placeholder="Todas las Comunidades"
+                            className="w-[200px]"
+                        />
+                        <SearchableSelect
+                            value={filterGestor === 'all' ? '' : filterGestor}
+                            onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                            options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                            placeholder="Todos los Gestores"
+                            className="w-[170px]"
+                        />
+                    </>
+                }
                 rowActions={(row) => {
                     const estado = row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente');
                     return [

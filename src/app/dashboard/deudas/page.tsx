@@ -796,30 +796,6 @@ export default function MorosidadPage() {
                     </button>
                 </div>
 
-                {/* Selectores de comunidad y gestor */}
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <SearchableSelect
-                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
-                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
-                        options={comunidades.map(c => ({
-                            value: c.id,
-                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
-                        }))}
-                        placeholder="Todas las Comunidades"
-                        className="w-full sm:w-[240px]"
-                    />
-                    <SearchableSelect
-                        value={filterGestor === 'all' ? '' : filterGestor}
-                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                        options={profiles.map(p => ({
-                            value: p.user_id,
-                            label: p.nombre
-                        }))}
-                        placeholder="Todos los Gestores"
-                        className="w-full sm:w-[200px]"
-                    />
-                </div>
-
                 {/* Export Actions (Visible only if selection) */}
                 {selectedIds.size > 0 && (
                     <div className="flex gap-2 items-center animate-in fade-in slide-in-from-bottom-2">
@@ -1202,6 +1178,24 @@ export default function MorosidadPage() {
                             loading={loading}
                             emptyMessage="No hay registros de morosidad en esta vista"
                             onRowClick={handleRowClick}
+                            extraFilters={
+                                <>
+                                    <SearchableSelect
+                                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                                        options={comunidades.map(c => ({ value: c.id, label: `${c.codigo || ''} - ${c.nombre_cdad}` }))}
+                                        placeholder="Todas las Comunidades"
+                                        className="w-[200px]"
+                                    />
+                                    <SearchableSelect
+                                        value={filterGestor === 'all' ? '' : filterGestor}
+                                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                                        options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                                        placeholder="Todos los Gestores"
+                                        className="w-[170px]"
+                                    />
+                                </>
+                            }
                             rowActions={(row) => [
                                 {
                                     label: 'Editar',
