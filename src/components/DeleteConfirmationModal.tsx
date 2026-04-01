@@ -58,7 +58,7 @@ export default function DeleteConfirmationModal({
             role="presentation"
         >
             <div
-                className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md p-6 relative animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-100"
+                className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-100"
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="delete-modal-title"

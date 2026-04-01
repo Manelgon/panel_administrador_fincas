@@ -462,7 +462,7 @@ export default function AvisosPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0">
+                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0 flex-wrap">
                             <button
                                 type="button"
                                 onClick={() => handleExport(selectedNotification)}

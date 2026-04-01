@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, Trash2, X, Edit2, Phone, Mail, MapPin, Building2, CreditCard, Clock, Loader2, Check, AlertCircle } from 'lucide-react';
+import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
@@ -391,7 +392,7 @@ export default function ProveedoresPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0">
+                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0 flex-wrap">
                             <button
                                 type="button"
                                 onClick={() => { setShowForm(false); setFormErrors({}); }}
@@ -527,28 +528,17 @@ export default function ProveedoresPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0">
+                        <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
+                            <ModalActionsMenu actions={[
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailProveedor.id); setShowDetailModal(false); }, variant: 'danger' },
+                                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => { handleEdit(selectedDetailProveedor); setShowDetailModal(false); } },
+                            ]} />
                             <button
-                                onClick={() => { handleDeleteClick(selectedDetailProveedor.id); setShowDetailModal(false); }}
-                                className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
+                                onClick={() => { toggleActive(selectedDetailProveedor.id, selectedDetailProveedor.activo); setSelectedDetailProveedor({ ...selectedDetailProveedor, activo: !selectedDetailProveedor.activo }); }}
+                                className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
-                                <Trash2 className="w-4 h-4" />
-                                Eliminar
+                                {selectedDetailProveedor.activo ? <><X className="w-4 h-4" /><span className="hidden sm:inline">Des</span>activar</> : <><Plus className="w-4 h-4" /> Activar</>}
                             </button>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => { handleEdit(selectedDetailProveedor); setShowDetailModal(false); }}
-                                    className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all"
-                                >
-                                    Editar
-                                </button>
-                                <button
-                                    onClick={() => { toggleActive(selectedDetailProveedor.id, selectedDetailProveedor.activo); setSelectedDetailProveedor({ ...selectedDetailProveedor, activo: !selectedDetailProveedor.activo }); }}
-                                    className="px-8 py-3 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 hover:shadow-md hover:-translate-y-0.5"
-                                >
-                                    {selectedDetailProveedor.activo ? <><X className="w-4 h-4" /> Desactivar</> : <><Plus className="w-4 h-4" /> Activar</>}
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>

@@ -130,7 +130,7 @@ export default function TaskDetailModal({ task, onClose, onDeleteClick, numCommu
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0">
+                <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 flex-wrap">
                     <button
                         onClick={onDeleteClick}
                         className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"

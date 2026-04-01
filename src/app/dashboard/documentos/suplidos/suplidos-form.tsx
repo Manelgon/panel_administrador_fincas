@@ -386,7 +386,7 @@ export default function SuplidosForm({ onSuccess, onCancel }: { onSuccess?: () =
                     </div>
                 </div>
             </div>
-            <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2">
+            <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-wrap">
                 <button onClick={onCancel} className="px-6 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-xs font-bold transition">
                     Cancelar
                 </button>

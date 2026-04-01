@@ -6,6 +6,7 @@ import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil } from 'lucide-react';
+import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import Badge from '@/components/ui/Badge';
@@ -1717,7 +1718,7 @@ export default function IncidenciasPage() {
 
                         {/* Footer */}
                         {/* Footer */}
-                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2">
+                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-wrap">
                             <button
                                 type="button"
                                 onClick={() => { setShowForm(false); setFormErrors({}); }}
@@ -1780,7 +1781,7 @@ export default function IncidenciasPage() {
                     }}
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative overflow-hidden max-h-[92dvh] overflow-y-auto"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="text-center">
@@ -2130,61 +2131,35 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0">
-                            <button
-                                onClick={() => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }}
-                                className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                Eliminar
-                            </button>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    onClick={() => detailFileInputRef.current?.click()}
-                                    disabled={isUpdatingRecord}
-                                    className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                                    Adjuntar
-                                </button>
-                                <button
-                                    onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])}
-                                    disabled={exporting}
-                                    className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
-                                >
-                                    {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                    PDF
-                                </button>
-                                {(selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' && (
-                                    <button
-                                        onClick={() => openAplazarModal(selectedDetailIncidencia.id)}
-                                        className="px-6 py-3 text-sm font-bold text-orange-600 hover:text-orange-700 hover:bg-orange-50 rounded-xl transition-all flex items-center gap-2 border border-orange-200"
-                                    >
-                                        <Pause className="w-4 h-4" />
-                                        Aplazar
-                                    </button>
-                                )}
+                        <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
+                            <ModalActionsMenu actions={[
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
+                                { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
+                                { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailIncidencia.id]), disabled: exporting },
+                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [{ label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const }] : []),
+                            ]} />
+                            <div className="flex items-center gap-2">
                                 {selectedDetailIncidencia.estado === 'Aplazado' && (
-                                    <div className="px-4 py-2 text-sm font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-2">
-                                        <CalendarClock className="w-4 h-4" />
-                                        Hasta {selectedDetailIncidencia.fecha_recordatorio ? new Date(selectedDetailIncidencia.fecha_recordatorio).toLocaleDateString('es-ES') : '...'}
+                                    <div className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-1.5">
+                                        <CalendarClock className="w-3.5 h-3.5" />
+                                        <span className="hidden sm:inline">Hasta </span>{selectedDetailIncidencia.fecha_recordatorio ? new Date(selectedDetailIncidencia.fecha_recordatorio).toLocaleDateString('es-ES') : '...'}
                                     </div>
                                 )}
                                 {selectedDetailIncidencia.resuelto ? (
                                     <button
                                         onClick={() => { toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto); setSelectedDetailIncidencia({ ...selectedDetailIncidencia, resuelto: false, estado: 'Pendiente', dia_resuelto: undefined, fecha_recordatorio: undefined }); }}
-                                        className="px-8 py-3 text-sm font-black text-neutral-600 border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
+                                        className="px-5 py-2.5 text-sm font-black text-neutral-600 border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <RotateCcw className="w-4 h-4" />
-                                        Reabrir Ticket
+                                        <span className="hidden sm:inline">Reabrir </span>Ticket
                                     </button>
                                 ) : (
                                     <button
                                         onClick={() => { toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto); setShowDetailModal(false); }}
-                                        className="px-8 py-3 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 hover:shadow-md hover:-translate-y-0.5"
+                                        className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <Check className="w-4 h-4" />
-                                        Resolver Ticket
+                                        <span className="hidden sm:inline">Resolver </span>Ticket
                                     </button>
                                 )}
                             </div>
@@ -2198,7 +2173,7 @@ export default function IncidenciasPage() {
                     className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                     >
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                             <Check className="w-8 h-8 text-green-600" />
@@ -2224,7 +2199,7 @@ export default function IncidenciasPage() {
                     className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                     >
                         <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
                             <Trash2 className="w-8 h-8 text-yellow-600" />
@@ -2472,7 +2447,7 @@ export default function IncidenciasPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-shrink-0">
+                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-shrink-0 flex-wrap">
                             <button
                                 type="button"
                                 onClick={closeImportModal}
@@ -2499,7 +2474,7 @@ export default function IncidenciasPage() {
                     className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">

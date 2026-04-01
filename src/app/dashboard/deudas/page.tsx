@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, Pencil, Save, AlertCircle } from 'lucide-react';
+import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import Badge from '@/components/ui/Badge';
@@ -1114,7 +1115,7 @@ export default function MorosidadPage() {
                                 }}
                             >
                                 <div
-                                    className="bg-white rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.22)] border border-neutral-200/70 w-full max-w-sm overflow-hidden animate-in fade-in zoom-in duration-200"
+                                    className="bg-white rounded-t-2xl sm:rounded-2xl shadow-[0_24px_80px_rgba(0,0,0,0.22)] border border-neutral-200/70 w-full max-w-sm overflow-hidden max-h-[92dvh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                                     onClick={e => e.stopPropagation()}
                                 >
                                     <div className="px-6 py-5 border-b border-neutral-100 bg-gradient-to-r from-neutral-50 to-white">
@@ -1392,49 +1393,29 @@ export default function MorosidadPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0">
-                            <button
-                                onClick={() => { handleDeleteClick(selectedDetailMorosidad.id); setShowDetailModal(false); }}
-                                className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                                Eliminar
-                            </button>
-                            <div className="flex items-center gap-3">
+                        <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
+                            <ModalActionsMenu actions={[
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailMorosidad.id); setShowDetailModal(false); }, variant: 'danger' },
+                                { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
+                                { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailMorosidad.id]), disabled: exporting },
+                            ]} />
+                            {selectedDetailMorosidad.estado !== 'Pagado' ? (
                                 <button
-                                    onClick={() => detailFileInputRef.current?.click()}
-                                    disabled={isUpdatingRecord}
-                                    className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
+                                    onClick={() => { markAsPaid(selectedDetailMorosidad.id); setShowDetailModal(false); }}
+                                    className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                 >
-                                    {isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                                    Adjuntar
+                                    <Check className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Marcar como </span>Pagado
                                 </button>
+                            ) : (
                                 <button
-                                    onClick={() => handleExport('pdf', [selectedDetailMorosidad.id])}
-                                    disabled={exporting}
-                                    className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all flex items-center gap-2 disabled:opacity-50"
+                                    onClick={() => { reopenDebt(selectedDetailMorosidad.id); setShowDetailModal(false); }}
+                                    className="px-5 py-2.5 text-sm font-black text-neutral-600 border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap"
                                 >
-                                    {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                                    PDF
+                                    <RotateCcw className="w-4 h-4" />
+                                    <span className="hidden sm:inline">Reabrir </span>Deuda
                                 </button>
-                                {selectedDetailMorosidad.estado !== 'Pagado' ? (
-                                    <button
-                                        onClick={() => { markAsPaid(selectedDetailMorosidad.id); setShowDetailModal(false); }}
-                                        className="px-8 py-3 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 hover:shadow-md hover:-translate-y-0.5"
-                                    >
-                                        <Check className="w-4 h-4" />
-                                        Marcar como Pagado
-                                    </button>
-                                ) : (
-                                    <button
-                                        onClick={() => { reopenDebt(selectedDetailMorosidad.id); setShowDetailModal(false); }}
-                                        className="px-8 py-3 text-sm font-black text-neutral-600 border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
-                                    >
-                                        <RotateCcw className="w-4 h-4" />
-                                        Reabrir Deuda
-                                    </button>
-                                )}
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>

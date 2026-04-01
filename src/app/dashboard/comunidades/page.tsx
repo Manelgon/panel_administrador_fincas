@@ -495,7 +495,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2">
+                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-wrap">
                             <button
                                 type="button"
                                 onClick={() => { setShowForm(false); setFormErrors({}); }}
@@ -626,7 +626,7 @@ export default function ComunidadesPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0">
+                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 flex-wrap">
                             <button
                                 onClick={() => { handleDeleteClick(selectedDetailComunidad.id); setShowDetailModal(false); }}
                                 className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"

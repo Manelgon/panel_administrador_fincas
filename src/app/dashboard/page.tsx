@@ -393,7 +393,7 @@ export default function DashboardPage() {
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4"
                 >
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl border border-neutral-200 w-full max-w-lg animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl border border-neutral-200 w-full max-w-lg max-h-[92dvh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -501,7 +501,7 @@ export default function DashboardPage() {
                         </div>
 
                         {/* Footer */}
-                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2">
+                        <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-wrap">
                             <button
                                 onClick={() => setShowPdfModal(false)}
                                 className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"

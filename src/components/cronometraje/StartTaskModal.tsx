@@ -179,7 +179,7 @@ export default function StartTaskModal({ onClose, onStarted }: StartTaskModalPro
         </div>
 
         {/* Footer */}
-                <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-end gap-3 shrink-0">
+                <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-end gap-3 shrink-0 flex-wrap">
                     <button
                         onClick={() => { setFormErrors({}); onClose(); }}
                         className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 bg-neutral-100 rounded-lg transition"

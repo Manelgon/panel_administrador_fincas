@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock, UserCog, Save, Pause, CalendarClock } from 'lucide-react';
+import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -1075,27 +1076,22 @@ export default function SofiaPage() {
                             </div>
                         </div>
 
-                        <div className="px-6 py-4 border-t bg-white flex justify-between items-center">
-                            <button onClick={() => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }} className="text-xs font-bold text-neutral-400 hover:text-red-600 uppercase flex items-center gap-2"><Trash2 className="w-4 h-4" /> Eliminar Registro</button>
-                            <div className="flex gap-3">
+                        <div className="px-4 py-3 border-t bg-white flex justify-between items-center gap-2">
+                            <ModalActionsMenu actions={[
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
+                                ...(!selectedDetailIncidencia.resuelto && selectedDetailIncidencia.estado !== 'Aplazado' ? [{ label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const }] : []),
+                            ]} />
+                            <div className="flex gap-2">
                                 <button
                                     onClick={handleUpdateGestor}
                                     disabled={!newGestorId || !newComunidadId || isUpdatingGestor}
-                                    className={`h-12 px-8 rounded-xl font-black text-xs uppercase shadow-lg transition-all flex items-center gap-2 ${(!newGestorId || !newComunidadId || isUpdatingGestor) ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed opacity-70' : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'}`}
+                                    className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 ${(!newGestorId || !newComunidadId || isUpdatingGestor) ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed opacity-70' : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'}`}
                                 >
-                                    {isUpdatingGestor ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                    TRAPASAR A GESTIÓN
+                                    {isUpdatingGestor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                    <span className="hidden sm:inline">Traspasar a </span>Gestión
                                 </button>
-                                {!selectedDetailIncidencia.resuelto && selectedDetailIncidencia.estado !== 'Aplazado' && (
-                                    <button
-                                        onClick={() => openAplazarModal(selectedDetailIncidencia.id)}
-                                        className="h-12 px-6 rounded-xl font-black text-xs uppercase bg-orange-100 text-orange-700 hover:bg-orange-200 transition-all flex items-center gap-2"
-                                    >
-                                        <Pause className="w-5 h-5" /> APLAZAR
-                                    </button>
-                                )}
-                                <button onClick={() => toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto)} className={`h-12 px-8 rounded-xl font-black text-xs uppercase transition-all ${selectedDetailIncidencia.resuelto ? 'bg-white border-2 border-neutral-900' : 'bg-amber-400 hover:bg-amber-500'}`}>
-                                    {selectedDetailIncidencia.resuelto ? 'Reabrir Ticket' : 'RESOLVER TICKET'}
+                                <button onClick={() => toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto)} className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all ${selectedDetailIncidencia.resuelto ? 'bg-white border-2 border-neutral-900' : 'bg-amber-400 hover:bg-amber-500'}`}>
+                                    {selectedDetailIncidencia.resuelto ? <><span className="hidden sm:inline">Reabrir </span>Ticket</> : <><span className="hidden sm:inline">Resolver </span>Ticket</>}
                                 </button>
                             </div>
                         </div>
@@ -1119,7 +1115,7 @@ export default function SofiaPage() {
 
             {showReassignSuccessModal && (
                 <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-green-600" /></div>
                         <h3 className="text-xl font-bold mb-2">Gestor Reasignado</h3>
                         <button onClick={() => setShowReassignSuccessModal(false)} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold">Aceptar</button>
@@ -1131,7 +1127,7 @@ export default function SofiaPage() {
             {showAplazarModal && (
                 <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">

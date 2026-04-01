@@ -450,7 +450,7 @@ export default function FacturasComunidadesPage() {
             {/* Create Folder Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm">
-                    <div className="bg-white rounded-t-2xl sm:rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-xl animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+                    <div className="bg-white rounded-t-2xl sm:rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-xl max-h-[92dvh] overflow-y-auto animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <form onSubmit={handleCreateConfirm} className="space-y-6">
                             <div>
                                 <label className="block text-lg font-bold text-neutral-900 mb-4">
@@ -570,7 +570,7 @@ export default function FacturasComunidadesPage() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-8 py-6 border-t border-neutral-100 flex items-center justify-between gap-4">
+                        <div className="px-8 py-6 border-t border-neutral-100 flex items-center justify-between gap-4 flex-wrap">
                             <div className="hidden sm:block">
                                 <span className="text-xs font-bold text-neutral-400 uppercase tracking-widest">Destino seleccionado:</span>
                                 <div className="text-xs font-bold text-neutral-900 truncate max-w-[200px]">

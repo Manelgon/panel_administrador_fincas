@@ -485,7 +485,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
             </div>
 
             {/* Fixed Footer */}
-            <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 shrink-0 flex justify-end gap-2">
+            <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 shrink-0 flex justify-end gap-2 flex-wrap">
                 <button
                     type="button"
                     onClick={onCancel}

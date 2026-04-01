@@ -84,7 +84,7 @@ export default function Dialog({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={descId}
-        className={`bg-white rounded-2xl shadow-2xl w-full max-w-md relative animate-in zoom-in-95 duration-200 border border-neutral-100 ${className}`}
+        className={`bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md relative max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-100 ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

@@ -339,7 +339,7 @@ export default function ImportComunidadesModal({ onClose, onImported }: ImportCo
                 </div>
 
                 {/* Footer */}
-                <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between shrink-0">
+                <div className="px-6 py-4 border-t border-neutral-100 bg-neutral-50 flex items-center justify-between shrink-0 flex-wrap">
                     <button
                         onClick={onClose}
                         className="px-4 py-2 text-sm font-medium text-neutral-600 hover:text-neutral-900 hover:bg-neutral-200 bg-neutral-100 rounded-lg transition"
