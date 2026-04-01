@@ -648,10 +648,9 @@ export default function CronometrajePage() {
             {/* Header */}
             <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                    <h1 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight truncate">
+                    <h1 className="text-xl font-bold text-neutral-900">
                         Cronometraje de Tareas
                     </h1>
-                    <p className="text-neutral-500 text-sm mt-0.5 hidden sm:block">Registra el tiempo dedicado a cada comunidad.</p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <button
