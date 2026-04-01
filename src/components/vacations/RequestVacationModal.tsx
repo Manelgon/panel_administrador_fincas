@@ -112,8 +112,8 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
 
     return (
         <ModalPortal>
-        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+            <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-lg overflow-hidden max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
                 <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/40">
                     <h3 className="text-lg font-semibold text-neutral-900 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-yellow-500" />
@@ -124,7 +124,7 @@ export default function RequestVacationModal({ isOpen, onClose, onSuccess, userI
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="p-4 sm:px-5 sm:py-4 space-y-4">
+                <form onSubmit={handleSubmit} className="p-4 sm:px-5 sm:py-4 space-y-4 overflow-y-auto flex-1">
                     <div className="flex justify-between items-end gap-4">
                         <div className="flex-grow space-y-1">
                             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Tipo de Solicitud</label>

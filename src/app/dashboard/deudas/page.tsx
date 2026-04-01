@@ -825,10 +825,10 @@ export default function MorosidadPage() {
             {/* Form Modal */}
             {portalReady && showForm && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
                     <div
-                        className="bg-white w-full max-w-5xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-5xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -847,7 +847,7 @@ export default function MorosidadPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                             <form id="morosidad-form" onSubmit={handleSubmit} className="space-y-6">
 
                                 {/* Sección: Identificación del Deudor */}
@@ -1107,7 +1107,7 @@ export default function MorosidadPage() {
                         {/* Export Notes Modal */}
                         {showExportModal && (
                             <div
-                                className="fixed inset-0 bg-black/60 z-[110] flex items-center justify-center p-4 backdrop-blur-[6px]"
+                                className="fixed inset-0 bg-black/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-[6px]"
                                 onClick={() => {
                                     setShowExportModal(false);
                                     setPendingExportParams(null);
@@ -1249,10 +1249,10 @@ export default function MorosidadPage() {
             {/* Detail Modal - Rediseño Administrativo */}
             {portalReady && showDetailModal && selectedDetailMorosidad && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
                     <div
-                        className="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -1285,7 +1285,7 @@ export default function MorosidadPage() {
                         />
 
                         {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
                             {/* Deudor */}
                             <div>

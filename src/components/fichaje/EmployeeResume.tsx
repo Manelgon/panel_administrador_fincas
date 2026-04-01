@@ -300,8 +300,8 @@ export default function EmployeeResume({ userId, allowExport = false }: Employee
             {/* Send Modal */}
             {showSendModal && (
                 <ModalPortal>
-                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-5">
+                    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-sm p-6 space-y-5 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                             <div className="flex items-center justify-between">
                                 <h3 className="text-base font-bold text-neutral-900">Enviar resumen por email</h3>
                                 <button onClick={() => setShowSendModal(false)} className="p-1.5 hover:bg-neutral-100 rounded-lg transition">

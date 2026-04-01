@@ -1433,10 +1433,10 @@ export default function IncidenciasPage() {
             {/* Form Modal */}
             {portalReady && showForm && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6 overflow-y-auto"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
                     <div
-                        className="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -1773,7 +1773,7 @@ export default function IncidenciasPage() {
             {/* Export Notes Modal */}
             {portalReady && showExportModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/50 z-[110] flex items-center justify-center p-4 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm"
                     onClick={() => {
                         setShowExportModal(false);
                         setPendingExportParams(null);
@@ -1892,10 +1892,10 @@ export default function IncidenciasPage() {
             {/* Detail Modal */}
             {portalReady && showDetailModal && selectedDetailIncidencia && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
                     <div
-                        className="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -1963,7 +1963,7 @@ export default function IncidenciasPage() {
                         />
 
                         {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
                             {/* Sección 1: Identificación del Cliente */}
                             <div>
@@ -2195,10 +2195,10 @@ export default function IncidenciasPage() {
             {/* Reassign Success Modal */}
             {portalReady && showReassignSuccessModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                     >
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
                             <Check className="w-8 h-8 text-green-600" />
@@ -2221,10 +2221,10 @@ export default function IncidenciasPage() {
             {/* Document Delete Confirmation Modal */}
             {portalReady && showDeleteDocConfirm && createPortal(
                 <div
-                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                     >
                         <div className="w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
                             <Trash2 className="w-8 h-8 text-yellow-600" />
@@ -2496,10 +2496,10 @@ export default function IncidenciasPage() {
             {/* Aplazar Date Picker Modal */}
             {portalReady && showAplazarModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">

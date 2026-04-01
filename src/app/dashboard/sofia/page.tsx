@@ -1118,8 +1118,8 @@ export default function SofiaPage() {
             />
 
             {showReassignSuccessModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 text-center">
+                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-green-600" /></div>
                         <h3 className="text-xl font-bold mb-2">Gestor Reasignado</h3>
                         <button onClick={() => setShowReassignSuccessModal(false)} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold">Aceptar</button>
@@ -1129,9 +1129,9 @@ export default function SofiaPage() {
 
             {/* Aplazar Modal */}
             {showAplazarModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
