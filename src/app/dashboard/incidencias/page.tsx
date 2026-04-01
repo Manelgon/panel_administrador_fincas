@@ -2219,7 +2219,7 @@ export default function IncidenciasPage() {
             {portalReady && showImportPreviewModal && importPreviewData && createPortal(
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6 overflow-y-auto">
                     <div
-                        className="bg-white w-full max-w-6xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-[95vw] rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -2292,8 +2292,8 @@ export default function IncidenciasPage() {
                                 <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">
                                     Detalle de registros
                                 </h3>
-                                <div className="border border-neutral-200 rounded-lg overflow-x-auto">
-                                    <table className="w-full text-xs min-w-[900px]">
+                                <div className="border border-neutral-200 rounded-lg overflow-hidden">
+                                    <table className="w-full text-xs">
                                         <thead>
                                             <tr className="bg-neutral-50 border-b border-neutral-200">
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest w-6"></th>
