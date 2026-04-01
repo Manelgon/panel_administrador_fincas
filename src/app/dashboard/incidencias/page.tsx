@@ -771,6 +771,27 @@ export default function IncidenciasPage() {
         }, currentStatus ? 'Reabriendo incidencia...' : 'Resolviendo incidencia...');
     };
 
+    const reactivarDesdeAplazado = async (id: number) => {
+        if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
+            setIsUpdatingStatus(id);
+            try {
+                const { error } = await supabase
+                    .from('incidencias')
+                    .update({ estado: 'Pendiente', fecha_recordatorio: null })
+                    .eq('id', id);
+                if (error) throw error;
+                toast.success('Ticket vuelto a Pendiente');
+                setIncidencias(prev => prev.map(i => i.id === id ? { ...i, estado: 'Pendiente' as any, fecha_recordatorio: undefined } : i));
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al reactivar ticket');
+            } finally {
+                setIsUpdatingStatus(null);
+            }
+        }, 'Reactivando ticket...');
+    };
+
     const openAplazarModal = (id: number) => {
         setAplazarIncidenciaId(id);
         // Default: tomorrow
@@ -1809,7 +1830,7 @@ export default function IncidenciasPage() {
                         {
                             label: estado === 'Resuelto' ? 'Reabrir' : (estado === 'Aplazado' ? 'Volver a Pendiente' : 'Resolver'),
                             icon: estado === 'Resuelto' ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />,
-                            onClick: (r) => toggleResuelto(r.id, r.resuelto),
+                            onClick: (r) => estado === 'Aplazado' ? reactivarDesdeAplazado(r.id) : toggleResuelto(r.id, r.resuelto),
                             disabled: isUpdatingStatus === row.id,
                             variant: estado === 'Resuelto' ? 'default' : 'success',
                         },
