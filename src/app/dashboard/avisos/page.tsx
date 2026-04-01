@@ -6,6 +6,7 @@ import { toast } from 'react-hot-toast';
 import { CheckCheck, X, Paperclip, Loader2, Download } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Notification {
     id: string;
@@ -19,6 +20,7 @@ interface Notification {
 }
 
 export default function AvisosPage() {
+    const { withLoading } = useGlobalLoading();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterState, setFilterState] = useState<'all' | 'unread' | 'read'>('unread');
@@ -108,43 +110,30 @@ export default function AvisosPage() {
     };
 
     const markAsRead = async (id: string) => {
-        try {
-            const { error } = await supabase
-                .from('notifications')
-                .update({ is_read: true })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            // Log read activity
-            const n = notifications.find(notif => notif.id === id);
-            await logActivity({
-                action: 'read',
-                entityType: 'aviso',
-                entityId: n?.entity_id,
-                entityName: n?.title,
-                details: {
-                    notification_id: id,
-                    id: n?.entity_id, // Add ID for consistency if it's related to an incident
-                    entity_type: n?.entity_type
-                }
-            });
-
-            toast.success('Marcado como leído');
-            setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
-        } catch (error) {
-            toast.error('Error al actualizar aviso');
-        }
+        await withLoading(async () => {
+            try {
+                const { error } = await supabase.from('notifications').update({ is_read: true }).eq('id', id);
+                if (error) throw error;
+                const n = notifications.find(notif => notif.id === id);
+                await logActivity({ action: 'read', entityType: 'aviso', entityId: n?.entity_id, entityName: n?.title, details: { notification_id: id, id: n?.entity_id, entity_type: n?.entity_type } });
+                toast.success('Marcado como leído');
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+            } catch (error) {
+                toast.error('Error al actualizar aviso');
+            }
+        }, 'Marcando como leído...');
     };
 
     const markAllRead = async () => {
-        try {
-            await fetch("/api/notifications/read-all", { method: "POST" });
-            toast.success('Todos marcados como leídos');
-            setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-        } catch (error) {
-            toast.error('Error al marcar todo como leído');
-        }
+        await withLoading(async () => {
+            try {
+                await fetch("/api/notifications/read-all", { method: "POST" });
+                toast.success('Todos marcados como leídos');
+                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+            } catch (error) {
+                toast.error('Error al marcar todo como leído');
+            }
+        }, 'Marcando todos como leídos...');
     };
 
     const filteredNotifications = notifications.filter(n => {
@@ -200,41 +189,43 @@ export default function AvisosPage() {
 
     const handleExport = async (notification: Notification) => {
         setExporting(true);
-        try {
-            const res = await fetch('/api/avisos/export', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ids: [notification.id],
-                    type: 'pdf',
-                    layout: 'detail'
-                })
-            });
+        await withLoading(async () => {
+            try {
+                const res = await fetch('/api/avisos/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ids: [notification.id],
+                        type: 'pdf',
+                        layout: 'detail'
+                    })
+                });
 
-            if (!res.ok) throw new Error('Export failed');
+                if (!res.ok) throw new Error('Export failed');
 
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
 
-            // Filename: AVISO_ID_DATE
-            const now = new Date();
-            const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
-            a.download = `AVISO_${notification.id.substring(0, 8)}_${dateStr}.pdf`;
+                // Filename: AVISO_ID_DATE
+                const now = new Date();
+                const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+                a.download = `AVISO_${notification.id.substring(0, 8)}_${dateStr}.pdf`;
 
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
 
-            toast.success('Descarga completada');
-        } catch (error) {
-            console.error(error);
-            toast.error('Error al descargar PDF');
-        } finally {
-            setExporting(false);
-        }
+                toast.success('Descarga completada');
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al descargar PDF');
+            } finally {
+                setExporting(false);
+            }
+        }, 'Generando PDF...');
     };
 
     return (

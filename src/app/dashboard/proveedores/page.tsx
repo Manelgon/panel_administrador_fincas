@@ -8,6 +8,7 @@ import { Plus, Trash2, X, Edit2, Phone, Mail, MapPin, Building2, CreditCard, Clo
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Proveedor {
     id: number;
@@ -23,6 +24,7 @@ interface Proveedor {
 }
 
 export default function ProveedoresPage() {
+    const { withLoading } = useGlobalLoading();
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -107,62 +109,34 @@ export default function ProveedoresPage() {
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
-        if (editingId) {
-            try {
-                const { error } = await supabase
-                    .from('proveedores')
-                    .update(formData)
-                    .eq('id', editingId);
-
-                if (error) throw error;
-
-                toast.success('Proveedor actualizado correctamente');
-
-                await logActivity({
-                    action: 'update',
-                    entityType: 'proveedor',
-                    entityId: editingId,
-                    entityName: formData.nombre,
-                    details: { email: formData.email }
-                });
-
-                setShowForm(false);
-                setFormErrors({});
-                setEditingId(null);
-                setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
-                fetchProveedores();
-            } catch (error: any) {
-                toast.error('Error al actualizar: ' + error.message);
+        const label = editingId ? 'Actualizando proveedor...' : 'Creando proveedor...';
+        await withLoading(async () => {
+            if (editingId) {
+                try {
+                    const { error } = await supabase.from('proveedores').update(formData).eq('id', editingId);
+                    if (error) throw error;
+                    toast.success('Proveedor actualizado correctamente');
+                    await logActivity({ action: 'update', entityType: 'proveedor', entityId: editingId, entityName: formData.nombre, details: { email: formData.email } });
+                    setShowForm(false); setFormErrors({}); setEditingId(null);
+                    setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
+                    fetchProveedores();
+                } catch (error: any) {
+                    toast.error('Error al actualizar: ' + error.message);
+                }
+            } else {
+                try {
+                    const { error } = await supabase.from('proveedores').insert([{ ...formData, activo: true }]).select();
+                    if (error) throw error;
+                    toast.success('Proveedor creado correctamente');
+                    await logActivity({ action: 'create', entityType: 'proveedor', entityName: formData.nombre, details: { email: formData.email } });
+                    setShowForm(false); setFormErrors({});
+                    setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
+                    fetchProveedores();
+                } catch (error: any) {
+                    toast.error('Error al crear: ' + (error.message || 'Error desconocido'));
+                }
             }
-        } else {
-            try {
-                const { data, error } = await supabase
-                    .from('proveedores')
-                    .insert([{
-                        ...formData,
-                        activo: true
-                    }])
-                    .select();
-
-                if (error) throw error;
-
-                toast.success('Proveedor creado correctamente');
-
-                await logActivity({
-                    action: 'create',
-                    entityType: 'proveedor',
-                    entityName: formData.nombre,
-                    details: { email: formData.email }
-                });
-
-                setShowForm(false);
-                setFormErrors({});
-                setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
-                fetchProveedores();
-            } catch (error: any) {
-                toast.error('Error al crear: ' + (error.message || 'Error desconocido'));
-            }
-        }
+        }, label);
     };
 
     const handleDeleteClick = (id: number) => {
@@ -174,67 +148,44 @@ export default function ProveedoresPage() {
     const handleConfirmDelete = async ({ email, password }: any) => {
         if (deleteId === null || !email || !password) return;
 
-        setIsDeleting(true);
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: deleteId,
-                    email,
-                    password,
-                    type: 'proveedor'
-                })
-            });
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: deleteId, email, password, type: 'proveedor' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-
-            toast.success('Proveedor eliminado correctamente');
-            const deleted = proveedores.find(p => p.id === deleteId);
-            setProveedores(proveedores.filter(p => p.id !== deleteId));
-
-            await logActivity({
-                action: 'delete',
-                entityType: 'proveedor',
-                entityId: deleteId,
-                entityName: deleted?.nombre,
-                details: { deleted_by_admin: email }
-            });
-
-            setShowDeleteModal(false);
-            setDeleteId(null);
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setIsDeleting(false);
-        }
+                toast.success('Proveedor eliminado correctamente');
+                const deleted = proveedores.find(p => p.id === deleteId);
+                setProveedores(proveedores.filter(p => p.id !== deleteId));
+                await logActivity({ action: 'delete', entityType: 'proveedor', entityId: deleteId, entityName: deleted?.nombre, details: { deleted_by_admin: email } });
+                setShowDeleteModal(false);
+                setDeleteId(null);
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsDeleting(false);
+            }
+        }, 'Eliminando proveedor...');
     };
 
     const toggleActive = async (id: number, currentStatus: boolean) => {
-        try {
-            const { error } = await supabase
-                .from('proveedores')
-                .update({ activo: !currentStatus })
-                .eq('id', id);
-
-            if (error) throw error;
-
-            toast.success(currentStatus ? 'Proveedor desactivado' : 'Proveedor activado');
-            setProveedores(prev => prev.map(p => p.id === id ? { ...p, activo: !currentStatus } : p));
-
-            const proveedor = proveedores.find(p => p.id === id);
-            await logActivity({
-                action: 'toggle_active',
-                entityType: 'proveedor',
-                entityId: id,
-                entityName: proveedor?.nombre,
-                details: { activo: !currentStatus }
-            });
-        } catch (error: any) {
-            toast.error('Error al actualizar estado');
-        }
+        await withLoading(async () => {
+            try {
+                const { error } = await supabase.from('proveedores').update({ activo: !currentStatus }).eq('id', id);
+                if (error) throw error;
+                toast.success(currentStatus ? 'Proveedor desactivado' : 'Proveedor activado');
+                setProveedores(prev => prev.map(p => p.id === id ? { ...p, activo: !currentStatus } : p));
+                const proveedor = proveedores.find(p => p.id === id);
+                await logActivity({ action: 'toggle_active', entityType: 'proveedor', entityId: id, entityName: proveedor?.nombre, details: { activo: !currentStatus } });
+            } catch (error: any) {
+                toast.error('Error al actualizar estado');
+            }
+        }, currentStatus ? 'Desactivando proveedor...' : 'Activando proveedor...');
     };
 
     const handleEdit = (proveedor: Proveedor) => {

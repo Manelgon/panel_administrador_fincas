@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Save, Loader2, Building2, Upload, ImageIcon, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { useGlobalLoading } from "@/lib/globalLoading";
 
 type Settings = {
     emisor_name: string;
@@ -21,6 +22,7 @@ type ImageState = {
 
 export default function AjustesEmisorPage() {
     const router = useRouter();
+    const { withLoading } = useGlobalLoading();
     const logoInputRef = useRef<HTMLInputElement>(null);
     const firmaInputRef = useRef<HTMLInputElement>(null);
     const headerInputRef = useRef<HTMLInputElement>(null);
@@ -89,46 +91,51 @@ export default function AjustesEmisorPage() {
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
-        try {
-            const res = await fetch("/api/admin/company-settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(settings),
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error);
-            toast.success("Datos del emisor actualizados");
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Error al guardar";
-            toast.error(msg);
-        } finally {
-            setSaving(false);
-        }
+        await withLoading(async () => {
+            try {
+                const res = await fetch("/api/admin/company-settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(settings),
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error);
+                toast.success("Datos del emisor actualizados");
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : "Error al guardar";
+                toast.error(msg);
+            } finally {
+                setSaving(false);
+            }
+        }, "Guardando datos del emisor...");
     };
 
     const handleImageUpload = async (file: File, type: "logo" | "firma" | "header") => {
         const setter = type === "logo" ? setLogo : type === "firma" ? setFirma : setHeader;
         setter(prev => ({ ...prev, uploading: true }));
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            formData.append("type", type);
+        const labels: Record<string, string> = { logo: "Subiendo logo...", firma: "Subiendo firma...", header: "Subiendo header..." };
+        await withLoading(async () => {
+            try {
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("type", type);
 
-            const res = await fetch("/api/admin/company-settings", {
-                method: "POST",
-                body: formData,
-            });
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error);
+                const res = await fetch("/api/admin/company-settings", {
+                    method: "POST",
+                    body: formData,
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error);
 
-            setter({ url: json.url, uploading: false, isDefault: false });
-            const labels: Record<string, string> = { logo: "Logo actualizado", firma: "Firma actualizada", header: "Header actualizado" };
-            toast.success(labels[type]);
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : "Error al subir imagen";
-            toast.error(msg);
-            setter(prev => ({ ...prev, uploading: false }));
-        }
+                setter({ url: json.url, uploading: false, isDefault: false });
+                const successLabels: Record<string, string> = { logo: "Logo actualizado", firma: "Firma actualizada", header: "Header actualizado" };
+                toast.success(successLabels[type]);
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : "Error al subir imagen";
+                toast.error(msg);
+                setter(prev => ({ ...prev, uploading: false }));
+            }
+        }, labels[type]);
     };
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "logo" | "firma" | "header") => {

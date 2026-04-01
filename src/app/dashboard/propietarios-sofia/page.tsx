@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Users, Building, Plus, X, Loader2, Power, Send, RotateCcw, MessageSquare, Pencil, AlertCircle } from 'lucide-react';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import ModalPortal from '@/components/ModalPortal';
@@ -27,6 +28,7 @@ interface Comunidad {
 }
 
 export default function PropietariosSofiaPage() {
+    const { withLoading } = useGlobalLoading();
     const [propietarios, setPropietarios] = useState<Propietario[]>([]);
     const [comunidades, setComunidades] = useState<Comunidad[]>([]);
     const [loading, setLoading] = useState(true);
@@ -105,23 +107,25 @@ export default function PropietariosSofiaPage() {
         if (isUpdatingStatus === id) return;
         setIsUpdatingStatus(id);
 
-        try {
-            const { error } = await supabase
-                .from('propietarios')
-                .update({ contestacion: newValue })
-                .eq('id', id);
+        await withLoading(async () => {
+            try {
+                const { error } = await supabase
+                    .from('propietarios')
+                    .update({ contestacion: newValue })
+                    .eq('id', id);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            const statusLabel = newValue === true ? 'Activada' : (newValue === false ? 'Desactivada' : 'Pendiente');
-            toast.success(`Estado actualizado a ${statusLabel}`);
-            setPropietarios(prev => prev.map(p => p.id === id ? { ...p, contestacion: newValue } : p));
-        } catch (error: any) {
-            console.error('Error updating status:', error);
-            toast.error('Error al actualizar estado');
-        } finally {
-            setIsUpdatingStatus(null);
-        }
+                const statusLabel = newValue === true ? 'Activada' : (newValue === false ? 'Desactivada' : 'Pendiente');
+                toast.success(`Estado actualizado a ${statusLabel}`);
+                setPropietarios(prev => prev.map(p => p.id === id ? { ...p, contestacion: newValue } : p));
+            } catch (error: any) {
+                console.error('Error updating status:', error);
+                toast.error('Error al actualizar estado');
+            } finally {
+                setIsUpdatingStatus(null);
+            }
+        }, 'Actualizando estado...');
     };
 
     const columns: Column<Propietario>[] = [
@@ -209,13 +213,27 @@ export default function PropietariosSofiaPage() {
         setFormErrors({});
 
         setIsSubmitting(true);
-        const loadingToastId = toast.loading('Guardando propietario...');
+        await withLoading(async () => {
+            try {
+                if (editingPropietario) {
+                    const { error } = await supabase
+                        .from('propietarios')
+                        .update({
+                            codigo_comunidad: formData.codigo_comunidad,
+                            comunidad: formData.comunidad,
+                            nombre_cliente: formData.nombre_cliente,
+                            apellid_cliente: formData.apellid_cliente,
+                            mail: formData.mail,
+                            telefono: formData.telefono,
+                            direccion_postal: formData.direccion_postal,
+                            contestacion: formData.contestacion === 'Activada' ? true : (formData.contestacion === 'Desactivada' ? false : null)
+                        })
+                        .eq('id', editingPropietario.id);
 
-        try {
-            if (editingPropietario) {
-                const { error } = await supabase
-                    .from('propietarios')
-                    .update({
+                    if (error) throw error;
+                    toast.success('Propietario actualizado correctamente');
+                } else {
+                    const { error } = await supabase.from('propietarios').insert([{
                         codigo_comunidad: formData.codigo_comunidad,
                         comunidad: formData.comunidad,
                         nombre_cliente: formData.nombre_cliente,
@@ -224,48 +242,33 @@ export default function PropietariosSofiaPage() {
                         telefono: formData.telefono,
                         direccion_postal: formData.direccion_postal,
                         contestacion: formData.contestacion === 'Activada' ? true : (formData.contestacion === 'Desactivada' ? false : null)
-                    })
-                    .eq('id', editingPropietario.id);
+                    }]);
 
-                if (error) throw error;
-                toast.success('Propietario actualizado correctamente');
-            } else {
-                const { error } = await supabase.from('propietarios').insert([{
-                    codigo_comunidad: formData.codigo_comunidad,
-                    comunidad: formData.comunidad,
-                    nombre_cliente: formData.nombre_cliente,
-                    apellid_cliente: formData.apellid_cliente,
-                    mail: formData.mail,
-                    telefono: formData.telefono,
-                    direccion_postal: formData.direccion_postal,
-                    contestacion: formData.contestacion === 'Activada' ? true : (formData.contestacion === 'Desactivada' ? false : null)
-                }]);
-
-                if (error) throw error;
-                toast.success('Propietario guardado correctamente');
+                    if (error) throw error;
+                    toast.success('Propietario guardado correctamente');
+                }
+                setShowForm(false);
+                setFormErrors({});
+                setEditingPropietario(null);
+                setFormData({
+                    id_comunidad: '',
+                    codigo_comunidad: '',
+                    comunidad: '',
+                    nombre_cliente: '',
+                    apellid_cliente: '',
+                    mail: '',
+                    telefono: '',
+                    direccion_postal: '',
+                    contestacion: 'Activada'
+                });
+                fetchPropietarios();
+            } catch (error: any) {
+                console.error('Error saving propietario:', error);
+                toast.error('Error al guardar: ' + error.message);
+            } finally {
+                setIsSubmitting(false);
             }
-            setShowForm(false);
-            setFormErrors({});
-            setEditingPropietario(null);
-            setFormData({
-                id_comunidad: '',
-                codigo_comunidad: '',
-                comunidad: '',
-                nombre_cliente: '',
-                apellid_cliente: '',
-                mail: '',
-                telefono: '',
-                direccion_postal: '',
-                contestacion: 'Activada'
-            });
-            fetchPropietarios();
-        } catch (error: any) {
-            console.error('Error saving propietario:', error);
-            toast.error('Error al guardar: ' + error.message);
-        } finally {
-            toast.dismiss(loadingToastId);
-            setIsSubmitting(false);
-        }
+        }, editingPropietario ? 'Actualizando propietario...' : 'Guardando propietario...');
     };
 
     return (

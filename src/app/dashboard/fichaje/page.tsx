@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Clock, Play, Square, Calendar } from 'lucide-react';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import EmployeeResume from '@/components/fichaje/EmployeeResume';
 import VacationDashboard from '@/components/vacations/VacationDashboard';
 
@@ -17,6 +18,7 @@ interface TimeEntry {
 }
 
 export default function FichajePage() {
+    const { withLoading } = useGlobalLoading();
     const [loading, setLoading] = useState(true);
     const [currentSession, setCurrentSession] = useState<TimeEntry | null>(null);
     const [history, setHistory] = useState<TimeEntry[]>([]);
@@ -129,53 +131,57 @@ export default function FichajePage() {
     };
 
     const handleClockIn = async () => {
-        try {
-            const { data, error } = await supabase.rpc('clock_in', { _note: note || null });
+        await withLoading(async () => {
+            try {
+                const { data, error } = await supabase.rpc('clock_in', { _note: note || null });
 
-            if (error) throw error;
+                if (error) throw error;
 
-            await logActivity({
-                action: 'clock_in',
-                entityType: 'fichaje',
-                details: { note: note || 'Sin nota' }
-            });
+                await logActivity({
+                    action: 'clock_in',
+                    entityType: 'fichaje',
+                    details: { note: note || 'Sin nota' }
+                });
 
-            toast.success('Fichaje de entrada registrado');
-            setNote('');
-            window.dispatchEvent(new Event('fichajeChanged'));
-            await fetchData();
-        } catch (error: any) {
-            toast.error(error.message || 'Error al fichar entrada');
-        }
+                toast.success('Fichaje de entrada registrado');
+                setNote('');
+                window.dispatchEvent(new Event('fichajeChanged'));
+                await fetchData();
+            } catch (error: any) {
+                toast.error(error.message || 'Error al fichar entrada');
+            }
+        }, 'Fichando entrada...');
     };
 
     const handleClockOut = async () => {
-        try {
-            const { data, error } = await supabase.rpc('clock_out');
+        await withLoading(async () => {
+            try {
+                const { data, error } = await supabase.rpc('clock_out');
 
-            if (error) throw error;
+                if (error) throw error;
 
-            // Calculate duration for log
-            let durationText = '';
-            if (currentSession) {
-                const start = new Date(currentSession.start_at).getTime();
-                const end = Date.now();
-                const diff = Math.floor((end - start) / 1000);
-                durationText = formatDuration(diff);
+                // Calculate duration for log
+                let durationText = '';
+                if (currentSession) {
+                    const start = new Date(currentSession.start_at).getTime();
+                    const end = Date.now();
+                    const diff = Math.floor((end - start) / 1000);
+                    durationText = formatDuration(diff);
+                }
+
+                await logActivity({
+                    action: 'clock_out',
+                    entityType: 'fichaje',
+                    details: { duration: durationText }
+                });
+
+                toast.success('Fichaje de salida registrado');
+                window.dispatchEvent(new Event('fichajeChanged'));
+                await fetchData();
+            } catch (error: any) {
+                toast.error(error.message || 'Error al fichar salida');
             }
-
-            await logActivity({
-                action: 'clock_out',
-                entityType: 'fichaje',
-                details: { duration: durationText }
-            });
-
-            toast.success('Fichaje de salida registrado');
-            window.dispatchEvent(new Event('fichajeChanged'));
-            await fetchData();
-        } catch (error: any) {
-            toast.error(error.message || 'Error al fichar salida');
-        }
+        }, 'Fichando salida...');
     };
 
     const formatSecondsToHoursMinutes = (totalSeconds: number) => {

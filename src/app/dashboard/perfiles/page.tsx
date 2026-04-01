@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { Plus, UserPlus, Loader2, Pencil, Trash2, KeyRound, AlertCircle, X } from 'lucide-react';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Profile {
     user_id: string;
@@ -18,6 +19,7 @@ interface Profile {
 }
 
 export default function PerfilesPage() {
+    const { withLoading } = useGlobalLoading();
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -137,49 +139,27 @@ export default function PerfilesPage() {
         if (Object.keys(errors).length > 0) { setCreateErrors(errors); return; }
         setCreateErrors({});
 
-        setProcessing(true);
-
-        try {
-            const session = (await supabase.auth.getSession()).data.session;
-            const response = await fetch('/api/admin/create-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    email: createFormData.email,
-                    password: createFormData.password,
-                    nombre: createFormData.nombre,
-                    apellido: createFormData.apellido,
-                    telefono: createFormData.telefono,
-                    rol: createFormData.rol,
-                }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Error al crear usuario');
+        await withLoading(async () => {
+            setProcessing(true);
+            try {
+                const session = (await supabase.auth.getSession()).data.session;
+                const response = await fetch('/api/admin/create-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ email: createFormData.email, password: createFormData.password, nombre: createFormData.nombre, apellido: createFormData.apellido, telefono: createFormData.telefono, rol: createFormData.rol }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al crear usuario');
+                toast.success('Usuario creado correctamente');
+                await logActivity({ action: 'create', entityType: 'profile', entityName: createFormData.nombre, details: { ...createFormData, password: undefined } });
+                setShowCreateModal(false);
+                fetchProfiles();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setProcessing(false);
             }
-
-            toast.success('Usuario creado correctamente');
-
-            await logActivity({
-                action: 'create',
-                entityType: 'profile',
-                entityName: createFormData.nombre,
-                details: { ...createFormData, password: undefined }
-            });
-
-            setShowCreateModal(false);
-            fetchProfiles();
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setProcessing(false);
-        }
+        }, 'Creando usuario...');
     };
 
     const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -192,49 +172,27 @@ export default function PerfilesPage() {
         if (Object.keys(errors).length > 0) { setEditErrors(errors); return; }
         setEditErrors({});
 
-        setProcessing(true);
-
-        try {
-            const session = (await supabase.auth.getSession()).data.session;
-            const response = await fetch('/api/admin/update-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    userId: selectedProfile.user_id,
-                    email: editFormData.email, // Kept for consistency, though possibly read-only in UI
-                    nombre: editFormData.nombre,
-                    apellido: editFormData.apellido,
-                    telefono: editFormData.telefono,
-                    rol: editFormData.rol,
-                }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Error al actualizar perfil');
+        await withLoading(async () => {
+            setProcessing(true);
+            try {
+                const session = (await supabase.auth.getSession()).data.session;
+                const response = await fetch('/api/admin/update-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ userId: selectedProfile.user_id, email: editFormData.email, nombre: editFormData.nombre, apellido: editFormData.apellido, telefono: editFormData.telefono, rol: editFormData.rol }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al actualizar perfil');
+                toast.success('Perfil actualizado correctamente');
+                await logActivity({ action: 'update', entityType: 'profile', entityName: editFormData.nombre, details: { userId: selectedProfile.user_id, ...editFormData } });
+                setShowEditModal(false);
+                fetchProfiles();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setProcessing(false);
             }
-
-            toast.success('Perfil actualizado correctamente');
-
-            await logActivity({
-                action: 'update',
-                entityType: 'profile',
-                entityName: editFormData.nombre,
-                details: { userId: selectedProfile.user_id, ...editFormData }
-            });
-
-            setShowEditModal(false);
-            fetchProfiles();
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setProcessing(false);
-        }
+        }, 'Actualizando perfil...');
     };
 
     const handleSavePassword = async (e: React.FormEvent) => {
@@ -249,128 +207,71 @@ export default function PerfilesPage() {
         if (Object.keys(errors).length > 0) { setPasswordErrors(errors); return; }
         setPasswordErrors({});
 
-        setProcessing(true);
-
-        try {
-            const session = (await supabase.auth.getSession()).data.session;
-            const response = await fetch('/api/admin/update-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    userId: selectedProfile.user_id,
-                    password: passwordFormData.password
-                }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Error al actualizar contraseña');
+        await withLoading(async () => {
+            setProcessing(true);
+            try {
+                const session = (await supabase.auth.getSession()).data.session;
+                const response = await fetch('/api/admin/update-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ userId: selectedProfile.user_id, password: passwordFormData.password }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al actualizar contraseña');
+                toast.success('Contraseña actualizada correctamente');
+                await logActivity({ action: 'update_password', entityType: 'profile', entityName: selectedProfile.nombre, details: { userId: selectedProfile.user_id } });
+                setShowPasswordModal(false);
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setProcessing(false);
             }
-
-            toast.success('Contraseña actualizada correctamente');
-
-            await logActivity({
-                action: 'update_password',
-                entityType: 'profile',
-                entityName: selectedProfile.nombre,
-                details: { userId: selectedProfile.user_id }
-            });
-
-            setShowPasswordModal(false);
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setProcessing(false);
-        }
+        }, 'Actualizando contraseña...');
     };
 
     const handleToggleStatus = async (profile: Profile) => {
-        if (!window.confirm(`¿Estás seguro de que deseas ${profile.activo ? 'desactivar' : 'activar'} a ${profile.nombre}?`)) {
-            return;
-        }
+        if (!window.confirm(`¿Estás seguro de que deseas ${profile.activo ? 'desactivar' : 'activar'} a ${profile.nombre}?`)) return;
 
-        const loadingToast = toast.loading('Actualizando estado...');
-
-        try {
-            const session = (await supabase.auth.getSession()).data.session;
-            const response = await fetch('/api/admin/update-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${session?.access_token}`
-                },
-                body: JSON.stringify({
-                    userId: profile.user_id,
-                    activo: !profile.activo // Toggle value
-                }),
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Error al actualizar estado');
+        await withLoading(async () => {
+            try {
+                const session = (await supabase.auth.getSession()).data.session;
+                const response = await fetch('/api/admin/update-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                    body: JSON.stringify({ userId: profile.user_id, activo: !profile.activo }),
+                });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al actualizar estado');
+                toast.success(`Usuario ${profile.activo ? 'desactivado' : 'activado'} correctamente`);
+                fetchProfiles();
+                await logActivity({ action: 'toggle_active', entityType: 'profile', entityName: profile.nombre, details: { previousStatus: profile.activo, newStatus: !profile.activo } });
+            } catch (error: any) {
+                toast.error(error.message);
             }
-
-            toast.success(`Usuario ${profile.activo ? 'desactivado' : 'activado'} correctamente`, { id: loadingToast });
-            fetchProfiles();
-
-            await logActivity({
-                action: 'toggle_active',
-                entityType: 'profile',
-                entityName: profile.nombre,
-                details: { previousStatus: profile.activo, newStatus: !profile.activo }
-            });
-
-        } catch (error: any) {
-            toast.error(error.message, { id: loadingToast });
-        }
+        }, profile.activo ? 'Desactivando usuario...' : 'Activando usuario...');
     };
 
     const handleConfirmDelete = async ({ email, password }: any) => {
         if (!userToDelete || !email || !password) return;
 
-        setIsDeleting(true);
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: userToDelete.user_id,
-                    email,
-                    password,
-                    type: 'perfil'
-                })
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-
-            toast.success('Usuario eliminado correctamente');
-
-            // Log activity
-            await logActivity({
-                action: 'delete',
-                entityType: 'profile',
-                entityId: 0,
-                entityName: userToDelete.nombre,
-                details: { deleted_by_admin: email }
-            });
-
-            // Refresh
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-
-        } catch (error: any) {
-            toast.error(error.message);
-            setIsDeleting(false);
-        }
+        await withLoading(async () => {
+            setIsDeleting(true);
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: userToDelete.user_id, email, password, type: 'perfil' })
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
+                toast.success('Usuario eliminado correctamente');
+                await logActivity({ action: 'delete', entityType: 'profile', entityId: 0, entityName: userToDelete.nombre, details: { deleted_by_admin: email } });
+                setTimeout(() => window.location.reload(), 1000);
+            } catch (error: any) {
+                toast.error(error.message);
+                setIsDeleting(false);
+            }
+        }, 'Eliminando usuario...');
     };
 
     const openDeleteModal = (profile: Profile) => {

@@ -10,6 +10,7 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
 import { getSecureUrl } from '@/lib/storage';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Incidencia {
     id: number;
@@ -47,6 +48,7 @@ interface Incidencia {
 }
 
 export default function SofiaPage() {
+    const { withLoading } = useGlobalLoading();
     const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
     const [comunidades, setComunidades] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -236,73 +238,73 @@ export default function SofiaPage() {
         if (!selectedDetailIncidencia) return;
 
         setIsUpdatingRecord(true);
-        const loadingToast = toast.loading('Subiendo archivos...');
+        await withLoading(async () => {
+            const loadingToast = toast.loading('Subiendo archivos...');
+            try {
+                const newUrls: string[] = [];
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileExt = file.name.split('.').pop();
+                    const fileName = `${Math.random()}.${fileExt}`;
+                    const filePath = `sofia/${fileName}`;
 
-        try {
-            const newUrls: string[] = [];
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${Math.random()}.${fileExt}`;
-                const filePath = `sofia/${fileName}`;
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('path', 'sofia');
+                    formData.append('bucket', 'documentos');
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('path', 'sofia');
-                formData.append('bucket', 'documentos');
+                    const res = await fetch('/api/storage/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
 
-                const res = await fetch('/api/storage/upload', {
-                    method: 'POST',
-                    body: formData
+                    if (!res.ok) {
+                        const error = await res.json();
+                        throw new Error(error.error || 'Error al subir archivo');
+                    }
+
+                    const data = await res.json();
+                    newUrls.push(data.publicUrl);
+                }
+
+                const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
+                const updatedAdjuntos = [...currentAdjuntos, ...newUrls];
+
+                const { error: updateError } = await supabase
+                    .from('incidencias_serincobot')
+                    .update({ adjuntos: updatedAdjuntos })
+                    .eq('id', selectedDetailIncidencia.id);
+
+                if (updateError) throw updateError;
+
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    adjuntos: updatedAdjuntos
                 });
 
-                if (!res.ok) {
-                    const error = await res.json();
-                    throw new Error(error.error || 'Error al subir archivo');
-                }
+                setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
 
-                const data = await res.json();
-                newUrls.push(data.publicUrl);
+                await logActivity({
+                    action: 'update',
+                    entityType: 'sofia_incidencia',
+                    entityId: selectedDetailIncidencia.id,
+                    entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
+                    details: {
+                        id: selectedDetailIncidencia.id,
+                        action: 'adjuntar_archivos',
+                        archivos_nuevos: newUrls.length,
+                        total_archivos: updatedAdjuntos.length
+                    }
+                });
+
+                toast.success('Archivos añadidos', { id: loadingToast });
+            } catch (error: any) {
+                console.error(error);
+                toast.error('Error al subir archivos', { id: loadingToast });
+            } finally {
+                setIsUpdatingRecord(false);
             }
-
-            const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
-            const updatedAdjuntos = [...currentAdjuntos, ...newUrls];
-
-            const { error: updateError } = await supabase
-                .from('incidencias_serincobot')
-                .update({ adjuntos: updatedAdjuntos })
-                .eq('id', selectedDetailIncidencia.id);
-
-            if (updateError) throw updateError;
-
-            setSelectedDetailIncidencia({
-                ...selectedDetailIncidencia,
-                adjuntos: updatedAdjuntos
-            });
-
-            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
-
-            // Log activity in primary
-            await logActivity({
-                action: 'update',
-                entityType: 'sofia_incidencia',
-                entityId: selectedDetailIncidencia.id,
-                entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
-                details: {
-                    id: selectedDetailIncidencia.id,
-                    action: 'adjuntar_archivos',
-                    archivos_nuevos: newUrls.length,
-                    total_archivos: updatedAdjuntos.length
-                }
-            });
-
-            toast.success('Archivos añadidos', { id: loadingToast });
-        } catch (error: any) {
-            console.error(error);
-            toast.error('Error al subir archivos', { id: loadingToast });
-        } finally {
-            setIsUpdatingRecord(false);
-        }
+        }, 'Subiendo archivos...');
     };
 
     const handleDeleteAttachment = async (urlToDelete: string) => {
@@ -312,109 +314,111 @@ export default function SofiaPage() {
         if (!isConfirmed) return;
 
         setIsUpdatingRecord(true);
-        const loadingToast = toast.loading('Eliminando archivo...');
+        await withLoading(async () => {
+            const loadingToast = toast.loading('Eliminando archivo...');
+            try {
+                const updatedAdjuntos = (selectedDetailIncidencia.adjuntos || []).filter(url => url !== urlToDelete);
 
-        try {
-            const updatedAdjuntos = (selectedDetailIncidencia.adjuntos || []).filter(url => url !== urlToDelete);
+                const { error: updateError } = await supabase
+                    .from('incidencias_serincobot')
+                    .update({ adjuntos: updatedAdjuntos })
+                    .eq('id', selectedDetailIncidencia.id);
 
-            const { error: updateError } = await supabase
-                .from('incidencias_serincobot')
-                .update({ adjuntos: updatedAdjuntos })
-                .eq('id', selectedDetailIncidencia.id);
+                if (updateError) throw updateError;
 
-            if (updateError) throw updateError;
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    adjuntos: updatedAdjuntos
+                });
 
-            setSelectedDetailIncidencia({
-                ...selectedDetailIncidencia,
-                adjuntos: updatedAdjuntos
-            });
+                setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
 
-            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+                await logActivity({
+                    action: 'update',
+                    entityType: 'sofia_incidencia',
+                    entityId: selectedDetailIncidencia.id,
+                    entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
+                    details: {
+                        id: selectedDetailIncidencia.id,
+                        action: 'eliminar_archivo',
+                        url: urlToDelete
+                    }
+                });
 
-            // Log activity in primary
-            await logActivity({
-                action: 'update',
-                entityType: 'sofia_incidencia',
-                entityId: selectedDetailIncidencia.id,
-                entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
-                details: {
-                    id: selectedDetailIncidencia.id,
-                    action: 'eliminar_archivo',
-                    url: urlToDelete
-                }
-            });
-
-            toast.success('Archivo eliminado', { id: loadingToast });
-        } catch (error: any) {
-            console.error(error);
-            toast.error('Error al eliminar archivo', { id: loadingToast });
-        } finally {
-            setIsUpdatingRecord(false);
-        }
+                toast.success('Archivo eliminado', { id: loadingToast });
+            } catch (error: any) {
+                console.error(error);
+                toast.error('Error al eliminar archivo', { id: loadingToast });
+            } finally {
+                setIsUpdatingRecord(false);
+            }
+        }, 'Eliminando archivo...');
     };
 
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
         if (isUpdatingStatus === id) return;
         setIsUpdatingStatus(id);
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
+        await withLoading(async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
 
-            const updatePayload: any = {
-                resuelto: !currentStatus,
-                dia_resuelto: !currentStatus ? new Date().toISOString() : null,
-                resuelto_por: !currentStatus ? (user?.id || 'manual_user') : null,
-                estado: !currentStatus ? 'Resuelto' : 'Pendiente',
-                fecha_recordatorio: null
-            };
+                const updatePayload: any = {
+                    resuelto: !currentStatus,
+                    dia_resuelto: !currentStatus ? new Date().toISOString() : null,
+                    resuelto_por: !currentStatus ? (user?.id || 'manual_user') : null,
+                    estado: !currentStatus ? 'Resuelto' : 'Pendiente',
+                    fecha_recordatorio: null
+                };
 
-            const { error } = await supabase
-                .from('incidencias_serincobot')
-                .update(updatePayload)
-                .eq('id', id);
+                const { error } = await supabase
+                    .from('incidencias_serincobot')
+                    .update(updatePayload)
+                    .eq('id', id);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            toast.success(currentStatus ? 'Marcado como pendiente' : 'Marcado como resuelto');
+                toast.success(currentStatus ? 'Marcado como pendiente' : 'Marcado como resuelto');
 
-            const currentProfile = profiles.find(p => p.user_id === user?.id);
-            setIncidencias(prev => prev.map(i => i.id === id ? {
-                ...i,
-                resuelto: !currentStatus,
-                estado: !currentStatus ? 'Resuelto' : 'Pendiente',
-                fecha_recordatorio: undefined,
-                dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
-                resuelto_por: !currentStatus ? user?.id : undefined,
-                resolver: !currentStatus ? { nombre: currentProfile?.nombre || 'Tú' } : undefined
-            } : i));
-
-            if (selectedDetailIncidencia?.id === id) {
-                setSelectedDetailIncidencia({
-                    ...selectedDetailIncidencia,
+                const currentProfile = profiles.find(p => p.user_id === user?.id);
+                setIncidencias(prev => prev.map(i => i.id === id ? {
+                    ...i,
                     resuelto: !currentStatus,
                     estado: !currentStatus ? 'Resuelto' : 'Pendiente',
                     fecha_recordatorio: undefined,
                     dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
                     resuelto_por: !currentStatus ? user?.id : undefined,
                     resolver: !currentStatus ? { nombre: currentProfile?.nombre || 'Tú' } : undefined
+                } : i));
+
+                if (selectedDetailIncidencia?.id === id) {
+                    setSelectedDetailIncidencia({
+                        ...selectedDetailIncidencia,
+                        resuelto: !currentStatus,
+                        estado: !currentStatus ? 'Resuelto' : 'Pendiente',
+                        fecha_recordatorio: undefined,
+                        dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
+                        resuelto_por: !currentStatus ? user?.id : undefined,
+                        resolver: !currentStatus ? { nombre: currentProfile?.nombre || 'Tú' } : undefined
+                    });
+                }
+
+                const incidencia = incidencias.find(i => i.id === id);
+                await logActivity({
+                    action: 'update',
+                    entityType: 'sofia_incidencia',
+                    entityId: id,
+                    entityName: `Sofia - ${incidencia?.nombre_cliente}`,
+                    details: { id, comunidad: incidencia?.comunidades?.nombre_cdad, resuelto: !currentStatus }
                 });
+
+                setShowDetailModal(false);
+            } catch (error: any) {
+                console.error('Error toggling resuelto:', error);
+                toast.error(`Error al actualizar estado: ${error.message || 'Error desconocido'}`);
+            } finally {
+                setIsUpdatingStatus(null);
             }
-
-            const incidencia = incidencias.find(i => i.id === id);
-            await logActivity({
-                action: 'update',
-                entityType: 'sofia_incidencia',
-                entityId: id,
-                entityName: `Sofia - ${incidencia?.nombre_cliente}`,
-                details: { id, comunidad: incidencia?.comunidades?.nombre_cdad, resuelto: !currentStatus }
-            });
-
-            setShowDetailModal(false);
-        } catch (error: any) {
-            console.error('Error toggling resuelto:', error);
-            toast.error(`Error al actualizar estado: ${error.message || 'Error desconocido'}`);
-        } finally {
-            setIsUpdatingStatus(null);
-        }
+        }, currentStatus ? 'Reabriendo ticket...' : 'Resolviendo ticket...');
     };
 
     const openAplazarModal = (id: number) => {
@@ -428,66 +432,66 @@ export default function SofiaPage() {
     const aplazarTicket = async () => {
         if (!aplazarIncidenciaId || !aplazarDate) return;
 
-        const loadingToast = toast.loading('Aplazando ticket...');
-        try {
-            const { data: { user } } = await supabase.auth.getUser();
+        await withLoading(async () => {
+            const loadingToast = toast.loading('Aplazando ticket...');
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
 
-            const { error } = await supabase
-                .from('incidencias_serincobot')
-                .update({
-                    estado: 'Aplazado',
-                    resuelto: false,
-                    fecha_recordatorio: aplazarDate
-                })
-                .eq('id', aplazarIncidenciaId);
+                const { error } = await supabase
+                    .from('incidencias_serincobot')
+                    .update({
+                        estado: 'Aplazado',
+                        resuelto: false,
+                        fecha_recordatorio: aplazarDate
+                    })
+                    .eq('id', aplazarIncidenciaId);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            const fechaFormateada = new Date(aplazarDate + 'T00:00:00').toLocaleDateString('es-ES', {
-                day: '2-digit', month: '2-digit', year: 'numeric'
-            });
-
-            // Record in timeline chat
-            if (user) {
-                await supabase.from('record_messages').insert([{
-                    entity_type: 'sofia_incidencia',
-                    entity_id: aplazarIncidenciaId,
-                    user_id: user.id,
-                    message: `⏸️ Ticket aplazado hasta el ${fechaFormateada}`
-                }]);
-            }
-
-            await logActivity({
-                action: 'update',
-                entityType: 'sofia_incidencia',
-                entityId: aplazarIncidenciaId,
-                entityName: `Sofia - Aplazado hasta ${fechaFormateada}`,
-                details: { id: aplazarIncidenciaId, action: 'aplazar', fecha_recordatorio: aplazarDate }
-            });
-
-            // Optimistic UI update
-            setIncidencias(prev => prev.map(i => i.id === aplazarIncidenciaId ? {
-                ...i, estado: 'Aplazado' as any, resuelto: false, fecha_recordatorio: aplazarDate
-            } : i));
-
-            if (selectedDetailIncidencia?.id === aplazarIncidenciaId) {
-                setSelectedDetailIncidencia({
-                    ...selectedDetailIncidencia,
-                    estado: 'Aplazado',
-                    resuelto: false,
-                    fecha_recordatorio: aplazarDate
+                const fechaFormateada = new Date(aplazarDate + 'T00:00:00').toLocaleDateString('es-ES', {
+                    day: '2-digit', month: '2-digit', year: 'numeric'
                 });
+
+                if (user) {
+                    await supabase.from('record_messages').insert([{
+                        entity_type: 'sofia_incidencia',
+                        entity_id: aplazarIncidenciaId,
+                        user_id: user.id,
+                        message: `⏸️ Ticket aplazado hasta el ${fechaFormateada}`
+                    }]);
+                }
+
+                await logActivity({
+                    action: 'update',
+                    entityType: 'sofia_incidencia',
+                    entityId: aplazarIncidenciaId,
+                    entityName: `Sofia - Aplazado hasta ${fechaFormateada}`,
+                    details: { id: aplazarIncidenciaId, action: 'aplazar', fecha_recordatorio: aplazarDate }
+                });
+
+                setIncidencias(prev => prev.map(i => i.id === aplazarIncidenciaId ? {
+                    ...i, estado: 'Aplazado' as any, resuelto: false, fecha_recordatorio: aplazarDate
+                } : i));
+
+                if (selectedDetailIncidencia?.id === aplazarIncidenciaId) {
+                    setSelectedDetailIncidencia({
+                        ...selectedDetailIncidencia,
+                        estado: 'Aplazado',
+                        resuelto: false,
+                        fecha_recordatorio: aplazarDate
+                    });
+                }
+
+                setShowAplazarModal(false);
+                setAplazarIncidenciaId(null);
+                setAplazarDate('');
+
+                toast.success(`Ticket aplazado hasta ${fechaFormateada}`, { id: loadingToast });
+            } catch (error: any) {
+                console.error('Error aplazando ticket:', error);
+                toast.error('Error al aplazar ticket', { id: loadingToast });
             }
-
-            setShowAplazarModal(false);
-            setAplazarIncidenciaId(null);
-            setAplazarDate('');
-
-            toast.success(`Ticket aplazado hasta ${fechaFormateada}`, { id: loadingToast });
-        } catch (error: any) {
-            console.error('Error aplazando ticket:', error);
-            toast.error('Error al aplazar ticket', { id: loadingToast });
-        }
+        }, 'Aplazando ticket...');
     };
 
     const handleExport = async (type: 'csv' | 'pdf', idsOverride?: number[], includeNotesFromModal?: boolean) => {
@@ -505,52 +509,53 @@ export default function SofiaPage() {
         const includeNotes = includeNotesFromModal !== undefined ? includeNotesFromModal : false;
 
         setExporting(true);
-        try {
-            // Note: If export API depends on primary DB, this might need an update to handle secondary DB
-            const res = await fetch('/api/incidencias/export', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    ids: idsToExport,
-                    type,
-                    layout: isDetailView ? 'detail' : 'list',
-                    includeNotes,
-                    table: 'incidencias_serincobot',
-                    isSecondary: true
-                })
-            });
+        await withLoading(async () => {
+            try {
+                const res = await fetch('/api/incidencias/export', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        ids: idsToExport,
+                        type,
+                        layout: isDetailView ? 'detail' : 'list',
+                        includeNotes,
+                        table: 'incidencias_serincobot',
+                        isSecondary: true
+                    })
+                });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.error || 'Export failed');
+                if (!res.ok) {
+                    const errData = await res.json();
+                    throw new Error(errData.error || 'Export failed');
+                }
+
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+
+                const now = new Date();
+                const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+
+                if (isDetailView) {
+                    a.download = `sofia_ticket_${idsToExport[0]}_${dateStr}.pdf`;
+                } else {
+                    a.download = `listado_sofia_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+                }
+
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                toast.success('Exportación completada');
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al exportar');
+            } finally {
+                setExporting(false);
             }
-
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-
-            const now = new Date();
-            const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
-
-            if (isDetailView) {
-                a.download = `sofia_ticket_${idsToExport[0]}_${dateStr}.pdf`;
-            } else {
-                a.download = `listado_sofia_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
-            }
-
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-
-            toast.success('Exportación completada');
-        } catch (error) {
-            console.error(error);
-            toast.error('Error al exportar');
-        } finally {
-            setExporting(false);
-        }
+        }, 'Generando exportación...');
     };
 
     const handleDeleteClick = (id: number) => {
@@ -564,43 +569,45 @@ export default function SofiaPage() {
         if (!itemToDelete || !email || !password) return;
 
         setIsDeleting(true);
-        try {
-            const res = await fetch('/api/admin/universal-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    id: itemToDelete,
-                    email,
-                    password,
-                    type: 'sofia_incidencia',
-                    table: 'incidencias_serincobot',
-                    isSecondary: true
-                })
-            });
+        await withLoading(async () => {
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        id: itemToDelete,
+                        email,
+                        password,
+                        type: 'sofia_incidencia',
+                        table: 'incidencias_serincobot',
+                        isSecondary: true
+                    })
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            if (!res.ok) {
-                throw new Error(data.error || 'Error al eliminar');
+                if (!res.ok) {
+                    throw new Error(data.error || 'Error al eliminar');
+                }
+
+                toast.success('Incidencia eliminada correctamente');
+                setIncidencias(prev => prev.filter(i => i.id !== itemToDelete));
+                setShowDeleteModal(false);
+
+                await logActivity({
+                    action: 'delete',
+                    entityType: 'sofia_incidencia',
+                    entityId: itemToDelete,
+                    entityName: `Sofia Deleted`,
+                    details: { id: itemToDelete, deleted_by_admin: email }
+                });
+
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsDeleting(false);
             }
-
-            toast.success('Incidencia eliminada correctamente');
-            setIncidencias(prev => prev.filter(i => i.id !== itemToDelete));
-            setShowDeleteModal(false);
-
-            await logActivity({
-                action: 'delete',
-                entityType: 'sofia_incidencia',
-                entityId: itemToDelete,
-                entityName: `Sofia Deleted`,
-                details: { id: itemToDelete, deleted_by_admin: email }
-            });
-
-        } catch (error: any) {
-            toast.error(error.message);
-        } finally {
-            setIsDeleting(false);
-        }
+        }, 'Eliminando incidencia...');
     };
 
     const handleUpdateGestor = async () => {
@@ -610,50 +617,47 @@ export default function SofiaPage() {
         }
 
         setIsUpdatingGestor(true);
-        const loadingToast = toast.loading('Transfiriendo ticket a gestión...');
-        try {
-            const res = await fetch('/api/sofia/transfer', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    sofiaId: selectedDetailIncidencia.id,
-                    gestorId: newGestorId,
-                    comunidadId: newComunidadId
-                })
-            });
+        await withLoading(async () => {
+            const loadingToast = toast.loading('Transfiriendo ticket a gestión...');
+            try {
+                const res = await fetch('/api/sofia/transfer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sofiaId: selectedDetailIncidencia.id,
+                        gestorId: newGestorId,
+                        comunidadId: newComunidadId
+                    })
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            if (!res.ok) {
-                const err = new Error(data.error || 'Error al transferir ticket') as any;
-                err.details = data.details;
-                throw err;
+                if (!res.ok) {
+                    const err = new Error(data.error || 'Error al transferir ticket') as any;
+                    err.details = data.details;
+                    throw err;
+                }
+
+                toast.success('Ticket transferido a Gestión de Tickets', { id: loadingToast });
+
+                setIncidencias(prev => prev.filter(inc => inc.id !== selectedDetailIncidencia.id));
+                setShowDetailModal(false);
+                setSelectedDetailIncidencia(null);
+                setIsReassigning(false);
+                setNewGestorId('');
+                setNewComunidadId('');
+
+            } catch (error: any) {
+                console.error('Error transferring ticket:', error);
+                const errorMessage = error.message || 'Error al reasignar gestor';
+                toast.error(errorMessage, { id: loadingToast });
+                if (error.details) {
+                    console.error('Detailed DB Error:', error.details);
+                }
+            } finally {
+                setIsUpdatingGestor(false);
             }
-
-            // Successfully transferred
-            toast.success('Ticket transferido a Gestión de Tickets', { id: loadingToast });
-
-            // Remove from Sofia UI
-            setIncidencias(prev => prev.filter(inc => inc.id !== selectedDetailIncidencia.id));
-            setShowDetailModal(false);
-            setSelectedDetailIncidencia(null);
-            setIsReassigning(false);
-            setNewGestorId('');
-            setNewComunidadId('');
-
-            // Note: We don't log locally here because the API logs the move or the new ticket creation
-            // if logActivity is needed, it should be called for the NEW ticket id
-
-        } catch (error: any) {
-            console.error('Error transferring ticket:', error);
-            const errorMessage = error.message || 'Error al reasignar gestor';
-            toast.error(errorMessage, { id: loadingToast });
-            if (error.details) {
-                console.error('Detailed DB Error:', error.details);
-            }
-        } finally {
-            setIsUpdatingGestor(false);
-        }
+        }, 'Transfiriendo ticket...');
     };
 
     const filteredIncidencias = incidencias.filter(inc => {
