@@ -321,6 +321,7 @@ export async function POST(req: NextRequest) {
           created_at: incident.created_at,
           nombre_cliente: '',
           quien_lo_recibe: receptorId,
+          gestor_asignado: receptorId,
         })
         .select('id')
         .single()

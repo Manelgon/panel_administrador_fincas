@@ -2303,6 +2303,7 @@ export default function IncidenciasPage() {
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Mensaje</th>
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest whitespace-nowrap">Fecha</th>
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest whitespace-nowrap">Quien lo recibe</th>
+                                                <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest whitespace-nowrap">Gestor asignado</th>
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest whitespace-nowrap">Timeline</th>
                                                 <th className="text-left px-3 py-2 text-[10px] font-bold text-neutral-500 uppercase tracking-widest">Estado</th>
                                             </tr>
@@ -2349,6 +2350,10 @@ export default function IncidenciasPage() {
                                                             {rec.fecha.replace('T', ' ').slice(0, 16)}
                                                         </td>
                                                         {/* Quien lo recibe */}
+                                                        <td className="px-3 py-2.5 whitespace-nowrap">
+                                                            <span className="text-xs font-medium text-neutral-700">{importReceptorName}</span>
+                                                        </td>
+                                                        {/* Gestor asignado */}
                                                         <td className="px-3 py-2.5 whitespace-nowrap">
                                                             <span className="text-xs font-medium text-neutral-700">{importReceptorName}</span>
                                                         </td>
