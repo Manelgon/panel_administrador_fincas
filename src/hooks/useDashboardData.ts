@@ -27,7 +27,7 @@ export interface Community {
 }
 
 export interface ChartData {
-    incidenciasEvolution: { date: string; count: number; aplazadas: number }[];
+    incidenciasEvolution: { date: string; count: number; aplazadas: number; total: number }[];
     urgencyDistribution: { name: string; value: number }[];
     topComunidades: { name: string; count: number }[];
     userPerformance: { name: string; assigned: number; resolved: number; pending: number; efficiency: number }[];
@@ -240,6 +240,7 @@ export function useDashboardData() {
                     date: dateStr,
                     count: runningPending,
                     aplazadas: runningAplazadas,
+                    total: runningPending + runningAplazadas,
                 });
                 const createdCount = createdMap.get(dateStr) || 0;
                 const resolvedCount = resolvedMap.get(dateStr) || 0;

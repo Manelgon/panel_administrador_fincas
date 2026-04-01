@@ -84,7 +84,7 @@ export default function DashboardPage() {
     const [portalReady, setPortalReady] = useState(false);
     useEffect(() => setPortalReady(true), []);
 
-    const [visibleLines, setVisibleLines] = useState({ pendientes: true, aplazadas: true });
+    const [visibleLines, setVisibleLines] = useState({ pendientes: true, aplazadas: true, total: true });
     const toggleLine = (key: keyof typeof visibleLines) =>
         setVisibleLines(prev => ({ ...prev, [key]: !prev[key] }));
 
@@ -205,6 +205,7 @@ export default function DashboardPage() {
                                 {([
                                     { key: 'pendientes', label: 'Pendientes', color: '#EAB308' },
                                     { key: 'aplazadas',  label: 'Aplazadas',  color: '#F97316' },
+                                    { key: 'total',      label: 'Total (P+A)', color: '#6366F1' },
                                 ] as const).map(({ key, label, color }) => (
                                     <label key={key} className="flex items-center gap-1.5 cursor-pointer select-none">
                                         <input
@@ -234,13 +235,18 @@ export default function DashboardPage() {
                                             <stop offset="5%" stopColor="#F97316" stopOpacity={0.5} />
                                             <stop offset="95%" stopColor="#F97316" stopOpacity={0} />
                                         </linearGradient>
+                                        <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366F1" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
+                                        </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E5E5" />
                                     <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#737373' }} tickLine={false} axisLine={false} dy={8} />
                                     <YAxis tick={{ fontSize: 11, fill: '#737373' }} tickLine={false} axisLine={false} />
                                     <Tooltip contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e5e5' }} />
-                                    {visibleLines.pendientes && <Area type="monotone" dataKey="count"     name="Pendientes" stroke="#EAB308" fill="url(#colorPendientes)" activeDot={{ r: 5 }} />}
-                                    {visibleLines.aplazadas  && <Area type="monotone" dataKey="aplazadas" name="Aplazadas"  stroke="#F97316" fill="url(#colorAplazadas)"  activeDot={{ r: 5 }} />}
+                                    {visibleLines.total      && <Area type="monotone" dataKey="total"     name="Total (P+A)" stroke="#6366F1" fill="url(#colorTotal)"      activeDot={{ r: 5 }} strokeDasharray="4 2" />}
+                                    {visibleLines.pendientes && <Area type="monotone" dataKey="count"     name="Pendientes"  stroke="#EAB308" fill="url(#colorPendientes)" activeDot={{ r: 5 }} />}
+                                    {visibleLines.aplazadas  && <Area type="monotone" dataKey="aplazadas" name="Aplazadas"   stroke="#F97316" fill="url(#colorAplazadas)"  activeDot={{ r: 5 }} />}
                                 </AreaChart>
                             </ResponsiveContainer>
                         </div>
