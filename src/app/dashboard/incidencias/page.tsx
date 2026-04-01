@@ -1316,9 +1316,9 @@ export default function IncidenciasPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex flex-wrap justify-between items-center gap-3">
                 <h1 className="text-xl font-bold text-neutral-900">Gestión de Tickets</h1>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     <input
                         ref={pdfImportInputRef}
                         type="file"
@@ -1357,7 +1357,7 @@ export default function IncidenciasPage() {
 
             {/* Filters and Actions */}
             <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setFilterEstado('pendiente')}
                         className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
@@ -1851,7 +1851,7 @@ export default function IncidenciasPage() {
                     ];
                 }}
                 extraFilters={
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                         <SearchableSelect
                             value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
                             onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
@@ -1860,7 +1860,7 @@ export default function IncidenciasPage() {
                                 label: `${c.codigo || ''} - ${c.nombre_cdad}`
                             }))}
                             placeholder="Todas las Comunidades"
-                            className="w-[240px]"
+                            className="w-full sm:w-[240px]"
                         />
                         <SearchableSelect
                             value={filterGestor === 'all' ? '' : filterGestor}
@@ -1870,7 +1870,7 @@ export default function IncidenciasPage() {
                                 label: p.nombre
                             }))}
                             placeholder="Todos los Gestores"
-                            className="w-[200px]"
+                            className="w-full sm:w-[200px]"
                         />
                     </div>
                 }
