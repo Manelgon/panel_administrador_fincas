@@ -740,7 +740,7 @@ export default function MorosidadPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-4">
+            <div className="flex justify-between items-center gap-3">
                 <h1 className="text-xl font-bold text-neutral-900">Gestión de Deudas</h1>
                 <button
                     onClick={() => {
@@ -765,16 +765,17 @@ export default function MorosidadPage() {
                             });
                         }
                     }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
+                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm flex-shrink-0"
                 >
-                    <Plus className={`w-4 h-4 ${showForm ? 'rotate-45' : ''} transition-transform`} />
-                    {showForm ? 'Cancelar' : 'Registrar Deuda'}
+                    <Plus className={`w-4 h-4 flex-shrink-0 ${showForm ? 'rotate-45' : ''} transition-transform`} />
+                    <span className="hidden sm:inline">{showForm ? 'Cancelar' : 'Registrar Deuda'}</span>
+                    <span className="sm:hidden">{showForm ? 'Cancelar' : 'Deuda'}</span>
                 </button>
             </div>
 
             {/* Filters */}
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                <div className="flex gap-2">
+            <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setFilterEstado('pendiente')}
                         className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
@@ -793,6 +794,30 @@ export default function MorosidadPage() {
                     >
                         Todas
                     </button>
+                </div>
+
+                {/* Selectores de comunidad y gestor */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <SearchableSelect
+                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                        options={comunidades.map(c => ({
+                            value: c.id,
+                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
+                        }))}
+                        placeholder="Todas las Comunidades"
+                        className="w-full sm:w-[240px]"
+                    />
+                    <SearchableSelect
+                        value={filterGestor === 'all' ? '' : filterGestor}
+                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                        options={profiles.map(p => ({
+                            value: p.user_id,
+                            label: p.nombre
+                        }))}
+                        placeholder="Todos los Gestores"
+                        className="w-full sm:w-[200px]"
+                    />
                 </div>
 
                 {/* Export Actions (Visible only if selection) */}
@@ -1210,30 +1235,6 @@ export default function MorosidadPage() {
                             selectable={true}
                             selectedKeys={selectedIds}
                             onSelectionChange={(keys) => setSelectedIds(keys)}
-                            extraFilters={
-                                <div className="flex items-center gap-2">
-                                    <SearchableSelect
-                                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
-                                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
-                                        options={comunidades.map(c => ({
-                                            value: c.id,
-                                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
-                                        }))}
-                                        placeholder="Todas las Comunidades"
-                                        className="w-[240px]"
-                                    />
-                                    <SearchableSelect
-                                        value={filterGestor === 'all' ? '' : filterGestor}
-                                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                                        options={profiles.map(p => ({
-                                            value: p.user_id,
-                                            label: p.nombre
-                                        }))}
-                                        placeholder="Todos los Gestores"
-                                        className="w-[200px]"
-                                    />
-                                </div>
-                            }
                         />
                     </>
                 );

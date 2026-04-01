@@ -26,6 +26,7 @@ interface ImportPreviewRecord {
     source_mapped?: string | null;
     reason?: string;
     chat_count: number;
+    comunidad_not_found?: boolean;
 }
 interface ImportPreviewData {
     total_parsed: number;
@@ -100,6 +101,7 @@ export default function IncidenciasPage() {
     const [importPreviewData, setImportPreviewData] = useState<ImportPreviewData | null>(null);
     const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
     const [importRecordEstados, setImportRecordEstados] = useState<Record<number, 'Pendiente' | 'Resuelto'>>({});
+    const [importRecordComunidades, setImportRecordComunidades] = useState<Record<number, number>>({});
     const [importReceptorName, setImportReceptorName] = useState<string>('');
 
     // Document Delete Confirmation
@@ -172,6 +174,7 @@ export default function IncidenciasPage() {
         setPendingImportFile(null);
         setImportPreviewData(null);
         setImportRecordEstados({});
+        setImportRecordComunidades({});
         setImportReceptorName('');
         if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
     };
@@ -212,14 +215,27 @@ export default function IncidenciasPage() {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) throw new Error('No hay sesión activa');
 
-                const estadosArray = importPreviewData.records
-                    .map((rec, idx) => rec.status === 'ok' ? (importRecordEstados[idx] || 'Pendiente') : null)
-                    .filter(Boolean);
+                // Build arrays: estados and comunidades_override indexed by position in 'ok' records
+                // For records that were skip but got a manual comunidad assigned, treat them as ok too
+                const estadosArray: string[] = [];
+                const comunidadesOverride: Record<number, number> = {}; // okIndex → comunidad_id
+                let okIndex = 0;
+                importPreviewData.records.forEach((rec, idx) => {
+                    if (rec.status === 'ok') {
+                        estadosArray.push(importRecordEstados[idx] || 'Pendiente');
+                        okIndex++;
+                    } else if (rec.status === 'skip' && rec.comunidad_not_found && importRecordComunidades[idx]) {
+                        estadosArray.push(importRecordEstados[idx] || 'Pendiente');
+                        comunidadesOverride[okIndex] = importRecordComunidades[idx];
+                        okIndex++;
+                    }
+                });
 
                 const payload = new FormData();
                 payload.append('pdf', pendingImportFile);
                 payload.append('receptor_id', user.id);
                 payload.append('estados', JSON.stringify(estadosArray));
+                payload.append('comunidades_override', JSON.stringify(comunidadesOverride));
 
                 const response = await fetch('/api/incidencias/import-pdf', { method: 'POST', body: payload });
                 const result = await response.json();
@@ -237,6 +253,7 @@ export default function IncidenciasPage() {
                 setPendingImportFile(null);
                 setImportPreviewData(null);
                 setImportRecordEstados({});
+                setImportRecordComunidades({});
                 if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
             }
         }, 'Importando incidencias...');
@@ -1316,9 +1333,9 @@ export default function IncidenciasPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap justify-between items-center gap-3">
+            <div className="flex justify-between items-center gap-3">
                 <h1 className="text-xl font-bold text-neutral-900">Gestión de Tickets</h1>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                     <input
                         ref={pdfImportInputRef}
                         type="file"
@@ -1332,10 +1349,11 @@ export default function IncidenciasPage() {
                     <button
                         onClick={() => pdfImportInputRef.current?.click()}
                         disabled={importingPdf}
-                        className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm disabled:opacity-50"
+                        className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm disabled:opacity-50"
                     >
-                        {importingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
-                        Importar desde PDF
+                        {importingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 flex-shrink-0" />}
+                        <span className="hidden sm:inline">Importar desde PDF</span>
+                        <span className="sm:hidden">Importar</span>
                     </button>
                     <button
                         onClick={() => {
@@ -1347,16 +1365,17 @@ export default function IncidenciasPage() {
                             setFormErrors({});
                             setShowForm(!showForm);
                         }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
+                        className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm"
                     >
-                        <Plus className="w-4 h-4" />
-                        Nuevo Ticket
+                        <Plus className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">Nuevo Ticket</span>
+                        <span className="sm:hidden">Ticket</span>
                     </button>
                 </div>
             </div>
 
             {/* Filters and Actions */}
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
+            <div className="flex flex-col gap-3">
                 <div className="flex flex-wrap gap-2">
                     <button
                         onClick={() => setFilterEstado('pendiente')}
@@ -1383,6 +1402,30 @@ export default function IncidenciasPage() {
                     >
                         Todas
                     </button>
+                </div>
+
+                {/* Selectores de comunidad y gestor */}
+                <div className="flex flex-col sm:flex-row gap-2">
+                    <SearchableSelect
+                        value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                        onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                        options={comunidades.map(c => ({
+                            value: c.id,
+                            label: `${c.codigo || ''} - ${c.nombre_cdad}`
+                        }))}
+                        placeholder="Todas las Comunidades"
+                        className="w-full sm:w-[240px]"
+                    />
+                    <SearchableSelect
+                        value={filterGestor === 'all' ? '' : filterGestor}
+                        onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                        options={profiles.map(p => ({
+                            value: p.user_id,
+                            label: p.nombre
+                        }))}
+                        placeholder="Todos los Gestores"
+                        className="w-full sm:w-[200px]"
+                    />
                 </div>
 
                 {/* Export Actions (Visible only if selection) */}
@@ -1850,30 +1893,6 @@ export default function IncidenciasPage() {
                         },
                     ];
                 }}
-                extraFilters={
-                    <div className="flex flex-wrap items-center gap-2">
-                        <SearchableSelect
-                            value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
-                            onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
-                            options={comunidades.map(c => ({
-                                value: c.id,
-                                label: `${c.codigo || ''} - ${c.nombre_cdad}`
-                            }))}
-                            placeholder="Todas las Comunidades"
-                            className="w-full sm:w-[240px]"
-                        />
-                        <SearchableSelect
-                            value={filterGestor === 'all' ? '' : filterGestor}
-                            onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                            options={profiles.map(p => ({
-                                value: p.user_id,
-                                label: p.nombre
-                            }))}
-                            placeholder="Todos los Gestores"
-                            className="w-full sm:w-[200px]"
-                        />
-                    </div>
-                }
             />
 
             {/* Detail Modal */}
@@ -2277,11 +2296,15 @@ export default function IncidenciasPage() {
                                         <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mt-1">Total PDF</div>
                                     </div>
                                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-                                        <div className="text-xl font-bold text-green-700">{importPreviewData.to_insert}</div>
+                                        <div className="text-xl font-bold text-green-700">
+                                            {importPreviewData.to_insert + Object.keys(importRecordComunidades).length}
+                                        </div>
                                         <div className="text-[10px] font-bold text-green-500 uppercase tracking-widest mt-1">Se importan</div>
                                     </div>
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
-                                        <div className="text-xl font-bold text-amber-700">{importPreviewData.to_skip}</div>
+                                        <div className="text-xl font-bold text-amber-700">
+                                            {importPreviewData.to_skip - Object.keys(importRecordComunidades).length}
+                                        </div>
                                         <div className="text-[10px] font-bold text-amber-500 uppercase tracking-widest mt-1">Se omiten</div>
                                     </div>
                                 </div>
@@ -2352,10 +2375,36 @@ export default function IncidenciasPage() {
                                                             </span>
                                                         </td>
                                                         {/* Comunidad */}
-                                                        <td className="px-3 py-2.5 font-semibold text-neutral-800 max-w-[140px]">
-                                                            <span className="block truncate">{rec.comunidad_matched ?? rec.comunidad_name}</span>
-                                                            {rec.status === 'skip' && (
-                                                                <span className="block text-[10px] text-amber-700 font-bold mt-0.5 truncate">{rec.reason}</span>
+                                                        <td className="px-3 py-2.5 font-semibold text-neutral-800 max-w-[180px]">
+                                                            {rec.status === 'skip' && rec.comunidad_not_found ? (
+                                                                <div>
+                                                                    <span className="block text-[10px] text-amber-700 font-bold truncate mb-1" title={rec.comunidad_name}>{rec.comunidad_name}</span>
+                                                                    <select
+                                                                        value={importRecordComunidades[idx] ?? ''}
+                                                                        onChange={e => {
+                                                                            const val = e.target.value;
+                                                                            setImportRecordComunidades(prev => {
+                                                                                const next = { ...prev };
+                                                                                if (val) next[idx] = Number(val);
+                                                                                else delete next[idx];
+                                                                                return next;
+                                                                            });
+                                                                        }}
+                                                                        className="w-full text-[10px] border border-amber-300 rounded px-1.5 py-1 bg-white text-neutral-700 focus:border-yellow-400 outline-none"
+                                                                    >
+                                                                        <option value="">— Asignar comunidad —</option>
+                                                                        {comunidades.map(c => (
+                                                                            <option key={c.id} value={c.id}>{c.nombre_cdad}</option>
+                                                                        ))}
+                                                                    </select>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="block truncate">{rec.comunidad_matched ?? rec.comunidad_name}</span>
+                                                                    {rec.status === 'skip' && (
+                                                                        <span className="block text-[10px] text-amber-700 font-bold mt-0.5 truncate">{rec.reason}</span>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </td>
                                                         {/* Entrada */}
@@ -2397,7 +2446,7 @@ export default function IncidenciasPage() {
                                                         </td>
                                                         {/* Estado toggle */}
                                                         <td className="px-3 py-2.5">
-                                                            {rec.status === 'ok' ? (
+                                                            {rec.status === 'ok' || (rec.status === 'skip' && rec.comunidad_not_found && importRecordComunidades[idx]) ? (
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setImportRecordEstados(prev => ({
@@ -2440,11 +2489,11 @@ export default function IncidenciasPage() {
                             <button
                                 type="button"
                                 onClick={handleConfirmImport}
-                                disabled={importPreviewData.to_insert === 0}
+                                disabled={importPreviewData.to_insert + Object.keys(importRecordComunidades).length === 0}
                                 className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-2 shadow-sm"
                             >
                                 <FileText className="w-3.5 h-3.5" />
-                                Importar {importPreviewData.to_insert} registros
+                                Importar {importPreviewData.to_insert + Object.keys(importRecordComunidades).length} registros
                             </button>
                         </div>
                     </div>

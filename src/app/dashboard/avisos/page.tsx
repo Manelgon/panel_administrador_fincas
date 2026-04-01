@@ -230,25 +230,20 @@ export default function AvisosPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-xl font-bold text-neutral-900">Mis Avisos</h1>
-                </div>
-
-                <div className="flex gap-2">
-                    {/* Mark All Button */}
-                    <button
-                        onClick={markAllRead}
-                        className="bg-neutral-900 hover:bg-neutral-800 text-white px-4 py-2 rounded-md flex items-center gap-2 transition font-semibold text-sm"
-                    >
-                        <CheckCheck className="w-4 h-4" />
-                        Marcar todo leído
-                    </button>
-                </div>
+            <div className="flex justify-between items-center gap-3">
+                <h1 className="text-xl font-bold text-neutral-900 min-w-0 truncate">Mis Avisos</h1>
+                <button
+                    onClick={markAllRead}
+                    className="bg-neutral-900 hover:bg-neutral-800 text-white px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm flex-shrink-0"
+                >
+                    <CheckCheck className="w-4 h-4 flex-shrink-0" />
+                    <span className="hidden sm:inline">Marcar todo leído</span>
+                    <span className="sm:hidden">Leído</span>
+                </button>
             </div>
 
             {/* Filters */}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
                 <button
                     onClick={() => setFilterState('unread')}
                     className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterState === 'unread' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}

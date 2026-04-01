@@ -268,31 +268,73 @@ export default function ActividadPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <h1 className="text-xl font-bold text-neutral-900">Registro de Actividad</h1>
-
-                <div className="flex items-center gap-2">
+            <div className="flex justify-between items-center gap-3">
+                <h1 className="text-xl font-bold text-neutral-900 min-w-0 truncate">Registro de Actividad</h1>
+                <div className="flex items-center gap-2 flex-shrink-0">
                     {selectedIds.size > 0 && (
-                        <span className="text-xs font-medium text-neutral-500 mr-2">
-                            {selectedIds.size} seleccionados
+                        <span className="text-xs font-medium text-neutral-500 hidden sm:inline">
+                            {selectedIds.size} sel.
                         </span>
                     )}
                     <button
                         onClick={() => handleExport('csv')}
                         disabled={selectedIds.size === 0 || isExporting}
-                        className="flex items-center gap-2 bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-50 transition disabled:opacity-50"
+                        className="flex items-center gap-1.5 bg-white border border-neutral-300 text-neutral-700 px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-50 transition disabled:opacity-50"
                     >
-                        <Download className="w-4 h-4" />
+                        <Download className="w-4 h-4 flex-shrink-0" />
                         CSV
                     </button>
                     <button
                         onClick={() => handleExport('pdf')}
                         disabled={selectedIds.size === 0 || isExporting}
-                        className="flex items-center gap-2 bg-neutral-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-800 transition disabled:opacity-50"
+                        className="flex items-center gap-1.5 bg-neutral-900 text-white px-3 py-1.5 rounded-lg text-sm font-semibold hover:bg-neutral-800 transition disabled:opacity-50"
                     >
-                        <FileDown className="w-4 h-4" />
+                        <FileDown className="w-4 h-4 flex-shrink-0" />
                         PDF
                     </button>
+                </div>
+            </div>
+
+            {/* Filtros en columna para móvil */}
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                <SearchableSelect
+                    value={filterUser === 'all' ? '' : filterUser}
+                    onChange={(val) => setFilterUser(val === '' ? 'all' : String(val))}
+                    options={uniqueUsers.map(u => ({ value: u, label: u }))}
+                    placeholder="Todos los Usuarios"
+                    className="w-full sm:w-[160px]"
+                />
+                <SearchableSelect
+                    value={filterAction === 'all' ? '' : filterAction}
+                    onChange={(val) => setFilterAction(val === '' ? 'all' : String(val))}
+                    options={uniqueActions.map(a => ({ value: a, label: getActionLabel(a) }))}
+                    placeholder="Todas las Acciones"
+                    className="w-full sm:w-[160px]"
+                />
+                <SearchableSelect
+                    value={filterType === 'all' ? '' : filterType}
+                    onChange={(val) => setFilterType(val === '' ? 'all' : String(val))}
+                    options={uniqueTypes.map(t => ({ value: t, label: getEntityLabel(t) }))}
+                    placeholder="Todos los Tipos"
+                    className="w-full sm:w-[160px]"
+                />
+                <div className="flex items-center gap-1 bg-white border border-neutral-300 rounded-md px-2 h-[38px] w-full sm:w-auto">
+                    <Calendar className="w-4 h-4 text-neutral-400 flex-shrink-0" />
+                    <input
+                        type="date"
+                        value={dateFrom}
+                        onChange={(e) => setDateFrom(e.target.value)}
+                        className="text-sm outline-none border-none bg-transparent min-w-0"
+                        placeholder="Desde"
+                    />
+                    <span className="text-neutral-400">-</span>
+                    <input
+                        type="date"
+                        value={dateTo}
+                        onChange={(e) => setDateTo(e.target.value)}
+                        className="text-sm outline-none border-none bg-transparent min-w-0"
+                        placeholder="Hasta"
+                    />
                 </div>
             </div>
 
@@ -306,49 +348,6 @@ export default function ActividadPage() {
                 selectable={true}
                 selectedKeys={selectedIds}
                 onSelectionChange={(keys) => setSelectedIds(keys as Set<number>)}
-                extraFilters={
-                    <div className="flex items-center gap-2">
-                        <SearchableSelect
-                            value={filterUser === 'all' ? '' : filterUser}
-                            onChange={(val) => setFilterUser(val === '' ? 'all' : String(val))}
-                            options={uniqueUsers.map(u => ({ value: u, label: u }))}
-                            placeholder="Todos los Usuarios"
-                            className="w-[160px]"
-                        />
-                        <SearchableSelect
-                            value={filterAction === 'all' ? '' : filterAction}
-                            onChange={(val) => setFilterAction(val === '' ? 'all' : String(val))}
-                            options={uniqueActions.map(a => ({ value: a, label: getActionLabel(a) }))}
-                            placeholder="Todas las Acciones"
-                            className="w-[160px]"
-                        />
-                        <SearchableSelect
-                            value={filterType === 'all' ? '' : filterType}
-                            onChange={(val) => setFilterType(val === '' ? 'all' : String(val))}
-                            options={uniqueTypes.map(t => ({ value: t, label: getEntityLabel(t) }))}
-                            placeholder="Todos los Tipos"
-                            className="w-[160px]"
-                        />
-                        <div className="flex items-center gap-1 bg-white border border-neutral-300 rounded-md px-2 h-[38px]">
-                            <Calendar className="w-4 h-4 text-neutral-400" />
-                            <input
-                                type="date"
-                                value={dateFrom}
-                                onChange={(e) => setDateFrom(e.target.value)}
-                                className="text-sm outline-none border-none bg-transparent"
-                                placeholder="Desde"
-                            />
-                            <span className="text-neutral-400">-</span>
-                            <input
-                                type="date"
-                                value={dateTo}
-                                onChange={(e) => setDateTo(e.target.value)}
-                                className="text-sm outline-none border-none bg-transparent"
-                                placeholder="Hasta"
-                            />
-                        </div>
-                    </div>
-                }
             />
         </div>
     );

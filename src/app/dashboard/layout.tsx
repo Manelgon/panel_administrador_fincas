@@ -58,7 +58,9 @@ export default function DashboardLayout({
                 {/* Navbar bar */}
                 <header className="flex-shrink-0 bg-white border-b border-neutral-200">
                     <div className="flex items-center gap-4 px-4 md:px-6 py-3">
-                        <Greeting />
+                        <div className="hidden sm:block">
+                            <Greeting />
+                        </div>
                         <div className="flex-1">
                             <Navbar />
                         </div>

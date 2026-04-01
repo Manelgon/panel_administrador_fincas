@@ -46,6 +46,7 @@ interface ParsedIncident {
   created_at: string
   chat_messages: ChatMessage[]
   has_preamble: boolean
+  preamble_text: string
 }
 
 interface PreviewRecord {
@@ -59,6 +60,7 @@ interface PreviewRecord {
   source_mapped?: string | null
   reason?: string
   chat_count: number
+  comunidad_not_found?: boolean
 }
 
 type Comunidad = { id: number; nombre_cdad: string; codigo: string }
@@ -78,17 +80,18 @@ function mapSource(sourceRaw: string): string | null {
   return VALID_SOURCES.includes(mapped ?? '') ? mapped : null
 }
 
-function parseWhatsAppMessages(bodyText: string): { messages: ChatMessage[]; hasPreamble: boolean } {
+function parseWhatsAppMessages(bodyText: string): { messages: ChatMessage[]; hasPreamble: boolean; preambleText: string } {
   const messages: ChatMessage[] = []
   const regex = new RegExp(WA_HEADER_PATTERN.source, 'g')
 
   const firstMatch = regex.exec(bodyText)
   if (!firstMatch) {
     // No WhatsApp messages at all
-    return { messages: [], hasPreamble: bodyText.trim().length > 0 }
+    return { messages: [], hasPreamble: bodyText.trim().length > 0, preambleText: bodyText.trim() }
   }
 
-  const hasPreamble = firstMatch.index > 0 && bodyText.slice(0, firstMatch.index).trim().length > 0
+  const preambleText = firstMatch.index > 0 ? bodyText.slice(0, firstMatch.index).trim() : ''
+  const hasPreamble = preambleText.length > 0
 
   // Restart and collect all messages
   regex.lastIndex = 0
@@ -118,7 +121,7 @@ function parseWhatsAppMessages(bodyText: string): { messages: ChatMessage[]; has
     if (content) messages.push({ author: prevAuthor, content, created_at: prevTimestamp })
   }
 
-  return { messages, hasPreamble }
+  return { messages, hasPreamble, preambleText }
 }
 
 function parseNetFincasPdf(text: string): ParsedIncident[] {
@@ -201,9 +204,12 @@ function parseNetFincasPdf(text: string): ParsedIncident[] {
 
     // Keep body lines for WhatsApp parsing (join with space, WA pattern doesn't need newlines)
     const bodyText = lines.slice(bodyStart, nextHeaderIdx).join(' ').trim()
-    const mensaje = bodyText ? `${motivoTicket} ${bodyText}` : motivoTicket
 
-    const { messages: chat_messages, hasPreamble: has_preamble } = parseWhatsAppMessages(bodyText)
+    const { messages: chat_messages, hasPreamble: has_preamble, preambleText: preamble_text } = parseWhatsAppMessages(bodyText)
+
+    // If there are WA messages, mensaje is just the motivo (chat goes to timeline).
+    // If there are no WA messages, the body text is the full message.
+    const mensaje = chat_messages.length > 0 ? motivoTicket : (bodyText ? `${motivoTicket} ${bodyText}` : motivoTicket)
 
     const [day, month, year] = date.split('/')
 
@@ -216,6 +222,7 @@ function parseNetFincasPdf(text: string): ParsedIncident[] {
         created_at: `${year}-${month}-${day}T${time}`,
         chat_messages,
         has_preamble,
+        preamble_text,
       })
     }
   }
@@ -234,6 +241,10 @@ export async function POST(req: NextRequest) {
     const estadosArray: EstadoImport[] = estadosRaw
       ? (JSON.parse(estadosRaw) as string[]).map((e) => (e === 'Resuelto' ? 'Resuelto' : 'Pendiente'))
       : []
+    const comunidadesOverrideRaw = formData.get('comunidades_override') as string | null
+    const comunidadesOverride: Record<number, number> = comunidadesOverrideRaw
+      ? JSON.parse(comunidadesOverrideRaw)
+      : {}
 
     if (!file) {
       return NextResponse.json({ error: 'No se recibió archivo PDF' }, { status: 400 })
@@ -272,6 +283,7 @@ export async function POST(req: NextRequest) {
             source_raw: incident.source_raw,
             reason: `Comunidad no encontrada en el sistema: "${incident.comunidad_name}"`,
             chat_count: incident.chat_messages.length,
+            comunidad_not_found: true,
           })
           continue
         }
@@ -300,9 +312,15 @@ export async function POST(req: NextRequest) {
     for (const incident of incidents) {
       const community = matchCommunity(incident.comunidad_name, allComunidades)
 
-      if (!community) {
-        skipped.push({ motivo: incident.motivo_ticket, reason: `Comunidad no encontrada: "${incident.comunidad_name}"` })
-        continue
+      let comunidadId: number | undefined = community?.id
+      if (!comunidadId) {
+        const overrideComunidadId = comunidadesOverride[okIndex]
+        if (overrideComunidadId) {
+          comunidadId = overrideComunidadId
+        } else {
+          skipped.push({ motivo: incident.motivo_ticket, reason: `Comunidad no encontrada: "${incident.comunidad_name}"` })
+          continue
+        }
       }
 
       const estado: EstadoImport = estadosArray[okIndex] ?? 'Pendiente'
@@ -311,13 +329,14 @@ export async function POST(req: NextRequest) {
       const { data, error } = await supabaseAdmin
         .from('incidencias')
         .insert({
-          comunidad_id: community.id,
+          comunidad_id: comunidadId,
           motivo_ticket: incident.motivo_ticket,
           mensaje: incident.mensaje,
           source: mapSource(incident.source_raw),
           urgencia: 'Alta',
           categoria: 'Incidencias',
           estado,
+          aviso: false,
           created_at: incident.created_at,
           nombre_cliente: '',
           quien_lo_recibe: receptorId,
@@ -350,6 +369,15 @@ export async function POST(req: NextRequest) {
             entity_type: 'incidencia',
             entity_id: data.id,
             content: incident.motivo_ticket,
+            created_at: incident.created_at,
+          })
+        } else if (incident.preamble_text) {
+          // Preamble is free text before the WA chat — add it as first timeline entry
+          timelineRows.push({
+            user_id: receptorId,
+            entity_type: 'incidencia',
+            entity_id: data.id,
+            content: incident.preamble_text,
             created_at: incident.created_at,
           })
         }

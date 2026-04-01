@@ -212,116 +212,80 @@ export default function Navbar() {
     };
 
     return (
-        <nav aria-label="Panel de control" className="flex flex-col gap-2 w-full md:flex-row md:items-center md:justify-end md:gap-x-6">
+        <nav aria-label="Panel de control" className="flex items-center gap-2 w-full md:justify-end md:gap-x-6">
             {showStartTaskModal && (
                 <StartTaskModal
                     onClose={() => setShowStartTaskModal(false)}
                     onStarted={() => { setShowStartTaskModal(false); fetchActiveTask(); }}
                 />
             )}
-            
-            {/* Timer row — stacks vertically on mobile, inline on desktop */}
-            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto md:flex-nowrap">
+
+            {/* Botones fichaje + tarea — siempre en fila */}
+            <div className="flex items-center gap-2">
                 {/* Quick-Start Fichaje */}
-                <div className="flex items-center min-w-0">
-                    {dashActiveFichaje ? (
-                        <div className="flex items-center gap-1.5 sm:gap-2 bg-yellow-50 border border-yellow-200 pl-2 sm:pl-3 pr-1 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm shadow-sm" role="status" aria-label="Fichaje activo">
-                            <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
-                            <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(fichajeElapsed)}</span>
-                            <div className="flex items-center ml-0.5 sm:ml-1 border-l border-yellow-200 pl-1.5 sm:pl-2">
-                                <a href="/dashboard/fichaje" className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver fichaje">Ver →</a>
-                                <button
-                                    onClick={handleClockOut}
-                                    disabled={fichajeLoading}
-                                    aria-label="Fichar salida"
-                                    className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 ml-0.5 sm:ml-1 text-[10px] sm:text-xs font-bold bg-neutral-900 text-white hover:bg-neutral-800 rounded transition disabled:opacity-50"
-                                >
-                                    {fichajeLoading ? (
-                                        <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <Square className="w-3 h-3" aria-hidden="true" />
-                                    )}
-                                    <span className="hidden xs:inline">Salir</span>
-                                </button>
-                            </div>
+                {dashActiveFichaje ? (
+                    <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 pl-2 pr-1 py-1 rounded-lg shadow-sm" role="status" aria-label="Fichaje activo">
+                        <Timer className="w-3.5 h-3.5 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
+                        <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums text-xs">{formatDashElapsed(fichajeElapsed)}</span>
+                        <div className="flex items-center border-l border-yellow-200 pl-1 ml-1">
+                            <a href="/dashboard/fichaje" className="px-1.5 py-1 text-[10px] text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver fichaje">Ver →</a>
+                            <button onClick={handleClockOut} disabled={fichajeLoading} aria-label="Fichar salida"
+                                className="flex items-center p-1 ml-0.5 bg-neutral-900 text-white hover:bg-neutral-800 rounded transition disabled:opacity-50">
+                                {fichajeLoading ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Square className="w-3 h-3" />}
+                            </button>
                         </div>
-                    ) : (
-                        <button
-                            onClick={handleClockIn}
-                            disabled={fichajeLoading}
-                            aria-label="Fichar entrada"
-                            className="flex items-center gap-1.5 sm:gap-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition shadow-sm disabled:opacity-50"
-                        >
-                            {fichajeLoading ? (
-                                <div className="w-3.5 h-3.5 border-2 border-neutral-900/30 border-t-neutral-900 rounded-full animate-spin" />
-                            ) : (
-                                <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
-                            )}
-                            <span className="hidden sm:inline">Fichar</span> Entrada
-                        </button>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <button onClick={handleClockIn} disabled={fichajeLoading} aria-label="Fichar entrada"
+                        className="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm disabled:opacity-50">
+                        {fichajeLoading ? <div className="w-3.5 h-3.5 border-2 border-neutral-900/30 border-t-neutral-900 rounded-full animate-spin" /> : <Play className="w-3 h-3" aria-hidden="true" />}
+                        <span className="hidden sm:inline">Fichar</span> Entrada
+                    </button>
+                )}
 
                 {/* Quick-Start Task Timer */}
-                <div className="flex items-center ml-auto md:ml-0 min-w-0">
-                    {dashActiveTask ? (
-                        <div className="flex items-center gap-1.5 sm:gap-2 bg-yellow-50 border border-yellow-200 pl-2 sm:pl-3 pr-1 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm shadow-sm" role="status" aria-label="Tarea activa">
-                            <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
-                            <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(dashElapsed)}</span>
-                            <div className="flex items-center ml-0.5 sm:ml-1 border-l border-yellow-200 pl-1.5 sm:pl-2">
-                                <span className="px-1.5 sm:px-2 font-semibold text-yellow-800 hidden lg:inline-block max-w-[160px] xl:max-w-[200px] truncate text-xs">
-                                    {dashActiveTask.comunidades 
-                                        ? `${dashActiveTask.comunidades.codigo} – ${dashActiveTask.comunidades.nombre_cdad}`
-                                        : 'TODAS'
-                                    }
-                                </span>
-                                <a href="/dashboard/cronometraje" className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver cronometraje">Ver →</a>
-                                <button 
-                                    onClick={handleStopTask}
-                                    disabled={stopping}
-                                    aria-label="Parar tarea"
-                                    className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 ml-0.5 sm:ml-1 text-[10px] sm:text-xs font-bold bg-neutral-900 text-white hover:bg-neutral-800 rounded transition disabled:opacity-50"
-                                >
-                                    {stopping ? (
-                                        <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" />
-                                    ) : (
-                                        <Square className="w-3 h-3" aria-hidden="true" />
-                                    )}
-                                    <span className="hidden xs:inline">Parar</span>
-                                </button>
-                            </div>
+                {dashActiveTask ? (
+                    <div className="flex items-center gap-1 bg-yellow-50 border border-yellow-200 pl-2 pr-1 py-1 rounded-lg shadow-sm" role="status" aria-label="Tarea activa">
+                        <Timer className="w-3.5 h-3.5 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
+                        <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums text-xs">{formatDashElapsed(dashElapsed)}</span>
+                        <span className="hidden lg:inline px-1.5 font-semibold text-yellow-800 max-w-[160px] truncate text-xs">
+                            {dashActiveTask.comunidades ? `${dashActiveTask.comunidades.codigo} – ${dashActiveTask.comunidades.nombre_cdad}` : 'TODAS'}
+                        </span>
+                        <div className="flex items-center border-l border-yellow-200 pl-1 ml-1">
+                            <a href="/dashboard/cronometraje" className="px-1.5 py-1 text-[10px] text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver cronometraje">Ver →</a>
+                            <button onClick={handleStopTask} disabled={stopping} aria-label="Parar tarea"
+                                className="flex items-center p-1 ml-0.5 bg-neutral-900 text-white hover:bg-neutral-800 rounded transition disabled:opacity-50">
+                                {stopping ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Square className="w-3 h-3" />}
+                            </button>
                         </div>
-                    ) : (
-                        <button
-                            onClick={() => setShowStartTaskModal(true)}
-                            aria-label="Empezar tarea"
-                            className="flex items-center gap-1.5 sm:gap-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[10px] sm:text-xs font-bold transition shadow-sm"
-                        >
-                            <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5" aria-hidden="true" />
-                            <span className="hidden sm:inline">Empezar</span> Tarea
-                        </button>
-                    )}
-                </div>
+                    </div>
+                ) : (
+                    <button onClick={() => setShowStartTaskModal(true)} aria-label="Empezar tarea"
+                        className="flex items-center gap-1.5 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-2.5 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
+                        <Play className="w-3 h-3" aria-hidden="true" />
+                        <span className="hidden sm:inline">Empezar</span> Tarea
+                    </button>
+                )}
             </div>
 
-            {/* Stats — collapses to compact badges on mobile */}
-            <div className="flex items-center gap-3 sm:gap-4 md:gap-6 text-[10px] sm:text-xs md:text-sm justify-end">
-                <div className="flex items-center gap-1.5 text-neutral-600" aria-label={`${stats.comunidades} comunidades`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" aria-hidden="true"></span>
-                    <span className="font-medium hidden sm:inline">Comunidades:</span>
-                    <span className="font-medium sm:hidden">Cdad:</span>
+            {/* Stats — ocultas en móvil, visibles desde sm */}
+            <div className="hidden sm:flex items-center gap-4 md:gap-6 text-xs md:text-sm ml-auto md:ml-0">
+                <div className="flex items-center gap-1.5 text-neutral-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+                    <span className="font-medium hidden md:inline">Comunidades:</span>
+                    <span className="font-medium md:hidden">Cdad:</span>
                     <span className="font-bold text-neutral-900">{stats.comunidades}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-neutral-600" aria-label={`${stats.incidencias} tickets abiertos`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" aria-hidden="true"></span>
-                    <span className="font-medium hidden sm:inline">Tickets:</span>
-                    <span className="font-medium sm:hidden">Tck:</span>
+                <div className="flex items-center gap-1.5 text-neutral-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
+                    <span className="font-medium hidden md:inline">Tickets:</span>
+                    <span className="font-medium md:hidden">Tck:</span>
                     <span className="font-bold text-neutral-900">{stats.incidencias}</span>
                 </div>
-                <div className="flex items-center gap-1.5 text-neutral-600" aria-label={`${stats.morosidad} deudas pendientes`}>
-                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 flex-shrink-0" aria-hidden="true"></span>
-                    <span className="font-medium hidden sm:inline">Deudas:</span>
-                    <span className="font-medium sm:hidden">Deu:</span>
+                <div className="flex items-center gap-1.5 text-neutral-600">
+                    <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 flex-shrink-0"></span>
+                    <span className="font-medium hidden md:inline">Deudas:</span>
+                    <span className="font-medium md:hidden">Deu:</span>
                     <span className="font-bold text-neutral-900">{stats.morosidad}</span>
                 </div>
             </div>

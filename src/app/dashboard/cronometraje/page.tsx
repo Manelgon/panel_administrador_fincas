@@ -646,28 +646,30 @@ export default function CronometrajePage() {
             )}
 
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight">
+            <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                    <h1 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight truncate">
                         Cronometraje de Tareas
                     </h1>
-                    <p className="text-neutral-500 text-sm mt-0.5">Registra el tiempo dedicado a cada comunidad.</p>
+                    <p className="text-neutral-500 text-sm mt-0.5 hidden sm:block">Registra el tiempo dedicado a cada comunidad.</p>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                         onClick={() => setShowAddOldModal(true)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-white border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-lg transition shadow-sm"
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium bg-white border border-neutral-200 hover:border-neutral-300 text-neutral-700 rounded-lg transition shadow-sm"
                     >
-                        <Plus className="w-4 h-4" />
-                        Añadir Tarea Antigua
+                        <Plus className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">Añadir Tarea Antigua</span>
+                        <span className="sm:hidden">Antigua</span>
                     </button>
                     <button
                         onClick={() => setShowStartModal(true)}
                         disabled={!!activeTask}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex items-center gap-1.5 px-3 py-2 text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <Play className="w-4 h-4" />
-                        Empezar Tarea
+                        <Play className="w-4 h-4 flex-shrink-0" />
+                        <span className="hidden sm:inline">Empezar Tarea</span>
+                        <span className="sm:hidden">Empezar</span>
                     </button>
                 </div>
             </div>
@@ -761,17 +763,27 @@ export default function CronometrajePage() {
             {/* History Table */}
             <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-neutral-100">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-neutral-400" />
-                            <h2 className="text-base font-bold text-neutral-800">Historial de Tareas</h2>
-                            <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">
-                                {filteredHistory.length} registros
-                            </span>
+                    <div className="flex flex-col gap-3">
+                        <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-neutral-400" />
+                                <h2 className="text-base font-bold text-neutral-800">Historial de Tareas</h2>
+                                <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">
+                                    {filteredHistory.length} registros
+                                </span>
+                            </div>
+                            {/* Download button */}
+                            <button
+                                onClick={openReportModal}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-lg transition shadow-sm flex-shrink-0"
+                            >
+                                <FileText className="w-3.5 h-3.5" />
+                                Descargar
+                            </button>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             {/* Period filter */}
-                            <div className="flex items-center bg-neutral-100 rounded-lg overflow-hidden">
+                            <div className="flex items-center bg-neutral-100 rounded-lg overflow-hidden self-start">
                                 {[{ label: 'Todo', value: 'all' }, { label: '30 días', value: '30' }, { label: '90 días', value: '90' }].map(opt => (
                                     <button
                                         key={opt.value}
@@ -787,7 +799,7 @@ export default function CronometrajePage() {
                                 ))}
                             </div>
                             {/* Community filter */}
-                            <div className="min-w-[180px]">
+                            <div className="w-full sm:min-w-[180px] sm:w-auto">
                                 <SearchableSelect
                                     options={[
                                         { value: 'all', label: 'Todas las comunidades' },
@@ -798,14 +810,6 @@ export default function CronometrajePage() {
                                     placeholder="Todas las comunidades"
                                 />
                             </div>
-                            {/* Download button */}
-                            <button
-                                onClick={openReportModal}
-                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-lg transition shadow-sm"
-                            >
-                                <FileText className="w-3.5 h-3.5" />
-                                Descargar
-                            </button>
                         </div>
                     </div>
                 </div>
