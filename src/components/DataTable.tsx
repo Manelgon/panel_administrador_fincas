@@ -306,7 +306,8 @@ export default function DataTable<T extends Record<string, any>>({
     return (
         <div className="space-y-3">
             {/* Controls */}
-            <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                {/* Fila 1 (móvil) / todo en una fila (desktop): buscador + count */}
                 <div className="flex flex-1 items-center gap-2">
                     {/* Search */}
                     <div className="relative flex-1 max-w-sm">
@@ -319,7 +320,8 @@ export default function DataTable<T extends Record<string, any>>({
                             className="w-full pl-9 pr-3 py-2 border border-neutral-200 rounded-lg bg-white text-neutral-900 text-sm focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition-shadow"
                         />
                     </div>
-                    {extraFilters && <div className="flex items-center gap-2">{extraFilters}</div>}
+                    {/* Selectores: en desktop junto al buscador, en móvil se mueven abajo */}
+                    {extraFilters && <div className="hidden sm:flex items-center gap-2">{extraFilters}</div>}
                     {/* Record count */}
                     {!loading && (
                         <span className="text-xs text-neutral-400 whitespace-nowrap hidden sm:inline">
@@ -331,6 +333,12 @@ export default function DataTable<T extends Record<string, any>>({
                         </span>
                     )}
                 </div>
+                {/* Fila 2 solo en móvil: selectores debajo del buscador */}
+                {extraFilters && (
+                    <div className="flex sm:hidden items-center gap-2 [&>*]:flex-1 [&>*]:min-w-0">
+                        {extraFilters}
+                    </div>
+                )}
 
                 {/* Column selector */}
                 <div className="relative">
