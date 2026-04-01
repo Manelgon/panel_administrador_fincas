@@ -494,7 +494,7 @@ export default function FacturasComunidadesPage() {
             {/* Move File Modal */}
             {showMoveModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm sm:p-4">
-                    <div className="bg-white rounded-t-2xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
+                    <div className="bg-white rounded-t-2xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92dvh] sm:max-h-[90dvh]">
                         {/* Modal Header */}
                         <div className="px-8 py-6 border-b border-neutral-100">
                             <h2 className="text-xl font-bold text-neutral-900">Mover archivo</h2>

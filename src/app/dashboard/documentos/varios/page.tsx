@@ -72,7 +72,7 @@ export default function VariosFacturasPage() {
             {portalReady && showForm && createPortal(
                 <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
                     <div
-                        className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] bg-white rounded-t-2xl sm:rounded-xl shadow-xl flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="w-full sm:max-w-4xl max-h-[92dvh] sm:max-h-[90dvh] bg-white rounded-t-2xl sm:rounded-xl shadow-xl flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}

@@ -304,7 +304,7 @@ export default function PropietariosSofiaPage() {
                     className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 md:p-8 backdrop-blur-sm"
                 >
                     <div
-                        className="w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[85vh] bg-white rounded-t-2xl sm:rounded-xl shadow-xl flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="w-full sm:max-w-2xl max-h-[92dvh] sm:max-h-[85dvh] bg-white rounded-t-2xl sm:rounded-xl shadow-xl flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center">

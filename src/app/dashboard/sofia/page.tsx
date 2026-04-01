@@ -906,7 +906,7 @@ export default function SofiaPage() {
             {/* Detail Modal (Cloned from Incidencias) */}
             {showDetailModal && selectedDetailIncidencia && (
                 <div className="fixed inset-0 bg-neutral-900/60 z-[9999] flex items-center justify-center p-0 sm:p-4 backdrop-blur-md">
-                    <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+                    <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92dvh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
                         <div className="px-6 py-5 border-b flex justify-between items-center bg-neutral-50/50">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center text-neutral-900">
