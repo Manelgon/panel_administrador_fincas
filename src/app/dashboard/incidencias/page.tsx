@@ -1895,10 +1895,16 @@ export default function IncidenciasPage() {
                                         </span>
                                     )}
                                     {/* Aviso */}
-                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${selectedDetailIncidencia.aviso ? 'bg-indigo-100 text-indigo-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedDetailIncidencia.aviso ? 'bg-indigo-500' : 'bg-neutral-400'}`} />
-                                        Aviso: {selectedDetailIncidencia.aviso ? 'Sí' : 'No'}
-                                    </span>
+                                    {(() => {
+                                        const avisoVal = selectedDetailIncidencia.aviso;
+                                        const avisoSent = avisoVal === true || avisoVal === 'true';
+                                        return (
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${avisoSent ? 'bg-indigo-100 text-indigo-700' : 'bg-neutral-100 text-neutral-500'}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${avisoSent ? 'bg-indigo-500' : 'bg-neutral-400'}`} />
+                                                Aviso: {avisoSent ? 'Sí' : 'No'}
+                                            </span>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                             <button
