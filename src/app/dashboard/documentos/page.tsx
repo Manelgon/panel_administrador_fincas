@@ -79,13 +79,9 @@ export default function DocumentosPage() {
 
     return (
         <div className="space-y-6">
-            <div>
+            <div className="flex justify-between items-center gap-3">
                 <h1 className="text-xl font-bold text-neutral-900">Documentos</h1>
             </div>
-
-            <p className="text-sm text-neutral-600">
-                Selecciona el tipo de documento que quieres generar.
-            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {documentTypes.map((doc) => (

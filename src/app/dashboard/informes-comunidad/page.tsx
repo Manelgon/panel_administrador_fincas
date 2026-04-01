@@ -289,10 +289,7 @@ export default function InformesComunidadPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-xl md:text-2xl font-bold text-neutral-900 tracking-tight flex items-center gap-2">
-                        <Building className="w-6 h-6 text-yellow-500" /> Informes de Comunidad
-                    </h1>
-                    <p className="text-neutral-500 text-sm">Informes globales combinados (Emails, Deudas, Tickets, Cronometraje).</p>
+                    <h1 className="text-xl font-bold text-neutral-900">Informes de Comunidad</h1>
                 </div>
                 <button
                     onClick={fetchFolders}
