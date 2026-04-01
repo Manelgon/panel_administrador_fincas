@@ -76,20 +76,20 @@ export default function VariosFacturasPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-6 sm:px-8 pt-6 sm:pt-7 pb-4 border-b border-slate-100 flex justify-between items-center">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                        <div className="px-5 py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50 shrink-0">
+                            <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
                                 Nuevo Certificado de estar al dia / Factura
                             </h2>
                             <button
                                 onClick={() => setShowForm(false)}
-                                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                                className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+                        <div className="flex-1 p-6 sm:p-8 overflow-y-auto custom-scrollbar">
                             <VariosForm onSuccess={() => setShowForm(false)} />
                         </div>
                     </div>

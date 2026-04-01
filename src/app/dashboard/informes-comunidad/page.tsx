@@ -383,36 +383,42 @@ export default function InformesComunidadPage() {
             {portalReady && showGenerator && createPortal(
                 <div className="fixed inset-0 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4">
                     <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm" onClick={() => { setShowGenerator(false); setFormErrors({}); }} />
-                    <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92dvh] sm:max-h-[90dvh] overflow-y-auto">
-                        <div className="flex justify-between items-center">
-                            <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-                                <Plus className="w-5 h-5 text-yellow-500" /> Nuevo Informe Global de Comunidad
-                            </h2>
-                            <button onClick={() => { setShowGenerator(false); setFormErrors({}); }} className="p-1.5 rounded-full text-neutral-400 hover:text-neutral-600 hover:bg-neutral-100 transition-colors">
+                    <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92dvh] sm:max-h-[90dvh] overflow-hidden">
+                        {/* Header fijo */}
+                        <div className="flex justify-between items-center px-5 py-4 border-b border-neutral-100 bg-neutral-50 shrink-0">
+                            <div>
+                                <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
+                                    Nuevo Informe de Comunidad
+                                </h2>
+                                <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-widest mt-0.5">Complete los datos del informe</p>
+                            </div>
+                            <button onClick={() => { setShowGenerator(false); setFormErrors({}); }} className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
+                        {/* Body scrollable */}
+                        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 space-y-5">
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 gap-4">
                             <div className="space-y-2">
                                 <label className="text-sm font-semibold text-neutral-700">Comunidad (Carpeta de Outlook)</label>
                                 <select
                                     value={selectedFolder}
                                     onChange={(e) => { setSelectedFolder(e.target.value); setFormErrors(prev => ({ ...prev, config: '' })); }}
-                                    className={`w-full bg-neutral-50 border rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`}
+                                    className={`w-full bg-neutral-50 border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`}
                                 >
                                     <option value="">Selecciona una comunidad...</option>
                                     {folders.map(f => <option key={f.id} value={f.id}>{f.displayName || f.name}</option>)}
                                 </select>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-neutral-700">Desde</label>
-                                    <input type="date" value={fechaInicio} onChange={(e) => { setFechaInicio(e.target.value); setFormErrors(prev => ({ ...prev, config: '' })); }} className={`w-full bg-neutral-50 border rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`} />
+                                    <input type="date" value={fechaInicio} onChange={(e) => { setFechaInicio(e.target.value); setFormErrors(prev => ({ ...prev, config: '' })); }} className={`w-full bg-neutral-50 border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`} />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-sm font-semibold text-neutral-700">Hasta</label>
-                                    <input type="date" value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setFormErrors(prev => ({ ...prev, config: '' })); }} className={`w-full bg-neutral-50 border rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`} />
+                                    <input type="date" value={fechaFin} onChange={(e) => { setFechaFin(e.target.value); setFormErrors(prev => ({ ...prev, config: '' })); }} className={`w-full bg-neutral-50 border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-yellow-400 ${formErrors.config ? 'border-red-400' : 'border-neutral-200'}`} />
                                 </div>
                             </div>
                             {formErrors.config && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500 col-span-full"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.config}</p>}
@@ -465,7 +471,7 @@ export default function InformesComunidadPage() {
                             </div>
 
                             {/* Emails + Cronometraje en fila */}
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <label className={`flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all ${includeEmails ? 'border-yellow-400 bg-yellow-50' : formErrors.sections ? 'border-red-300' : 'border-neutral-100 bg-neutral-50'}`}>
                                     <input type="checkbox" checked={includeEmails} onChange={e => { setIncludeEmails(e.target.checked); setFormErrors(prev => ({ ...prev, sections: '' })); }} className="w-4 h-4 accent-yellow-500" />
                                     <Mail className={`w-5 h-5 ${includeEmails ? 'text-yellow-600' : 'text-neutral-400'}`} />
@@ -497,10 +503,11 @@ export default function InformesComunidadPage() {
                         <button
                             onClick={handleGenerateReport}
                             disabled={isGenerating || !selectedFolder}
-                            className="w-full bg-neutral-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-neutral-800 transition shadow-lg disabled:opacity-50"
+                            className="w-full bg-neutral-900 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-neutral-800 transition shadow-lg disabled:opacity-50"
                         >
                             {isGenerating ? <><Loader2 className="w-5 h-5 animate-spin" /> Generando Informe Global...</> : <><CheckCircle2 className="w-5 h-5 text-yellow-400" /> Generar Informe Combinado</>}
                         </button>
+                        </div>{/* /body scrollable */}
                     </div>
                 </div>
             , document.body)}

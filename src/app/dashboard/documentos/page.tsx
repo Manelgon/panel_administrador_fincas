@@ -145,22 +145,23 @@ export default function DocumentosPage() {
             {activeModal && (
                 <ModalPortal>
                 <div
-                    className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-0 sm:p-4 md:p-8 backdrop-blur-sm overflow-y-auto"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
+                    onClick={() => setActiveModal(null)}
                 >
                     <div
-                        className="w-full sm:w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[85dvh] bg-white rounded-none sm:rounded-xl shadow-xl flex flex-col animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}
-                        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex justify-between items-center bg-white flex-shrink-0 rounded-t-xl">
-                            <h2 className="text-lg font-semibold text-slate-900">
+                        <div className="px-5 py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50 shrink-0">
+                            <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
                                 {activeModal === "suplidos" && "Registrar Nuevo Suplido"}
                                 {activeModal === "varios" && "Registrar Certificado de estar al dia y Factura"}
                                 {activeModal === "certificado_renta" && "Registrar Certificado Renta"}
                             </h2>
                             <button
                                 onClick={() => setActiveModal(null)}
-                                className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500"
+                                className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
