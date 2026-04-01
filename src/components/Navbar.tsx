@@ -227,7 +227,7 @@ export default function Navbar() {
                     {dashActiveFichaje ? (
                         <div className="flex items-center gap-1.5 sm:gap-2 bg-yellow-50 border border-yellow-200 pl-2 sm:pl-3 pr-1 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm shadow-sm" role="status" aria-label="Fichaje activo">
                             <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
-                            <span className="font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(fichajeElapsed)}</span>
+                            <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(fichajeElapsed)}</span>
                             <div className="flex items-center ml-0.5 sm:ml-1 border-l border-yellow-200 pl-1.5 sm:pl-2">
                                 <a href="/dashboard/fichaje" className="px-1.5 sm:px-2 py-1 text-[10px] sm:text-xs text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver fichaje">Ver →</a>
                                 <button
@@ -267,7 +267,7 @@ export default function Navbar() {
                     {dashActiveTask ? (
                         <div className="flex items-center gap-1.5 sm:gap-2 bg-yellow-50 border border-yellow-200 pl-2 sm:pl-3 pr-1 py-1 sm:py-1.5 rounded-lg text-xs sm:text-sm shadow-sm" role="status" aria-label="Tarea activa">
                             <Timer className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-600 animate-pulse flex-shrink-0" aria-hidden="true" />
-                            <span className="font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(dashElapsed)}</span>
+                            <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums">{formatDashElapsed(dashElapsed)}</span>
                             <div className="flex items-center ml-0.5 sm:ml-1 border-l border-yellow-200 pl-1.5 sm:pl-2">
                                 <span className="px-1.5 sm:px-2 font-semibold text-yellow-800 hidden lg:inline-block max-w-[160px] xl:max-w-[200px] truncate text-xs">
                                     {dashActiveTask.comunidades 
