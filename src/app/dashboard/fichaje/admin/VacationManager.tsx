@@ -219,8 +219,8 @@ export default function VacationManager() {
             {/* Modal de Procesamiento */}
             {selectedReq && (
                 <ModalPortal>
-                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="p-6 border-b border-neutral-100 bg-neutral-50">
                             <h3 className="text-lg font-bold text-neutral-900 italic">
                                 Procesar: {selectedReq.profiles.nombre}

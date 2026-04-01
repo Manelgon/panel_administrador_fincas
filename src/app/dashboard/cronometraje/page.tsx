@@ -520,11 +520,11 @@ export default function CronometrajePage() {
             {/* Report Config Modal */}
             {showPDFOptionsModal && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[150] flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-black/50 z-[150] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setShowPDFOptionsModal(false)}
                 >
                     <div
-                        className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Modal Header */}

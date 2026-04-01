@@ -390,10 +390,10 @@ export default function DashboardPage() {
             {/* PDF Options Modal */}
             {portalReady && showPdfModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4"
                 >
                     <div
-                        className="bg-white rounded-xl shadow-2xl border border-neutral-200 w-full max-w-lg animate-in fade-in zoom-in duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl border border-neutral-200 w-full max-w-lg animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}

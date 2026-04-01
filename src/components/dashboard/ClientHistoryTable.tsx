@@ -450,11 +450,11 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             {deleteModalOpen && (
                 <ModalPortal>
                 <div
-                    className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm"
                     onClick={() => setDeleteModalOpen(false)}
                 >
                     <div
-                        className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl"
+                        className="bg-white rounded-t-2xl sm:rounded-lg p-6 max-w-md w-full sm:mx-4 shadow-xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <h3 className="text-lg font-bold text-neutral-900 mb-4">Confirmar Eliminación</h3>
@@ -517,11 +517,11 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             {sendModalOpen && (
                 <ModalPortal>
                 <div
-                    className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm"
                     onClick={() => setSendModalOpen(false)}
                 >
                     <div
-                        className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6"
+                        className="bg-white rounded-t-2xl sm:rounded-lg shadow-xl max-w-sm w-full p-6 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex justify-between items-center mb-4">

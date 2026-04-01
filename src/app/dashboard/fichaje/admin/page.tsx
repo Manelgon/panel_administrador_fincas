@@ -573,8 +573,8 @@ export default function FichajeAdminPage() {
             {/* CONFIRMATION MODAL */}
             {showConfirmModal && (
                 <ModalPortal>
-                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6 relative">
+                <div className="fixed inset-0 bg-black/50 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-xl w-full max-w-md p-6 relative animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <button
                             onClick={() => setShowConfirmModal(false)}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"

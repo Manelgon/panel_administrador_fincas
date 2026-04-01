@@ -380,8 +380,8 @@ export default function PerfilesPage() {
 
             {/* Create User Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm p-3 sm:p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+                <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm sm:p-4">
+                    <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full overflow-hidden max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/40">
                             <h3 className="text-lg font-bold text-neutral-900">
                                 Crear Nuevo Usuario
@@ -523,8 +523,8 @@ export default function PerfilesPage() {
 
             {/* Edit User Modal */}
             {showEditModal && selectedProfile && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm p-3 sm:p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+                <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm sm:p-4">
+                    <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl max-w-md w-full overflow-hidden max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/40">
                             <h3 className="text-lg font-bold text-neutral-900">
                                 Editar Usuario
@@ -616,8 +616,8 @@ export default function PerfilesPage() {
 
             {/* Password Reset Modal */}
             {showPasswordModal && selectedProfile && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm p-3 sm:p-4">
-                    <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full overflow-hidden">
+                <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm sm:p-4">
+                    <div className="bg-white rounded-t-2xl sm:rounded-xl shadow-2xl max-w-sm w-full overflow-hidden max-h-[92vh] sm:max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50/40">
                             <div>
                                 <h3 className="text-lg font-bold text-neutral-900">

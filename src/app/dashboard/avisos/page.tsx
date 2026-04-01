@@ -277,10 +277,10 @@ export default function AvisosPage() {
             {/* Detail Modal */}
             {showDetailModal && selectedNotification && (
                 <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-center p-4 sm:p-6"
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
                 >
                     <div
-                        className="bg-white w-full max-w-4xl rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[95vh] animate-in fade-in zoom-in duration-200"
+                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92vh] sm:max-h-[90vh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
@@ -302,7 +302,7 @@ export default function AvisosPage() {
                         </div>
 
                         {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
                             {/* Aviso Info */}
                             <div>

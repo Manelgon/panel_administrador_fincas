@@ -75,7 +75,7 @@ export default function Dialog({
     <ModalPortal>
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
       role="presentation"
     >
       <div

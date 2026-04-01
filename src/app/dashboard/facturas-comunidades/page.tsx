@@ -449,8 +449,8 @@ export default function FacturasComunidadesPage() {
 
             {/* Create Folder Modal */}
             {showCreateModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm">
-                    <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-xl animate-in fade-in zoom-in duration-200">
+                <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm">
+                    <div className="bg-white rounded-t-2xl sm:rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-xl animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <form onSubmit={handleCreateConfirm} className="space-y-6">
                             <div>
                                 <label className="block text-lg font-bold text-neutral-900 mb-4">
@@ -493,8 +493,8 @@ export default function FacturasComunidadesPage() {
 
             {/* Move File Modal */}
             {showMoveModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999] backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200 flex flex-col max-h-[90vh]">
+                <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center sm:justify-center z-[9999] backdrop-blur-sm sm:p-4">
+                    <div className="bg-white rounded-t-2xl sm:rounded-3xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 flex flex-col max-h-[92vh] sm:max-h-[90vh]">
                         {/* Modal Header */}
                         <div className="px-8 py-6 border-b border-neutral-100">
                             <h2 className="text-xl font-bold text-neutral-900">Mover archivo</h2>

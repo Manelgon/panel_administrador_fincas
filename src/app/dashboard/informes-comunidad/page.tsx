@@ -381,9 +381,9 @@ export default function InformesComunidadPage() {
 
             {/* Generator Modal */}
             {portalReady && showGenerator && createPortal(
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[9999] flex items-end sm:items-center sm:justify-center sm:p-4">
                     <div className="absolute inset-0 bg-neutral-900/60 backdrop-blur-sm" onClick={() => { setShowGenerator(false); setFormErrors({}); }} />
-                    <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-8 space-y-8 animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+                    <div className="relative bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-2xl p-6 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200 max-h-[92vh] sm:max-h-[90vh] overflow-y-auto">
                         <div className="flex justify-between items-center">
                             <h2 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
                                 <Plus className="w-5 h-5 text-yellow-500" /> Nuevo Informe Global de Comunidad
