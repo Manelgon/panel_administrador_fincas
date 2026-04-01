@@ -457,7 +457,7 @@ export default function SofiaPage() {
                         entity_type: 'sofia_incidencia',
                         entity_id: aplazarIncidenciaId,
                         user_id: user.id,
-                        message: `⏸️ Ticket aplazado hasta el ${fechaFormateada}`
+                        content: `⏸️ Ticket aplazado hasta el ${fechaFormateada}`
                     }]);
                 }
 
