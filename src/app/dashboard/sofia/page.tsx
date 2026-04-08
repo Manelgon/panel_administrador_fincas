@@ -1114,7 +1114,7 @@ export default function SofiaPage() {
             />
 
             {showReassignSuccessModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
                     <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
                         <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-green-600" /></div>
                         <h3 className="text-xl font-bold mb-2">Gestor Reasignado</h3>
@@ -1125,7 +1125,7 @@ export default function SofiaPage() {
 
             {/* Aplazar Modal */}
             {showAplazarModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
                     <div
                         className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}

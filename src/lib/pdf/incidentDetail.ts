@@ -80,7 +80,7 @@ function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): 
 
 export async function generateIncidentDetailPdf({ incident, notes = [] }: { incident: any, notes?: any[] }) {
     // --- ASSETS ---
-    const { headerPath } = await getEmisor();
+    const { headerPath, nombre } = await getEmisor();
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
 
     // --- PDF SETUP ---
@@ -394,7 +394,7 @@ export async function generateIncidentDetailPdf({ incident, notes = [] }: { inci
     for (let i = 0; i < allPages.length; i++) {
         const p = allPages[i];
         const { width: pW } = p.getSize();
-        p.drawText("Serincosol | Administración de Fincas", {
+        p.drawText(nombre || "Administración de Fincas", {
             x: margin,
             y: 20,
             size: 8,

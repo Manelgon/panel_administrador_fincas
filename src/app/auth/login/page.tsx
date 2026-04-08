@@ -1,27 +1,49 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
-import { fetchEmisorName } from './login-action';
 
 export default function LoginPage() {
+    return (
+        <Suspense>
+            <LoginForm />
+        </Suspense>
+    );
+}
+
+function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [emisorName, setEmisorName] = useState('');
+    const [logoPath, setLogoPath] = useState('');
 
-    // Load emisor name via Server Action to bypass RLS
+    // Force sign-out if redirected from proxy due to inactive/missing profile
     useEffect(() => {
-        fetchEmisorName().then((name) => {
-            if (name) setEmisorName(name);
-        });
+        if (searchParams.get('force_signout') === '1') {
+            supabase.auth.signOut().then(() => {
+                toast.error('Tu cuenta está desactivada o no tiene perfil. Contacta con el administrador.', { duration: 6000 });
+            });
+        }
+    }, [searchParams]);
+
+    // Load emisor data from public API endpoint
+    useEffect(() => {
+        fetch('/api/public/emisor')
+            .then(r => r.json())
+            .then(({ nombre, logoPath }) => {
+                if (nombre) setEmisorName(nombre);
+                if (logoPath) setLogoPath(logoPath);
+            })
+            .catch(() => {});
     }, []);
 
     // Load remembered credentials on mount
@@ -146,8 +168,8 @@ export default function LoginPage() {
                             }}
                         >
                             <img
-                                src="/serincosol-logo.png"
-                                alt="Serincosol Logo"
+                                src={logoPath || '/serincosol-logo.png'}
+                                alt={emisorName ? `${emisorName} Logo` : 'Logo'}
                                 className="h-14 w-auto object-contain"
                             />
                         </div>

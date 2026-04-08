@@ -35,6 +35,7 @@ interface GeneratePDFParams {
     communities: Community[];
     includeCharts?: boolean;
     sections?: string[];
+    includeTimeline?: boolean;
     dateFrom?: string;
     dateTo?: string;
 }
@@ -63,7 +64,7 @@ function getCommunityLabel(selectedCommunity: string, communities: Community[]):
 export async function generateDashboardPDF({
     stats, cronoStats, chartData, period, selectedCommunity, communities,
     includeCharts = true, sections = ['incidencias', 'rendimiento', 'deudas'],
-    dateFrom, dateTo,
+    includeTimeline = false, dateFrom, dateTo,
 }: GeneratePDFParams): Promise<void> {
     const loadingToast = toast.loading('Generando reporte PDF...');
 
@@ -96,6 +97,8 @@ export async function generateDashboardPDF({
             cronoStats,
             cronoByGestor: chartData.cronoByGestor,
             sections,
+            includeTimeline,
+            selectedCommunityId: selectedCommunity !== 'all' ? selectedCommunity : null,
             dateFrom: dateFrom || null,
             dateTo: dateTo || null,
         };

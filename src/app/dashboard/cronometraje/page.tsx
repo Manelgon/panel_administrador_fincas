@@ -520,7 +520,7 @@ export default function CronometrajePage() {
             {/* Report Config Modal */}
             {showPDFOptionsModal && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-[150] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-black/50 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                     onClick={() => setShowPDFOptionsModal(false)}
                 >
                     <div

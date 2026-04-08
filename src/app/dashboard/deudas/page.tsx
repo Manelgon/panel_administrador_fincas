@@ -51,7 +51,20 @@ export default function MorosidadPage() {
     const [exporting, setExporting] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [enviarNotificacion, setEnviarNotificacion] = useState<boolean | null>(null);
+    const [notifEmail, setNotifEmail] = useState(false);
+    const [notifWhatsapp, setNotifWhatsapp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const resetForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
+        setFile(null);
+        setEnviarNotificacion(null);
+        setNotifEmail(false);
+        setNotifWhatsapp(false);
+        setFormErrors({});
+    };
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
 
     const handleRowClick = (morosidad: Morosidad) => {
@@ -181,10 +194,10 @@ export default function MorosidadPage() {
         if (!formData.titulo_documento?.trim()) errors.titulo_documento = 'El título del documento es obligatorio';
         if (!formData.fecha_notificacion) errors.fecha_notificacion = 'La fecha de notificación es obligatoria';
         if (!formData.importe) errors.importe = 'El importe es obligatorio';
-        if (enviarNotificacion === null) errors.enviarNotificacion = 'Debes indicar si deseas enviar notificación';
-        if (enviarNotificacion === true && !formData.telefono_deudor && !formData.email_deudor) errors.contacto = 'Para enviar aviso debes proporcionar Teléfono o Email';
-        if (formData.telefono_deudor && !/^\d{9}$/.test(formData.telefono_deudor)) errors.telefono_deudor = 'El teléfono debe tener 9 dígitos numéricos';
-        if (formData.email_deudor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor)) errors.email_deudor = 'El formato del email no es válido';
+        if (notifEmail && !formData.email_deudor) errors.email_deudor = 'El email es obligatorio para notificar por Email';
+        if (notifEmail && formData.email_deudor && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor)) errors.email_deudor = 'El formato del email no es válido';
+        if (notifWhatsapp && !formData.telefono_deudor) errors.telefono_deudor = 'El teléfono es obligatorio para notificar por WhatsApp';
+        if (notifWhatsapp && formData.telefono_deudor && !/^\d{9}$/.test(formData.telefono_deudor)) errors.telefono_deudor = 'El teléfono debe tener 9 dígitos numéricos';
         if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
         setFormErrors({});
 
@@ -273,6 +286,9 @@ export default function MorosidadPage() {
                     webhookPayload.append('gestor_nombre', gestorProfile?.nombre || 'Desconocido');
                     webhookPayload.append('documento_url', docUrl || '');
                     webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
+                    webhookPayload.append('canal_email', notifEmail ? 'true' : 'false');
+                    webhookPayload.append('canal_whatsapp', notifWhatsapp ? 'true' : 'false');
+                    webhookPayload.append('notificacion_propietario', (!notifEmail && !notifWhatsapp) ? '0' : (notifWhatsapp && !notifEmail) ? '1' : (!notifWhatsapp && notifEmail) ? '2' : '3');
                     webhookPayload.append('adjuntos_count', file ? '1' : '0');
                     if (file) webhookPayload.append('adjunto', file);
                     fetch('/api/webhooks/trigger-debt', { method: 'POST', body: webhookPayload })
@@ -280,7 +296,7 @@ export default function MorosidadPage() {
 
                     setShowForm(false); setFormErrors({});
                     setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
-                    setEnviarNotificacion(null); setFile(null);
+                    setEnviarNotificacion(null); setNotifEmail(false); setNotifWhatsapp(false); setFile(null);
                     fetchMorosidad();
                 } catch (error: any) {
                     toast.error('Error: ' + error.message);
@@ -842,7 +858,7 @@ export default function MorosidadPage() {
                                     {editingId ? 'Modifique los datos de la deuda' : 'Complete los datos para registrar una nueva deuda'}
                                 </p>
                             </div>
-                            <button onClick={() => { setShowForm(false); setFormErrors({}); }} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors text-neutral-400 hover:text-neutral-700">
+                            <button onClick={resetForm} className="p-2 hover:bg-neutral-100 rounded-xl transition-colors text-neutral-400 hover:text-neutral-700">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
@@ -1013,43 +1029,98 @@ export default function MorosidadPage() {
 
                                 {/* Sección: Notificación */}
                                 <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Notificación</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                                        <div className="md:col-span-4 bg-white border border-neutral-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                                            <div>
-                                                <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block">
-                                                    Notificar al Propietario <span className="text-red-500">*</span>
+                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Notificación al Propietario</h3>
+                                    <div className="flex flex-col gap-3">
+                                        {/* Checkboxes de canal */}
+                                        <div className="bg-white border border-neutral-200 rounded-xl p-4">
+                                            <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                                Canal de notificación
+                                            </label>
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={notifEmail}
+                                                        disabled={isSubmitting}
+                                                        onChange={e => {
+                                                            setNotifEmail(e.target.checked);
+                                                            setEnviarNotificacion(e.target.checked || notifWhatsapp ? true : false);
+                                                            setFormErrors(prev => ({ ...prev, enviarNotificacion: '', contacto: '' }));
+                                                        }}
+                                                        className="w-4 h-4 rounded accent-yellow-400"
+                                                    />
+                                                    <span className="text-xs font-semibold text-neutral-700">Notificar por Email</span>
                                                 </label>
-                                                <p className="text-[10px] text-neutral-500 font-medium">¿Se enviará un aviso de registro al cliente?</p>
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={notifWhatsapp}
+                                                        disabled={isSubmitting}
+                                                        onChange={e => {
+                                                            setNotifWhatsapp(e.target.checked);
+                                                            setEnviarNotificacion(notifEmail || e.target.checked ? true : false);
+                                                            setFormErrors(prev => ({ ...prev, enviarNotificacion: '', contacto: '' }));
+                                                        }}
+                                                        className="w-4 h-4 rounded accent-yellow-400"
+                                                    />
+                                                    <span className="text-xs font-semibold text-neutral-700">Notificar por WhatsApp</span>
+                                                </label>
                                             </div>
-                                            <div className="flex bg-neutral-100 rounded-lg p-1 w-fit">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setEnviarNotificacion(true); setFormErrors(prev => ({ ...prev, enviarNotificacion: '' })); }}
-                                                    disabled={isSubmitting}
-                                                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${enviarNotificacion === true ? 'bg-yellow-400 text-neutral-950 shadow-sm border border-yellow-500/20' : 'text-neutral-500 hover:text-neutral-700'}`}
-                                                >
-                                                    Sí
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => { setEnviarNotificacion(false); setFormErrors(prev => ({ ...prev, enviarNotificacion: '', contacto: '' })); }}
-                                                    disabled={isSubmitting}
-                                                    className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${enviarNotificacion === false ? 'bg-yellow-400 text-neutral-950 shadow-sm border border-yellow-500/20' : 'text-neutral-500 hover:text-neutral-700'}`}
-                                                >
-                                                    No
-                                                </button>
-                                            </div>
+                                            <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al propietario.</p>
                                         </div>
-                                        {formErrors.enviarNotificacion && (
-                                            <div className="md:col-span-4">
-                                                <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.enviarNotificacion}</p>
+                                        {/* Datos de contacto para notificación */}
+                                        {notifEmail && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                    Email para notificación <span className="text-red-500">*</span>
+                                                </label>
+                                                {formData.email_deudor ? (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                        <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{formData.email_deudor}</span>
+                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del cliente</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="email"
+                                                            placeholder="ejemplo@correo.com"
+                                                            disabled={isSubmitting}
+                                                            className={`w-full bg-white border text-neutral-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all placeholder:text-neutral-400 ${formErrors.email_deudor ? 'border-red-400 focus:ring-red-400/20 focus:border-red-400' : 'border-neutral-200 focus:ring-amber-400/20 focus:border-amber-400'}`}
+                                                            value={formData.email_deudor}
+                                                            onChange={e => { setFormData({ ...formData, email_deudor: e.target.value }); setFormErrors(prev => ({ ...prev, email_deudor: '' })); }}
+                                                        />
+                                                        {formErrors.email_deudor && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.email_deudor}</p>}
+                                                    </>
+                                                )}
                                             </div>
                                         )}
-                                        {enviarNotificacion === true && !formData.email_deudor && !formData.telefono_deudor && (
-                                            <div className="md:col-span-4 flex justify-end">
-                                                <span className="text-[10px] font-bold text-red-500 uppercase bg-red-50 px-3 py-1 rounded-md">Debe indicar email o teléfono para notificar</span>
+                                        {notifWhatsapp && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                    Teléfono para notificación <span className="text-red-500">*</span>
+                                                </label>
+                                                {formData.telefono_deudor ? (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                        <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{formData.telefono_deudor}</span>
+                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del cliente</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="tel"
+                                                            placeholder="600000000"
+                                                            disabled={isSubmitting}
+                                                            className={`w-full bg-white border text-neutral-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 transition-all placeholder:text-neutral-400 ${formErrors.telefono_deudor ? 'border-red-400 focus:ring-red-400/20 focus:border-red-400' : 'border-neutral-200 focus:ring-amber-400/20 focus:border-amber-400'}`}
+                                                            value={formData.telefono_deudor}
+                                                            onChange={e => { setFormData({ ...formData, telefono_deudor: e.target.value }); setFormErrors(prev => ({ ...prev, telefono_deudor: '' })); }}
+                                                        />
+                                                        {formErrors.telefono_deudor && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.telefono_deudor}</p>}
+                                                    </>
+                                                )}
                                             </div>
+                                        )}
+                                        {formErrors.contacto && (
+                                            <p className="flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.contacto}</p>
                                         )}
                                     </div>
                                 </div>
@@ -1060,7 +1131,7 @@ export default function MorosidadPage() {
                         <div className="flex items-center justify-end gap-3 px-6 py-4 bg-white border-t border-neutral-100">
                             <button
                                 type="button"
-                                onClick={() => { setShowForm(false); setFormErrors({}); }}
+                                onClick={resetForm}
                                 className="px-6 py-3 text-xs font-black uppercase tracking-[0.15em] text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-colors"
                             >
                                 Cancelar
@@ -1076,10 +1147,8 @@ export default function MorosidadPage() {
                                     !formData.titulo_documento ||
                                     !formData.fecha_notificacion ||
                                     !formData.importe ||
-                                    enviarNotificacion === null ||
-                                    (enviarNotificacion === true && !formData.telefono_deudor && !formData.email_deudor) ||
-                                    (formData.telefono_deudor ? !/^\d{9}$/.test(formData.telefono_deudor) : false) ||
-                                    (formData.email_deudor ? !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email_deudor) : false)
+                                    !!(notifEmail && !formData.email_deudor) ||
+                                    !!(notifWhatsapp && !formData.telefono_deudor)
                                 }
                                 className="h-12 px-8 bg-amber-400 hover:bg-amber-500 text-neutral-950 font-black text-xs uppercase tracking-[0.15em] rounded-xl transition-all shadow-lg shadow-amber-200/50 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                             >
@@ -1108,7 +1177,7 @@ export default function MorosidadPage() {
                         {/* Export Notes Modal */}
                         {showExportModal && (
                             <div
-                                className="fixed inset-0 bg-black/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-[6px]"
+                                className="fixed inset-0 bg-black/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-[6px]"
                                 onClick={() => {
                                     setShowExportModal(false);
                                     setPendingExportParams(null);

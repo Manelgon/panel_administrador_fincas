@@ -1,9 +1,10 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
-  // Activa el MCP server en /_next/mcp (Next.js 16+)
   experimental: {
-    mcpServer: true,
+    // mcpServer desactivado — causa crash de Turbopack "Next.js package not found"
+    // en rutas con Server Actions (bug Next.js 16.1.1)
+    // mcpServer: true,
   },
 }
 

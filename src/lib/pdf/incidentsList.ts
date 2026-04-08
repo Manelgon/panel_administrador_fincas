@@ -63,7 +63,7 @@ export async function generateIncidentsPdf({
     incidents: any[];
 }) {
     // --- ASSETS ---
-    const { headerPath } = await getEmisor();
+    const { headerPath, nombre } = await getEmisor();
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
 
     // --- PDF GENERATION ---
@@ -248,7 +248,7 @@ export async function generateIncidentsPdf({
     }
 
     // 6. Global Footer
-    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerText = nombre || "Administración de Fincas";
     const footerSize = 8;
     const allPages = pdfDoc.getPages();
     for (const p of allPages) {

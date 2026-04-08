@@ -62,7 +62,7 @@ const drawYellowBlock = (page: any, x: number, y: number, w: number, h: number, 
 
 // Common Layout Boilerplate
 async function setupPdf(title: string) {
-    const { headerPath } = await getEmisor();
+    const { headerPath, nombre } = await getEmisor();
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([595.28, 841.89]); // A4 Portrait
@@ -87,11 +87,11 @@ async function setupPdf(title: string) {
     page.drawText(title, { x: (width - titleW) / 2, y, size: 18, font: bold });
     y -= 40;
 
-    return { pdfDoc, page, font, bold, width, height, margin, y };
+    return { pdfDoc, page, font, bold, width, height, margin, y, nombre };
 }
 
-async function addFooter(pdfDoc: any, font: any) {
-    const footerText = "Serincosol | Administración de Fincas Málaga";
+async function addFooter(pdfDoc: any, font: any, nombre: string) {
+    const footerText = nombre || "Administración de Fincas";
     const pages = pdfDoc.getPages();
     for (const p of pages) {
         const { width: pW } = p.getSize();
@@ -102,7 +102,7 @@ async function addFooter(pdfDoc: any, font: any) {
 
 // 1. INCIDENCIAS
 export async function generateIncidentDetailPdf(incident: any) {
-    const { pdfDoc, page, font, bold, width, margin, y: startY } = await setupPdf("DETALLE DE INCIDENCIA");
+    const { pdfDoc, page, font, bold, width, margin, y: startY, nombre } = await setupPdf("DETALLE DE INCIDENCIA");
     let y = startY;
 
     // KPI Blocks (Status, Urgency)
@@ -141,13 +141,13 @@ export async function generateIncidentDetailPdf(incident: any) {
         y -= 12;
     });
 
-    await addFooter(pdfDoc, font);
+    await addFooter(pdfDoc, font, nombre);
     return await pdfDoc.save();
 }
 
 // 2. MOROSIDAD (Deuda)
 export async function generateDebtDetailPdf(debt: any) {
-    const { pdfDoc, page, font, bold, width, margin, y: startY } = await setupPdf("DETALLE DE DEUDA");
+    const { pdfDoc, page, font, bold, width, margin, y: startY, nombre } = await setupPdf("DETALLE DE DEUDA");
     let y = startY;
 
     drawYellowBlock(page, margin, y - 40, width - (margin * 2), 40, "ESTADO", debt.pagado ? "PAGADO" : "PENDIENTE", font, bold);
@@ -181,13 +181,13 @@ export async function generateDebtDetailPdf(debt: any) {
         y -= 12;
     });
 
-    await addFooter(pdfDoc, font);
+    await addFooter(pdfDoc, font, nombre);
     return await pdfDoc.save();
 }
 
 // 3. AVISOS (Notificaciones)
 export async function generateNoticeDetailPdf(notice: any) {
-    const { pdfDoc, page, font, bold, width, margin, y: startY } = await setupPdf("DETALLE DE AVISO");
+    const { pdfDoc, page, font, bold, width, margin, y: startY, nombre } = await setupPdf("DETALLE DE AVISO");
     let y = startY;
 
     drawYellowBlock(page, margin, y - 40, width - (margin * 2), 40, "ASUNTO", notice.title?.toUpperCase() || "SIN TÍTULO", font, bold);
@@ -218,6 +218,6 @@ export async function generateNoticeDetailPdf(notice: any) {
         y -= 12;
     });
 
-    await addFooter(pdfDoc, font);
+    await addFooter(pdfDoc, font, nombre);
     return await pdfDoc.save();
 }
