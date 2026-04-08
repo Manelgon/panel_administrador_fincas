@@ -81,6 +81,7 @@ export default function DashboardPage() {
     const [pdfDateTo, setPdfDateTo] = useState('');
     const [pdfMode, setPdfMode] = useState<'both' | 'charts' | 'data'>('both');
     const [pdfSections, setPdfSections] = useState<string[]>(['incidencias', 'cronometraje', 'rendimiento', 'deudas']);
+    const [pdfIncludeTimeline, setPdfIncludeTimeline] = useState(false);
     const [portalReady, setPortalReady] = useState(false);
     useEffect(() => setPortalReady(true), []);
 
@@ -103,6 +104,7 @@ export default function DashboardPage() {
                     communities,
                     includeCharts: pdfMode !== 'data',
                     sections: pdfMode !== 'charts' ? pdfSections : [],
+                    includeTimeline: pdfIncludeTimeline,
                     dateFrom: pdfDateFrom || undefined,
                     dateTo: pdfDateTo || undefined,
                 });
@@ -498,6 +500,22 @@ export default function DashboardPage() {
                                     </button>
                                 </div>
                             </div>
+
+                            {/* Timeline — solo cuando hay datos de incidencias o deudas */}
+                            {pdfMode !== 'charts' && (pdfSections.includes('incidencias') || pdfSections.includes('deudas')) && (
+                                <div>
+                                    <label className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400 block">Opciones adicionales</label>
+                                    <button
+                                        onClick={() => setPdfIncludeTimeline(v => !v)}
+                                        className={`w-full flex items-center gap-3 py-2.5 px-3 rounded-lg text-xs font-bold border transition ${pdfIncludeTimeline ? 'bg-yellow-100 text-yellow-700 border-yellow-400' : 'bg-white text-neutral-400 border-neutral-200 hover:border-neutral-300 hover:text-neutral-600'}`}
+                                    >
+                                        <span className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 transition ${pdfIncludeTimeline ? 'bg-yellow-400 border-yellow-400' : 'border-neutral-300'}`}>
+                                            {pdfIncludeTimeline && <svg className="w-2.5 h-2.5 text-neutral-900" fill="none" viewBox="0 0 10 10"><path d="M1.5 5l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                        </span>
+                                        <span>Incluir mensajes del timeline en incidencias y deudas</span>
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer */}

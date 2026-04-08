@@ -44,7 +44,7 @@ export async function generateFichajePdf({
     entries: any[];
 }) {
     // --- ASSETS ---
-    const { headerPath } = await getEmisor();
+    const { headerPath, nombre } = await getEmisor();
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
     const selloBytes = await downloadAssetPng("certificados/sello-retenciones.png");
 
@@ -190,7 +190,7 @@ export async function generateFichajePdf({
     }
 
     // 6. Global Footer
-    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerText = nombre || "Administración de Fincas";
     const footerSize = 8;
     const allPages = pdfDoc.getPages();
     for (const p of allPages) {

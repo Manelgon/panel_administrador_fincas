@@ -58,7 +58,7 @@ export async function generateActivitiesPdf({
 }: {
     activities: any[];
 }) {
-    const { headerPath } = await getEmisor();
+    const { headerPath, nombre } = await getEmisor();
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
 
     const pdfDoc = await PDFDocument.create();
@@ -292,7 +292,7 @@ export async function generateActivitiesPdf({
         y -= textBlockHeight;
     }
 
-    const footerText = "Serincosol | Administración de Fincas Málaga";
+    const footerText = nombre || "Administración de Fincas";
     const allPages = pdfDoc.getPages();
     for (const p of allPages) {
         const { width: pW } = p.getSize();

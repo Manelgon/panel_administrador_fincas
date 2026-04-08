@@ -54,10 +54,23 @@ export default function IncidenciasPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
+    const [notifEmail, setNotifEmail] = useState(false);
+    const [notifWhatsapp, setNotifWhatsapp] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [isManualDate, setIsManualDate] = useState(false);
+
+    const resetForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: '' });
+        setFiles([]);
+        setEnviarAviso(null);
+        setNotifEmail(false);
+        setNotifWhatsapp(false);
+        setFormErrors({});
+    };
 
     const [formData, setFormData] = useState({
         comunidad_id: '',
@@ -365,7 +378,8 @@ export default function IncidenciasPage() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (formData.telefono && !phoneRegex.test(formData.telefono)) errors.telefono = 'El teléfono debe tener exactamente 9 dígitos sin espacios';
         if (formData.email && !emailRegex.test(formData.email)) errors.email = 'El formato del email no es válido';
-        if (!editingId && enviarAviso === true && !formData.telefono && !formData.email) errors.contacto = 'Para enviar aviso debes proporcionar Teléfono o Email';
+        if (!editingId && notifEmail && !formData.email) errors.email = 'El email es obligatorio para notificar por Email';
+        if (!editingId && notifWhatsapp && !formData.telefono) errors.telefono = 'El teléfono es obligatorio para notificar por WhatsApp';
 
         if (Object.keys(errors).length > 0) {
             setFormErrors(errors);
@@ -497,6 +511,9 @@ export default function IncidenciasPage() {
                         webhookPayload.append('incidencia_id', incidenciaId.toString());
                     }
                     webhookPayload.append('notificacion', enviarAviso ? 'true' : 'false');
+                    webhookPayload.append('canal_email', notifEmail ? 'true' : 'false');
+                    webhookPayload.append('canal_whatsapp', notifWhatsapp ? 'true' : 'false');
+                    webhookPayload.append('notificacion_propietario', (!notifEmail && !notifWhatsapp) ? '0' : (notifWhatsapp && !notifEmail) ? '1' : (!notifWhatsapp && notifEmail) ? '2' : '3');
 
                     webhookPayload.append('adjuntos_count', files.length.toString());
                     files.forEach((file, index) => {
@@ -533,6 +550,8 @@ export default function IncidenciasPage() {
             });
             setFiles([]);
             setEnviarAviso(null);
+            setNotifEmail(false);
+            setNotifWhatsapp(false);
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
@@ -1451,7 +1470,7 @@ export default function IncidenciasPage() {
                                 </p>
                             </div>
                             <button
-                                onClick={() => { setShowForm(false); setFormErrors({}); }}
+                                onClick={resetForm}
                                 className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
@@ -1668,30 +1687,95 @@ export default function IncidenciasPage() {
 
                                 {/* Section: Notificación */}
                                 <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Notificación</h3>
-                                    <div className="md:col-span-4 bg-neutral-50/60 border border-neutral-100 rounded-lg p-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                                        <div>
-                                            <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block">
-                                                Notificar al Propietario <span className="text-red-500">*</span>
+                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Notificación al Propietario</h3>
+                                    <div className="flex flex-col gap-3">
+                                        {/* Checkboxes de canal */}
+                                        <div className="bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
+                                            <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                                Canal de notificación
                                             </label>
-                                            <p className="text-[10px] text-neutral-500 font-medium">¿Se enviará un aviso de registro al cliente?</p>
+                                            <div className="flex flex-col sm:flex-row gap-3">
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={notifEmail}
+                                                        onChange={e => {
+                                                            setNotifEmail(e.target.checked);
+                                                            setEnviarAviso(e.target.checked || notifWhatsapp ? true : false);
+                                                            setFormErrors(prev => ({ ...prev, contacto: '' }));
+                                                        }}
+                                                        className="w-4 h-4 rounded accent-yellow-400"
+                                                    />
+                                                    <span className="text-xs font-semibold text-neutral-700">Notificar por Email</span>
+                                                </label>
+                                                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={notifWhatsapp}
+                                                        onChange={e => {
+                                                            setNotifWhatsapp(e.target.checked);
+                                                            setEnviarAviso(notifEmail || e.target.checked ? true : false);
+                                                            setFormErrors(prev => ({ ...prev, contacto: '' }));
+                                                        }}
+                                                        className="w-4 h-4 rounded accent-yellow-400"
+                                                    />
+                                                    <span className="text-xs font-semibold text-neutral-700">Notificar por WhatsApp</span>
+                                                </label>
+                                            </div>
+                                            <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al propietario.</p>
                                         </div>
-                                        <div className="flex bg-neutral-100 rounded-lg p-1 w-fit">
-                                            <button
-                                                type="button"
-                                                onClick={() => setEnviarAviso(true)}
-                                                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${enviarAviso === true ? 'bg-yellow-400 text-neutral-950 shadow-sm border border-yellow-500/20' : 'text-neutral-500 hover:text-neutral-700'}`}
-                                            >
-                                                Sí
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setEnviarAviso(false)}
-                                                className={`px-6 py-2 rounded-md text-xs font-bold uppercase tracking-widest transition-all ${enviarAviso === false ? 'bg-yellow-400 text-neutral-950 shadow-sm border border-yellow-500/20' : 'text-neutral-500 hover:text-neutral-700'}`}
-                                            >
-                                                No
-                                            </button>
-                                        </div>
+                                        {/* Datos de contacto para notificación */}
+                                        {notifEmail && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                    Email para notificación <span className="text-red-500">*</span>
+                                                </label>
+                                                {formData.email ? (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                        <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{formData.email}</span>
+                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del cliente</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="email"
+                                                            placeholder="ejemplo@correo.com"
+                                                            className={`w-full bg-white border text-neutral-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 transition-all placeholder:text-neutral-400 ${formErrors.email ? 'border-red-400 focus:ring-red-400/20' : 'border-neutral-200 focus:ring-amber-400/20 focus:border-amber-400'}`}
+                                                            value={formData.email}
+                                                            onChange={e => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({ ...prev, email: '' })); }}
+                                                        />
+                                                        {formErrors.email && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.email}</p>}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                        {notifWhatsapp && (
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                    Teléfono para notificación <span className="text-red-500">*</span>
+                                                </label>
+                                                {formData.telefono ? (
+                                                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                        <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{formData.telefono}</span>
+                                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del cliente</span>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <input
+                                                            type="tel"
+                                                            placeholder="600000000"
+                                                            className={`w-full bg-white border text-neutral-900 text-sm rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 transition-all placeholder:text-neutral-400 ${formErrors.telefono ? 'border-red-400 focus:ring-red-400/20' : 'border-neutral-200 focus:ring-amber-400/20 focus:border-amber-400'}`}
+                                                            value={formData.telefono}
+                                                            onChange={e => { setFormData({ ...formData, telefono: e.target.value }); setFormErrors(prev => ({ ...prev, telefono: '' })); }}
+                                                        />
+                                                        {formErrors.telefono && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.telefono}</p>}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                        {formErrors.contacto && (
+                                            <p className="flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.contacto}</p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -1721,7 +1805,7 @@ export default function IncidenciasPage() {
                         <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-end gap-2 flex-wrap">
                             <button
                                 type="button"
-                                onClick={() => { setShowForm(false); setFormErrors({}); }}
+                                onClick={resetForm}
                                 className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                             >
                                 Cancelar
@@ -1732,11 +1816,11 @@ export default function IncidenciasPage() {
                                 disabled={
                                     isSubmitting ||
                                     uploading ||
-                                    (!editingId && enviarAviso === null) ||
                                     !formData.nombre_cliente ||
                                     !formData.comunidad_id ||
                                     !formData.mensaje ||
-                                    !!(enviarAviso === true && !formData.telefono && !formData.email) ||
+                                    !!(notifEmail && !formData.email) ||
+                                    !!(notifWhatsapp && !formData.telefono) ||
                                     !!(formData.telefono && !/^\d{9}$/.test(formData.telefono)) ||
                                     !!(formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
                                 }
@@ -1774,7 +1858,7 @@ export default function IncidenciasPage() {
             {/* Export Notes Modal */}
             {portalReady && showExportModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-black/50 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm"
+                    className="fixed inset-0 bg-black/50 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm"
                     onClick={() => {
                         setShowExportModal(false);
                         setPendingExportParams(null);
@@ -2196,7 +2280,7 @@ export default function IncidenciasPage() {
             {/* Document Delete Confirmation Modal */}
             {portalReady && showDeleteDocConfirm && createPortal(
                 <div
-                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
                         className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
@@ -2471,7 +2555,7 @@ export default function IncidenciasPage() {
             {/* Aplazar Date Picker Modal */}
             {portalReady && showAplazarModal && createPortal(
                 <div
-                    className="fixed inset-0 bg-neutral-900/60 z-[110] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
                 >
                     <div
                         className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
