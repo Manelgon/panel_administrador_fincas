@@ -1214,21 +1214,20 @@ export default function IncidenciasPage() {
             key: 'aviso',
             label: 'Aviso',
             render: (row) => {
-                const isSent = row.aviso === true || row.aviso === 'true';
-                const isNotSent = row.aviso === false || row.aviso === 'false';
-                const hasValue = row.aviso && !isSent && !isNotSent;
-
+                const v = Number(row.aviso);
+                const labels: Record<number, { text: string; cls: string }> = {
+                    0: { text: 'Sin aviso', cls: 'bg-neutral-100 text-neutral-500' },
+                    1: { text: 'WhatsApp', cls: 'bg-green-100 text-green-700' },
+                    2: { text: 'Email', cls: 'bg-blue-100 text-blue-700' },
+                    3: { text: 'Ambos', cls: 'bg-indigo-100 text-indigo-700' },
+                };
+                const label = labels[v];
                 return (
                     <div className="flex justify-center">
-                        {isSent ? (
-                            <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full text-[10px] font-bold">ENVIADO</span>
-                        ) : isNotSent ? (
-                            <span className="bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full text-[10px] font-bold">NO ENVIADO</span>
-                        ) : hasValue ? (
-                            <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">{String(row.aviso)}</span>
-                        ) : (
-                            <span className="text-neutral-400">-</span>
-                        )}
+                        {label
+                            ? <span className={`${label.cls} px-2 py-0.5 rounded-full text-[10px] font-bold`}>{label.text}</span>
+                            : <span className="text-neutral-400">-</span>
+                        }
                     </div>
                 );
             },
@@ -1957,12 +1956,18 @@ export default function IncidenciasPage() {
                                     )}
                                     {/* Aviso */}
                                     {(() => {
-                                        const avisoVal = selectedDetailIncidencia.aviso;
-                                        const avisoSent = avisoVal === true || avisoVal === 'true';
+                                        const v = Number(selectedDetailIncidencia.aviso);
+                                        const labels: Record<number, { text: string; dot: string; cls: string }> = {
+                                            0: { text: 'Sin aviso', dot: 'bg-neutral-400', cls: 'bg-neutral-100 text-neutral-500' },
+                                            1: { text: 'WhatsApp', dot: 'bg-green-500', cls: 'bg-green-100 text-green-700' },
+                                            2: { text: 'Email', dot: 'bg-blue-500', cls: 'bg-blue-100 text-blue-700' },
+                                            3: { text: 'Ambos', dot: 'bg-indigo-500', cls: 'bg-indigo-100 text-indigo-700' },
+                                        };
+                                        const label = labels[v] ?? { text: '-', dot: 'bg-neutral-400', cls: 'bg-neutral-100 text-neutral-500' };
                                         return (
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${avisoSent ? 'bg-indigo-100 text-indigo-700' : 'bg-neutral-100 text-neutral-500'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${avisoSent ? 'bg-indigo-500' : 'bg-neutral-400'}`} />
-                                                Aviso: {avisoSent ? 'Sí' : 'No'}
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${label.cls}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${label.dot}`} />
+                                                Aviso: {label.text}
                                             </span>
                                         );
                                     })()}
