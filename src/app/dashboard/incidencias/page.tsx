@@ -485,52 +485,7 @@ export default function IncidenciasPage() {
                     }
                 });
 
-                // Trigger Webhook only for new tickets
-                try {
-                    const webhookUrl = "https://serinwebhook.afcademia.com/webhook/c38663f7-31e9-417d-b0aa-acf60ccd8c5c";
-                    const webhookPayload = new FormData();
-                    webhookPayload.append('nombre_cliente', formData.nombre_cliente);
-                    webhookPayload.append('telefono', formData.telefono);
-                    webhookPayload.append('email', formData.email);
-                    webhookPayload.append('mensaje', formData.mensaje);
-
-                    webhookPayload.append('comunidad_id', formData.comunidad_id);
-                    webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
-                    webhookPayload.append('codigo_comunidad', comunidad?.codigo || '');
-
-                    const gestorObj = profiles.find(p => p.user_id === formData.gestor_asignado);
-                    webhookPayload.append('gestor_asignado', formData.gestor_asignado || '');
-                    webhookPayload.append('gestor_asignado_nombre', gestorObj?.nombre || '');
-
-                    const receptorObj = profiles.find(p => p.user_id === formData.recibido_por);
-                    webhookPayload.append('recibido_por', formData.recibido_por || '');
-                    webhookPayload.append('recibido_por_nombre', receptorObj?.nombre || '');
-
-                    webhookPayload.append('fecha', new Date().toISOString());
-                    if (incidenciaId) {
-                        webhookPayload.append('incidencia_id', incidenciaId.toString());
-                    }
-                    webhookPayload.append('notificacion', enviarAviso ? 'true' : 'false');
-                    webhookPayload.append('canal_email', notifEmail ? 'true' : 'false');
-                    webhookPayload.append('canal_whatsapp', notifWhatsapp ? 'true' : 'false');
-                    webhookPayload.append('notificacion_propietario', (!notifEmail && !notifWhatsapp) ? '0' : (notifWhatsapp && !notifEmail) ? '1' : (!notifWhatsapp && notifEmail) ? '2' : '3');
-
-                    webhookPayload.append('adjuntos_count', files.length.toString());
-                    files.forEach((file, index) => {
-                        webhookPayload.append(`adjunto_nombre_${index + 1}`, file.name);
-                    });
-
-                    files.forEach((file) => {
-                        webhookPayload.append('adjuntos', file);
-                    });
-
-                    await fetch(webhookUrl, {
-                        method: 'POST',
-                        body: webhookPayload
-                    });
-                } catch (webhookError) {
-                    console.error('Webhook trigger failed:', webhookError);
-                }
+                // Webhook disparado por Supabase nativo (INSERT en incidencias → trigger-new-ticket)
             }
 
             setShowForm(false);
@@ -785,20 +740,7 @@ export default function IncidenciasPage() {
                 }
             });
 
-            // Trigger Resolved Webhook
-            if (newResuelto) {
-                setTimeout(() => {
-                    try {
-                        fetch('/api/webhooks/trigger-resolved-ticket', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id: id })
-                        }).catch(e => console.error('Resolved Webhook Error:', e));
-                    } catch (e) {
-                        console.error('Resolved Webhook Trigger Error:', e);
-                    }
-                }, 2000);
-            }
+            // Webhook de resolución disparado por Supabase nativo (UPDATE en incidencias → trigger-resolved-ticket)
         } catch (error) {
             console.error(error);
             toast.error('Error al actualizar estado');
