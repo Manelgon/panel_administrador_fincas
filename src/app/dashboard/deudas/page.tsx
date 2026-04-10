@@ -276,23 +276,7 @@ export default function MorosidadPage() {
                         details: { comunidad: comunidad?.nombre_cdad, importe: formData.importe, concepto: formData.titulo_documento }
                     });
 
-                    const gestorProfile = profiles.find(p => p.user_id === formData.gestor);
-                    const webhookPayload = new FormData();
-                    Object.entries(formData).forEach(([key, value]) => { webhookPayload.append(key, value || ''); });
-                    webhookPayload.append('id', newDebt.id.toString());
-                    webhookPayload.append('comunidad_nombre', comunidad?.nombre_cdad || '');
-                    webhookPayload.append('comunidad_codigo', comunidad?.codigo || '');
-                    webhookPayload.append('comunidad_direccion', comunidad?.direccion || '');
-                    webhookPayload.append('gestor_nombre', gestorProfile?.nombre || 'Desconocido');
-                    webhookPayload.append('documento_url', docUrl || '');
-                    webhookPayload.append('notificacion', enviarNotificacion ? 'true' : 'false');
-                    webhookPayload.append('canal_email', notifEmail ? 'true' : 'false');
-                    webhookPayload.append('canal_whatsapp', notifWhatsapp ? 'true' : 'false');
-                    webhookPayload.append('notificacion_propietario', (!notifEmail && !notifWhatsapp) ? '0' : (notifWhatsapp && !notifEmail) ? '1' : (!notifWhatsapp && notifEmail) ? '2' : '3');
-                    webhookPayload.append('adjuntos_count', file ? '1' : '0');
-                    if (file) webhookPayload.append('adjunto', file);
-                    fetch('/api/webhooks/trigger-debt', { method: 'POST', body: webhookPayload })
-                        .catch(err => console.error('Webhook trigger error:', err));
+                    // Webhook disparado por Supabase nativo (INSERT en morosidad → trigger-new-debt)
 
                     setShowForm(false); setFormErrors({});
                     setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
@@ -379,24 +363,7 @@ export default function MorosidadPage() {
 
             toast.success('Marcado como pagado');
 
-            // Trigger Resolved Webhook
-            setTimeout(() => {
-                try {
-                    // Destructure to exclude the nested comunidades object
-                    const { comunidades: _cdad, ...morosoData } = moroso || {};
-
-                    fetch('/api/webhooks/trigger-resolved-debt', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: id,
-                            // Backend fetches full details to ensure freshness and security
-                        })
-                    }).catch(e => console.error('Resolved Debt Webhook Error:', e));
-                } catch (e) {
-                    console.error('Resolved Debt Webhook Trigger Error:', e);
-                }
-            }, 2000);
+            // Webhook de resolución disparado por Supabase nativo (UPDATE en morosidad → trigger-resolved-debt)
 
             // Log activity
             await logActivity({
