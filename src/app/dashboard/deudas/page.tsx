@@ -264,6 +264,7 @@ export default function MorosidadPage() {
                         id_email_deuda: formData.id_email_deuda || null,
                         gestor: formData.gestor || null,
                         ref: autoRef || null,
+                        aviso: (!notifEmail && !notifWhatsapp) ? 0 : (notifWhatsapp && !notifEmail) ? 1 : (!notifWhatsapp && notifEmail) ? 2 : 3,
                     }]).select().single();
 
                     if (error) throw error;
