@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { promises as fs } from "fs";
 import path from "path";
 import { logActivity } from "@/lib/logActivity";
@@ -22,11 +23,6 @@ const SECTION_BG = rgb(0.97, 0.97, 0.97);     // neutral-50
 const TABLE_HEADER_BG = rgb(0.09, 0.09, 0.11); // neutral-900
 const ALT_ROW_BG = rgb(0.98, 0.98, 0.98);     // neutral-100
 const ACCENT_TEXT = rgb(0.56, 0.49, 0.02);     // yellow-800
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 async function downloadAssetPng(storagePath: string): Promise<Uint8Array> {
     const { data, error } = await supabaseAdmin.storage.from("doc-assets").download(storagePath);

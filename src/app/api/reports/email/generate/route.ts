@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { promises as fs } from "fs";
 import path from "path";
 import { logActivity } from "@/lib/logActivity";
@@ -12,11 +13,6 @@ const A4 = { w: 595.28, h: 841.89 };
 const YELLOW = rgb(0.98, 0.84, 0.40);
 const BORDER = rgb(0.82, 0.82, 0.82);
 const BLACK = rgb(0, 0, 0);
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 function formatToEuropeanDate(dateStr: string | null | undefined): string {
     if (!dateStr) return "-";

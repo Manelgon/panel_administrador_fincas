@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logActivity } from "@/lib/logActivity";
 import { getEmisor } from "@/lib/getEmisor";
 
@@ -12,11 +13,6 @@ const BORDER = rgb(0.82, 0.82, 0.82);
 const BLACK = rgb(0, 0, 0);
 
 // EMISOR se carga dinámicamente desde company_settings en el handler POST
-
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
 
 async function downloadAssetPng(path: string): Promise<Uint8Array> {
     let { data, error } = await supabaseAdmin.storage

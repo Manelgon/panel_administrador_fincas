@@ -32,6 +32,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+debug-*.js
+debug-*.json
+debug-*.txt
+*.log
+diff_*.txt
+git_status.txt
+typescript_errors.log
 
 # Local env files
 .env*.local

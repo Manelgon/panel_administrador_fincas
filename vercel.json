@@ -4,5 +4,16 @@
             "path": "/api/cron/fichaje-autoclose",
             "schedule": "0 17 * * *"
         }
+    ],
+    "headers": [
+        {
+            "source": "/api/cron/(.*)",
+            "headers": [
+                {
+                    "key": "Authorization",
+                    "value": "Bearer $CRON_SECRET"
+                }
+            ]
+        }
     ]
 }

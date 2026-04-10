@@ -1,13 +1,9 @@
 import { PDFDocument, rgb, StandardFonts, PDFFont } from "pdf-lib";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 
 // Helper for Service Role (bypassing RLS for assets)
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 // Helper: Download Asset with Admin Client
 async function downloadAssetPng(filePath: string) {
     let { data, error } = await supabaseAdmin.storage

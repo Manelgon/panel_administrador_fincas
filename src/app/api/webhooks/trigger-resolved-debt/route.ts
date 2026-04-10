@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 export async function POST(req: Request) {
     try {
@@ -19,24 +19,6 @@ export async function POST(req: Request) {
                 details: 'Please add RESOLVED_DEBT_WEBHOOK to your .env.local file'
             }, { status: 500 });
         }
-
-        // Initialize Admin Client to fetch full debt details securely
-        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-        if (!serviceRoleKey) {
-            console.error('❌ SUPABASE_SERVICE_ROLE_KEY is missing');
-            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-        }
-
-        const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            serviceRoleKey,
-            {
-                auth: {
-                    autoRefreshToken: false,
-                    persistSession: false
-                }
-            }
-        );
 
         // Fetch debt data with safe relations (avoiding unknown FK names for gestor)
         const { data: moroso, error: fetchError } = await supabaseAdmin

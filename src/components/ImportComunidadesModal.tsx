@@ -3,7 +3,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { X, Upload, FileSpreadsheet, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import * as XLSX from 'xlsx';
 import ModalPortal from '@/components/ModalPortal';
 
 interface ImportRow {
@@ -33,23 +32,29 @@ export default function ImportComunidadesModal({ onClose, onImported }: ImportCo
         setDone(false);
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
-                const data = e.target?.result;
-                const wb = XLSX.read(data, { type: 'binary' });
-                const ws = wb.Sheets[wb.SheetNames[0]];
-                // Convert to array of arrays
-                const raw: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+                const ExcelJS = await import('exceljs');
+                const workbook = new ExcelJS.Workbook();
+                const buffer = e.target?.result as ArrayBuffer;
+                await workbook.xlsx.load(buffer);
+                const ws = workbook.worksheets[0];
 
-                if (raw.length < 2) {
+                if (!ws || ws.rowCount < 2) {
                     toast.error('El fichero está vacío o no tiene filas de datos.');
                     return;
                 }
 
+                // Build raw array of arrays from ExcelJS rows
+                const raw: string[][] = [];
+                ws.eachRow((row) => {
+                    const vals = (row.values as unknown[]).slice(1);
+                    raw.push(vals.map(v => v == null ? '' : String(v).trim()));
+                });
+
                 // Detect header row – look for Código/Codigo in first row
-                // Support flexible column order: try to find by header name
-                const headers = raw[0].map((h: any) => String(h).trim().toLowerCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+                const headers = raw[0].map(h => h.toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
                 );
 
                 const codigoIdx = headers.findIndex(h => h === 'codigo' || h === 'cod' || h === 'code');
@@ -70,10 +75,10 @@ export default function ImportComunidadesModal({ onClose, onImported }: ImportCo
 
                 const parsed: ImportRow[] = raw
                     .slice(1) // skip header
-                    .map((row: any[]) => ({
-                        codigo: normalizeCode(String(row[ci] ?? '')),
-                        nombre_cdad: String(row[ni] ?? '').trim(),
-                        cif: String(row[fi] ?? '').trim(),
+                    .map((row) => ({
+                        codigo: normalizeCode(row[ci] ?? ''),
+                        nombre_cdad: (row[ni] ?? '').trim(),
+                        cif: (row[fi] ?? '').trim(),
                         status: 'pending' as const,
                     }))
                     .filter(r => r.codigo && r.nombre_cdad); // skip empty rows
@@ -89,7 +94,7 @@ export default function ImportComunidadesModal({ onClose, onImported }: ImportCo
                 toast.error('Error al leer el fichero. Asegúrate de que es CSV o Excel válido.');
             }
         };
-        reader.readAsBinaryString(file);
+        reader.readAsArrayBuffer(file);
     }, []);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -21,7 +21,6 @@ function LoginForm() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [rememberMe, setRememberMe] = useState(false);
     const [loading, setLoading] = useState(false);
     const [emisorName, setEmisorName] = useState('');
     const [logoPath, setLogoPath] = useState('');
@@ -46,31 +45,10 @@ function LoginForm() {
             .catch(() => {});
     }, []);
 
-    // Load remembered credentials on mount
+    // Limpiar credenciales guardadas en localStorage (legacy — eliminado por seguridad)
     useEffect(() => {
-        const saved = localStorage.getItem('remembered_credentials');
-        if (saved) {
-            try {
-                const { email: savedEmail, password: savedPassword, timestamp } = JSON.parse(saved);
-                const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-                if (Date.now() - timestamp < thirtyDays) {
-                    setEmail(savedEmail);
-                    setPassword(savedPassword);
-                    setRememberMe(true);
-                } else {
-                    localStorage.removeItem('remembered_credentials');
-                }
-            } catch {
-                localStorage.removeItem('remembered_credentials');
-            }
-        }
+        localStorage.removeItem('remembered_credentials');
     }, []);
-
-    useEffect(() => {
-        if (!rememberMe) {
-            localStorage.removeItem('remembered_credentials');
-        }
-    }, [rememberMe]);
 
     const handleLogin = async (e: SubmitEvent | React.SyntheticEvent) => {
         e.preventDefault();
@@ -112,15 +90,6 @@ function LoginForm() {
                 return;
             }
             // ────────────────────────────────────────────────────────────────────
-
-            if (rememberMe) {
-                localStorage.setItem('remembered_credentials', JSON.stringify({
-                    email, password, timestamp: Date.now()
-                }));
-                await supabase.auth.updateUser({ data: { remember_me: true } });
-            } else {
-                localStorage.removeItem('remembered_credentials');
-            }
 
             // Overlay se mantiene visible durante la navegación al dashboard
             toast.success('Bienvenido');
@@ -271,34 +240,6 @@ function LoginForm() {
                                 }
                             </button>
                         </div>
-                    </div>
-
-                    {/* Remember me */}
-                    <div className="flex items-center gap-2.5">
-                        <input
-                            type="checkbox"
-                            id="rememberMe"
-                            checked={rememberMe}
-                            onChange={(e) => setRememberMe(e.target.checked)}
-                            className="w-4 h-4 rounded cursor-pointer appearance-none transition-all"
-                            style={{
-                                background: rememberMe ? '#fbbf24' : '#f8fafc',
-                                border: `1px solid ${rememberMe ? '#fbbf24' : '#d1d5db'}`,
-                                boxShadow: rememberMe ? '0 0 0 3px rgba(251,191,36,0.20)' : 'none',
-                                backgroundImage: rememberMe
-                                    ? `url("data:image/svg+xml,%3Csvg viewBox='0 0 10 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3 3 5-6' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
-                                    : 'none',
-                                backgroundRepeat: 'no-repeat',
-                                backgroundPosition: 'center',
-                                backgroundSize: '10px 8px',
-                            }}
-                        />
-                        <label
-                            htmlFor="rememberMe"
-                            className="text-sm cursor-pointer select-none text-gray-600"
-                        >
-                            Recuérdame
-                        </label>
                     </div>
 
                     {/* Submit */}
