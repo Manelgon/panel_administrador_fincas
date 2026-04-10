@@ -668,6 +668,19 @@ export default function MorosidadPage() {
             key: 'aviso',
             label: 'Aviso',
             defaultVisible: false,
+            render: (row) => {
+                const v = Number(row.aviso);
+                const labels: Record<number, { text: string; cls: string }> = {
+                    0: { text: 'Sin aviso', cls: 'bg-neutral-100 text-neutral-500' },
+                    1: { text: 'WhatsApp', cls: 'bg-green-100 text-green-700' },
+                    2: { text: 'Email', cls: 'bg-blue-100 text-blue-700' },
+                    3: { text: 'Ambos', cls: 'bg-indigo-100 text-indigo-700' },
+                };
+                const label = labels[v];
+                return label
+                    ? <span className={`${label.cls} px-2 py-0.5 rounded-full text-[10px] font-bold`}>{label.text}</span>
+                    : <span className="text-neutral-400">-</span>;
+            },
         },
         {
             key: 'fecha_notificacion',
