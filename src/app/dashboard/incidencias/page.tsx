@@ -459,7 +459,7 @@ export default function IncidenciasPage() {
                     adjuntos: adjuntos,
                     // @ts-ignore
                     gestor_asignado: formData.gestor_asignado || null,
-                    aviso: enviarAviso,
+                    aviso: (!notifEmail && !notifWhatsapp) ? 0 : (notifWhatsapp && !notifEmail) ? 1 : (!notifWhatsapp && notifEmail) ? 2 : 3,
                     source: formData.source || null,
                     ...(formData.fecha_registro ? { created_at: new Date(formData.fecha_registro).toISOString() } : {})
                 }]).select();
