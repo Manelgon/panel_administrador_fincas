@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find c:/Users/manel/.000.Proyectos.DEV -type f -name *.tsx)"
+    ]
+  }
+}

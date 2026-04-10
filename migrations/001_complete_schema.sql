@@ -995,6 +995,18 @@ on public.proveedores for delete
 to authenticated
 using (public.is_admin());
 
+drop policy if exists "proveedores: gestor_empleado write" on public.proveedores;
+create policy "proveedores: gestor_empleado write"
+on public.proveedores
+for all
+to authenticated
+using (
+  (select rol from public.profiles where user_id = auth.uid()) in ('gestor', 'empleado')
+)
+with check (
+  (select rol from public.profiles where user_id = auth.uid()) in ('gestor', 'empleado')
+);
+
 -- ---------- NOTIFICATIONS ----------
 drop policy if exists "notifications: read own" on public.notifications;
 create policy "notifications: read own"

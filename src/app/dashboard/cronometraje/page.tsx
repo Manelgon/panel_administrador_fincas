@@ -393,7 +393,7 @@ export default function CronometrajePage() {
         await withLoading(async () => {
         setGeneratingXLS(true);
         try {
-            const { utils, writeFile } = await import('xlsx');
+            const ExcelJS = await import('exceljs');
             const reportData = buildReportData(community, dateFrom, dateTo);
 
             if (reportData.length === 0) {
@@ -411,12 +411,22 @@ export default function CronometrajePage() {
                 Tipo: t.is_manual ? 'Manual' : 'Real',
             }));
 
-            const ws = utils.json_to_sheet(rows);
-            const wb = utils.book_new();
-            utils.book_append_sheet(wb, ws, 'Cronometraje');
+            const wb = new ExcelJS.Workbook();
+            const ws = wb.addWorksheet('Cronometraje');
+            if (rows.length > 0) {
+                ws.columns = Object.keys(rows[0]).map(key => ({ header: key, key, width: 20 }));
+                rows.forEach(row => ws.addRow(row));
+            }
 
             const today = new Date().toISOString().slice(0, 10);
-            writeFile(wb, `informe_cronometraje_${today}.xlsx`);
+            const buffer = await wb.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `informe_cronometraje_${today}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
             toast.success('Excel descargado correctamente');
         } catch (err: unknown) {
             console.error('Error generating XLS:', err);

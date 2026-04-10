@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { createClient } from "@supabase/supabase-js";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 
 const DOC_KEY = "suplidos";
@@ -14,11 +15,6 @@ const BORDER = rgb(0.82, 0.82, 0.82);
 const BLACK = rgb(0, 0, 0);
 
 // Helper: Service Role Client to bypass RLS for assets
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
 /**
  * Helper to download asset as Uint8Array (Buffer)
  */
