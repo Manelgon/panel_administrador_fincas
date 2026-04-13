@@ -146,6 +146,7 @@ export default function ActividadPage() {
             documento: 'Documento',
             aviso: 'Aviso',
             importacion_pdf: 'Importación PDF',
+            reunion: 'Reunión',
         };
         return labels[entityType] || entityType;
     };

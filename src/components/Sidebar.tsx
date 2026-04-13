@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     Home, Building, AlertCircle, FileText, LogOut, Activity,
-    Users, Clock, X, Folder, Timer, ChevronRight
+    Users, Clock, X, Folder, Timer, ChevronRight, CalendarDays
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
@@ -59,6 +59,7 @@ const LOCAL_SECTION = {
         { name: 'Sofia (Local)', href: '/dashboard/sofia', icon: AlertCircle },
         { name: 'Propietarios Sofia', href: '/dashboard/propietarios-sofia', icon: Users },
         { name: 'Facturas', href: '/dashboard/facturas-comunidades', icon: Folder },
+        { name: 'Reuniones', href: '/dashboard/reuniones', icon: CalendarDays },
     ],
 };
 

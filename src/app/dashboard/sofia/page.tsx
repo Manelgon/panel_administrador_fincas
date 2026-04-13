@@ -46,6 +46,8 @@ interface Incidencia {
     id_email_gestion?: string;
     estado?: string;
     fecha_recordatorio?: string;
+    source?: string;
+    motivo_ticket?: string;
 }
 
 export default function SofiaPage() {
@@ -74,6 +76,7 @@ export default function SofiaPage() {
     const [exporting, setExporting] = useState(false);
 
     const [profiles, setProfiles] = useState<any[]>([]);
+    const [allProfilesForFilter, setAllProfilesForFilter] = useState<any[]>([]);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
 
     // Delete state
@@ -153,19 +156,19 @@ export default function SofiaPage() {
     const fetchInitialData = async () => {
         setLoading(true);
         // Metadata from primary, tickets from secondary
-        const [cdads, profs] = await Promise.all([fetchComunidades(), fetchProfiles()]);
-        await fetchIncidencias(cdads || [], profs || []);
+        const [cdads, allProfs] = await Promise.all([fetchComunidades(), fetchProfiles()]);
+        await fetchIncidencias(cdads || [], allProfs || []);
         setLoading(false);
     };
 
     const fetchProfiles = async () => {
-        const { data } = await supabase.from('profiles').select('user_id, nombre, rol').eq('activo', true);
-        if (data) {
-            const filtered = data.filter(p => p.nombre !== 'Sofia-Bot');
-            setProfiles(filtered);
-            return filtered;
-        }
-        return [];
+        // Fetch all profiles for name resolution and filtering
+        const { data } = await supabase.from('profiles').select('user_id, nombre, rol, activo');
+        const allProfs = (data || []);
+        const activeProfs = allProfs.filter(p => p.activo === true && p.nombre !== 'Sofia-Bot');
+        setProfiles(activeProfs);        // activos sin bots → selects de reasignación
+        setAllProfilesForFilter(allProfs); // todos → dropdown filtro y resolución de nombres
+        return allProfs;
     };
 
     const fetchComunidades = async () => {
@@ -215,7 +218,10 @@ export default function SofiaPage() {
                     (c.id === item.comunidad_id) ||
                     (item.codigo && c.codigo === item.codigo)
                 );
-                const gestorProf = currentProfiles.find((p: any) => p.user_id === rawGestor);
+                const gestorProf = currentProfiles.find((p: any) =>
+                    p.user_id === rawGestor ||
+                    (typeof rawGestor === 'string' && p.nombre?.toLowerCase() === rawGestor.toLowerCase())
+                );
                 const receptorProf = currentProfiles.find((p: any) => p.user_id === item.quien_lo_recibe);
                 const resolverProf = currentProfiles.find((p: any) => p.user_id === item.resuelto_por);
 
@@ -225,7 +231,9 @@ export default function SofiaPage() {
                     comunidad: cdad?.nombre_cdad || rawBuilding || '',
                     created_at: item.timestamp || rawDate,
                     codigo: item.codigo || cdad?.codigo || '',
-                    gestor: gestorProf ? { nombre: gestorProf.nombre } : undefined,
+                    gestor: gestorProf
+                        ? { nombre: gestorProf.nombre }
+                        : (rawGestor && !/^[0-9a-f-]{36}$/i.test(rawGestor) ? { nombre: rawGestor } : undefined),
                     receptor: receptorProf ? { nombre: receptorProf.nombre } : undefined,
                     resolver: resolverProf ? { nombre: resolverProf.nombre } : undefined,
                     resuelto_por: item.resuelto_por // Ensure UUID is kept
@@ -713,6 +721,18 @@ export default function SofiaPage() {
             render: (row) => <span className="text-[11px] font-medium text-neutral-600 truncate max-w-[100px] block" title={row.categoria}>{row.categoria || '-'}</span>
         },
         {
+            key: 'source',
+            label: 'Entrada',
+            render: (row) => row.source
+                ? <span className="text-[11px] font-medium text-neutral-600 truncate max-w-[120px] block capitalize" title={row.source}>{row.source}</span>
+                : <span className="text-neutral-300">-</span>
+        },
+        {
+            key: 'motivo_ticket',
+            label: 'Motivo',
+            render: (row) => <div className="max-w-[120px] truncate text-[11px] text-neutral-500" title={row.motivo_ticket}>{row.motivo_ticket || '-'}</div>
+        },
+        {
             key: 'sentimiento',
             label: 'Sentimiento',
             render: (row) => {
@@ -896,7 +916,7 @@ export default function SofiaPage() {
                         <SearchableSelect
                             value={filterGestor === 'all' ? '' : filterGestor}
                             onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                            options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                            options={allProfilesForFilter.map(p => ({ value: p.user_id, label: p.nombre }))}
                             placeholder="Todos los Gestores"
                             className="w-[200px]"
                         />
@@ -989,6 +1009,8 @@ export default function SofiaPage() {
                                     <div className="divide-y text-sm">
                                         <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Receptor</span><span className="uppercase text-amber-600 font-bold">{selectedDetailIncidencia.receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || 'Bot'}</span></div>
                                         <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Categoría</span><span className="font-medium">{selectedDetailIncidencia.categoria || '-'}</span></div>
+                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Entrada</span><span className="font-medium capitalize">{selectedDetailIncidencia.source || '-'}</span></div>
+                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Motivo del Ticket</span><span className="font-medium text-right max-w-[60%]">{selectedDetailIncidencia.motivo_ticket || '-'}</span></div>
                                         <div className="py-2 flex justify-between items-center">
                                             <span className="font-bold text-neutral-400 uppercase">Sentimiento</span>
                                             <span className={`font-black uppercase ${selectedDetailIncidencia.sentimiento?.toLowerCase() === 'positivo' ? 'text-emerald-600' :

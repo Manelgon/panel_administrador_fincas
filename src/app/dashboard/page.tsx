@@ -214,12 +214,12 @@ export default function DashboardPage() {
                             ))}
                         </div>
                     </div>
-                    <DashboardCharts chartData={chartData} selectedCommunity={selectedCommunity} visibleLines={visibleLines} />
+                    <DashboardCharts chartData={chartData} selectedCommunity={selectedCommunity} visibleLines={visibleLines} mode="incidencias" />
                 </Section>
 
                 {/* ── Sección Deudas ──────────────────────────────────────────────── */}
                 <Section id="deudas" title="Deudas" icon={FileText} iconColor="text-yellow-600">
-                    <DashboardCharts chartData={chartData} selectedCommunity={selectedCommunity} visibleLines={visibleLines} />
+                    <DashboardCharts chartData={chartData} selectedCommunity={selectedCommunity} visibleLines={visibleLines} mode="deudas" />
                 </Section>
 
                 {/* ── Sección Cronometraje ────────────────────────────────────────── */}

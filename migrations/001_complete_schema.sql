@@ -1261,5 +1261,93 @@ insert into public.company_settings (setting_key, setting_value) values
 on conflict (setting_key) do nothing;
 
 -- =========================================
+-- REUNIONES (Administración de Juntas)
+-- =========================================
+
+CREATE TABLE IF NOT EXISTS reuniones (
+  id              BIGSERIAL PRIMARY KEY,
+  comunidad_id    INTEGER NOT NULL REFERENCES comunidades(id) ON DELETE CASCADE,
+  fecha_reunion   DATE NOT NULL,
+  tipo            TEXT NOT NULL CHECK (tipo IN ('JGO', 'JGE', 'JV')),
+
+  -- Campos de proceso (booleanos del Excel "Seg. Juntas")
+  estado_cuentas  BOOLEAN NOT NULL DEFAULT FALSE,
+  pto_ordinario   BOOLEAN NOT NULL DEFAULT FALSE,
+  pto_extra       BOOLEAN NOT NULL DEFAULT FALSE,
+  morosos         BOOLEAN NOT NULL DEFAULT FALSE,
+  citacion_email  BOOLEAN NOT NULL DEFAULT FALSE,
+  citacion_carta  BOOLEAN NOT NULL DEFAULT FALSE,
+  redactar_acta   BOOLEAN NOT NULL DEFAULT FALSE,
+  vb_pendiente    BOOLEAN NOT NULL DEFAULT FALSE,
+  acta_email      BOOLEAN NOT NULL DEFAULT FALSE,
+  acta_carta      BOOLEAN NOT NULL DEFAULT FALSE,
+  pasar_acuerdos  BOOLEAN NOT NULL DEFAULT FALSE,
+
+  notas           TEXT,
+  created_by      UUID REFERENCES auth.users(id),
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'update_reuniones_updated_at'
+  ) THEN
+    CREATE TRIGGER update_reuniones_updated_at
+      BEFORE UPDATE ON reuniones
+      FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_reuniones_comunidad ON reuniones(comunidad_id);
+CREATE INDEX IF NOT EXISTS idx_reuniones_fecha ON reuniones(fecha_reunion DESC);
+CREATE INDEX IF NOT EXISTS idx_reuniones_tipo ON reuniones(tipo);
+
+ALTER TABLE reuniones ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden ver reuniones') THEN
+    CREATE POLICY "Usuarios autenticados pueden ver reuniones"
+      ON reuniones FOR SELECT TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden crear reuniones') THEN
+    CREATE POLICY "Usuarios autenticados pueden crear reuniones"
+      ON reuniones FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden actualizar reuniones') THEN
+    CREATE POLICY "Usuarios autenticados pueden actualizar reuniones"
+      ON reuniones FOR UPDATE TO authenticated USING (true);
+  END IF;
+END $$;
+
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Solo admin puede eliminar reuniones') THEN
+    CREATE POLICY "Solo admin puede eliminar reuniones"
+      ON reuniones FOR DELETE TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM profiles
+          WHERE profiles.user_id = auth.uid()
+          AND profiles.rol = 'admin'
+        )
+      );
+  END IF;
+END $$;
+
+-- =========================================
 -- FIN DE LA MIGRACIÓN
 -- =========================================
