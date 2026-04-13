@@ -180,7 +180,7 @@ export default function IncidenciasPage() {
 
     const fetchProfiles = async () => {
         const { data } = await supabase.from('profiles').select('user_id, nombre, rol').eq('activo', true);
-        if (data) setProfiles(data);
+        if (data) setProfiles(data.filter(p => !p.nombre?.toLowerCase().startsWith('sofia-bot')));
     };
 
     const closeImportModal = () => {

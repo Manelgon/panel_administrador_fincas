@@ -22,12 +22,14 @@ interface DashboardChartsProps {
     chartData: ChartData;
     selectedCommunity: string;
     visibleLines: { pendientes: boolean; aplazadas: boolean; total: boolean };
+    mode?: 'incidencias' | 'deudas' | 'all';
 }
 
-export default function DashboardCharts({ chartData, selectedCommunity, visibleLines }: DashboardChartsProps) {
+export default function DashboardCharts({ chartData, selectedCommunity, visibleLines, mode = 'all' }: DashboardChartsProps) {
     return (
         <>
             {/* ── Evolución de incidencias ──────────────────────────────────── */}
+            {mode !== 'deudas' && (
             <div className="h-[220px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData.incidenciasEvolution}>
@@ -55,8 +57,10 @@ export default function DashboardCharts({ chartData, selectedCommunity, visibleL
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
+            )}
 
             {/* ── Distribuciones (Estado / Urgencia / Sentimiento / Deuda) ──── */}
+            {mode !== 'deudas' && (
             <div className={`grid grid-cols-1 ${selectedCommunity === 'all' ? 'sm:grid-cols-3' : 'sm:grid-cols-4'} gap-4 mt-6`}>
                 {[
                     {
@@ -94,9 +98,10 @@ export default function DashboardCharts({ chartData, selectedCommunity, visibleL
                     </div>
                 ))}
             </div>
+            )}
 
             {/* ── Top comunidades ───────────────────────────────────────────── */}
-            {selectedCommunity === 'all' && (
+            {mode !== 'deudas' && selectedCommunity === 'all' && (
                 <div className="mt-6 pt-6 border-t border-neutral-100">
                     <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Top comunidades</p>
                     <div className="h-[220px]">
@@ -114,6 +119,7 @@ export default function DashboardCharts({ chartData, selectedCommunity, visibleL
             )}
 
             {/* ── Deudas ────────────────────────────────────────────────────── */}
+            {mode !== 'incidencias' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2">
                     <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mb-3">Deuda por comunidad</p>
@@ -146,6 +152,7 @@ export default function DashboardCharts({ chartData, selectedCommunity, visibleL
                     </div>
                 </div>
             </div>
+            )}
         </>
     );
 }

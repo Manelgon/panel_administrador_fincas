@@ -153,6 +153,54 @@ export interface Morosidad {
 }
 
 // ============================================
+// REUNIONES
+// ============================================
+
+export const reunionFormSchema = z.object({
+  comunidad_id: z.coerce.number().positive('Selecciona una comunidad'),
+  fecha_reunion: z.string().min(1, 'La fecha es obligatoria'),
+  tipo: z.enum(['JGO', 'JGE', 'JV']),
+  estado_cuentas: z.boolean().default(false),
+  pto_ordinario: z.boolean().default(false),
+  pto_extra: z.boolean().default(false),
+  morosos: z.boolean().default(false),
+  citacion_email: z.boolean().default(false),
+  citacion_carta: z.boolean().default(false),
+  redactar_acta: z.boolean().default(false),
+  vb_pendiente: z.boolean().default(false),
+  acta_email: z.boolean().default(false),
+  acta_carta: z.boolean().default(false),
+  pasar_acuerdos: z.boolean().default(false),
+  notas: z.string().optional(),
+});
+
+export type ReunionFormData = z.infer<typeof reunionFormSchema>;
+
+export interface Reunion {
+  id: number;
+  comunidad_id: number;
+  comunidad?: string;
+  codigo?: string;
+  fecha_reunion: string;
+  tipo: 'JGO' | 'JGE' | 'JV';
+  estado_cuentas: boolean;
+  pto_ordinario: boolean;
+  pto_extra: boolean;
+  morosos: boolean;
+  citacion_email: boolean;
+  citacion_carta: boolean;
+  redactar_acta: boolean;
+  vb_pendiente: boolean;
+  acta_email: boolean;
+  acta_carta: boolean;
+  pasar_acuerdos: boolean;
+  notas?: string;
+  created_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ============================================
 // SHARED / AUXILIARY TYPES
 // ============================================
 
