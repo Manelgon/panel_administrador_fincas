@@ -44,7 +44,7 @@ const parseBool = (val: string | null | undefined): boolean => {
     return s === 'SI' || s === 'SÍ' || s === 'YES' || s === 'TRUE' || s === '1' || s === 'X';
 };
 
-const TIPOS_VALIDOS = ['JGO', 'JGE', 'JV'];
+const TIPOS_VALIDOS = ['JGO', 'JGE', 'JV', 'JD'];
 
 export default function ImportReunionesModal({ onClose, onImported, comunidades }: Props) {
     const [rows, setRows] = useState<ImportRow[]>([]);
@@ -54,6 +54,18 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
     const [dragOver, setDragOver] = useState(false);
     // comunidad_id overrides para filas sin match
     const [overrides, setOverrides] = useState<Record<number, number>>({});
+    // estado override por fila: true = resuelto, false/undefined = pendiente
+    const [estadoRows, setEstadoRows] = useState<Record<number, boolean>>({});
+
+    const toggleEstado = (idx: number) =>
+        setEstadoRows(prev => ({ ...prev, [idx]: !prev[idx] }));
+
+    const setAllEstado = (resuelto: boolean) =>
+        setEstadoRows(() => {
+            const next: Record<number, boolean> = {};
+            rows.forEach((_, i) => { next[i] = resuelto; });
+            return next;
+        });
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const findComunidad = useCallback((raw: string): number | null => {
@@ -79,6 +91,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
         setRows([]);
         setDone(false);
         setOverrides({});
+        setEstadoRows({});
 
         try {
             const data = await file.arrayBuffer();
@@ -209,7 +222,8 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
         const BATCH = 20;
         for (let start = 0; start < updated.length; start += BATCH) {
             const batch = updated.slice(start, start + BATCH).map((r, j) => {
-                const cidOverride = overrides[start + j];
+                const globalIdx = start + j;
+                const cidOverride = overrides[globalIdx];
                 const cid = cidOverride ?? r.comunidad_id;
                 if (!cid) return null;
                 return {
@@ -227,6 +241,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                     acta_email: r.acta_email,
                     acta_carta: r.acta_carta,
                     pasar_acuerdos: r.pasar_acuerdos,
+                    resuelto: estadoRows[globalIdx] ?? false,
                 };
             });
 
@@ -367,7 +382,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                             <span className="text-xs bg-neutral-100 text-neutral-500 px-2 py-0.5 rounded-full">{rows.length} filas</span>
                                         </div>
                                         <button
-                                            onClick={() => { setFileName(''); setRows([]); setDone(false); setOverrides({}); }}
+                                            onClick={() => { setFileName(''); setRows([]); setDone(false); setOverrides({}); setEstadoRows({}); }}
                                             className="text-xs text-neutral-400 hover:text-red-500 flex items-center gap-1 transition-colors"
                                         >
                                             <RefreshCw className="w-3 h-3" /> Cambiar fichero
@@ -396,7 +411,27 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
 
                                     {/* Tabla preview */}
                                     <div>
-                                        <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-2 border-b border-[#bf4b50]">Vista previa</h3>
+                                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#bf4b50]">
+                                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest leading-none">Vista previa</h3>
+                                            {!done && rows.length > 0 && (
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAllEstado(true)}
+                                                        className="text-[10px] font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 px-2 py-1 rounded transition-colors"
+                                                    >
+                                                        Marcar todas Resuelto
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setAllEstado(false)}
+                                                        className="text-[10px] font-bold text-neutral-600 bg-neutral-100 hover:bg-neutral-200 px-2 py-1 rounded transition-colors"
+                                                    >
+                                                        Marcar todas Pendiente
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="overflow-auto max-h-[380px] rounded-lg border border-neutral-200">
                                             <table className="w-full text-xs">
                                                 <thead className="bg-neutral-50 sticky top-0 z-10">
@@ -423,6 +458,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                     {rows.map((row, idx) => {
                                                         const comunidadId = overrides[idx] ?? row.comunidad_id;
                                                         const sinComunidad = !comunidadId && row.status === 'pending';
+                                                        const isResuelto = estadoRows[idx] ?? false;
                                                         const rowBg =
                                                             row.status === 'ok'      ? 'bg-green-50/60' :
                                                             row.status === 'skipped' ? 'bg-yellow-50/60' :
@@ -474,6 +510,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                                     <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
                                                                         row.tipo === 'JGO' ? 'bg-blue-100 text-blue-700' :
                                                                         row.tipo === 'JGE' ? 'bg-orange-100 text-orange-700' :
+                                                                        row.tipo === 'JD'  ? 'bg-teal-100 text-teal-700' :
                                                                         'bg-purple-100 text-purple-700'
                                                                     }`}>{row.tipo}</span>
                                                                 </td>
@@ -489,12 +526,9 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                                 {boolCell(row.acta_carta)}
                                                                 {boolCell(row.pasar_acuerdos)}
                                                                 <td className="px-3 py-2 whitespace-nowrap">
-                                                                    {row.status === 'pending' && (
-                                                                        <span className="text-[10px] text-neutral-400 font-medium">Pendiente</span>
-                                                                    )}
                                                                     {row.status === 'ok' && (
                                                                         <span className="inline-flex items-center gap-1 text-[10px] text-green-700 font-semibold">
-                                                                            <CheckCircle className="w-3 h-3" /> OK
+                                                                            <CheckCircle className="w-3 h-3" /> Importada
                                                                         </span>
                                                                     )}
                                                                     {row.status === 'skipped' && (
@@ -505,6 +539,22 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                                             <AlertCircle className="w-3 h-3" />
                                                                             <span className="max-w-[100px] truncate">{row.message ?? 'Error'}</span>
                                                                         </span>
+                                                                    )}
+                                                                    {row.status === 'pending' && (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => toggleEstado(idx)}
+                                                                            className={`flex items-center gap-1.5 rounded text-[10px] font-bold px-2 py-1 transition-colors whitespace-nowrap ${
+                                                                                isResuelto
+                                                                                    ? 'bg-neutral-900 text-white hover:bg-neutral-700'
+                                                                                    : 'bg-white border border-neutral-200 text-neutral-500 hover:bg-neutral-50'
+                                                                            }`}
+                                                                        >
+                                                                            <div className={`w-3 h-3 rounded-sm flex items-center justify-center shrink-0 ${isResuelto ? 'bg-white/20' : 'border border-neutral-300'}`}>
+                                                                                {isResuelto && <CheckCircle className="w-2 h-2 text-white" />}
+                                                                            </div>
+                                                                            {isResuelto ? 'Resuelto' : 'Pendiente'}
+                                                                        </button>
                                                                     )}
                                                                 </td>
                                                             </tr>
