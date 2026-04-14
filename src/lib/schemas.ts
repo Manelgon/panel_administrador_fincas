@@ -171,6 +171,7 @@ export const reunionFormSchema = z.object({
   acta_email: z.boolean().default(false),
   acta_carta: z.boolean().default(false),
   pasar_acuerdos: z.boolean().default(false),
+  enviado: z.boolean().default(false),
   notas: z.string().optional(),
 });
 
@@ -194,6 +195,8 @@ export interface Reunion {
   acta_email: boolean;
   acta_carta: boolean;
   pasar_acuerdos: boolean;
+  enviado: boolean;
+  resuelto: boolean;
   notas?: string;
   created_by?: string;
   created_at: string;

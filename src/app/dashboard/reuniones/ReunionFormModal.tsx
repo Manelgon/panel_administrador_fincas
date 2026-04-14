@@ -220,7 +220,7 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                                         Tipo de Junta <span className="text-red-500">*</span>
                                     </label>
                                     <select
-                                        className={`w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#bf4b50]/40 focus:border-[#bf4b50] focus:bg-white transition ${errors.tipo ? 'border-red-400' : 'border-neutral-200'}`}
+                                        className={`w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-[#bf4b50]/40 focus:border-[#bf4b50] focus:bg-white appearance-none transition ${errors.tipo ? 'border-red-400' : 'border-neutral-200'}`}
                                         value={formData.tipo}
                                         onChange={e => { setFormData(prev => ({ ...prev, tipo: e.target.value })); setErrors(prev => ({ ...prev, tipo: '' })); }}
                                     >
