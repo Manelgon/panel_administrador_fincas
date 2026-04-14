@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send } from 'lucide-react';
 import DataTable, { Column, RowAction } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -31,6 +31,8 @@ const BOOL_FIELDS: { key: keyof Reunion; label: string }[] = [
     { key: 'acta_email',     label: 'Acta @' },
     { key: 'acta_carta',     label: 'Acta Carta' },
     { key: 'pasar_acuerdos', label: 'Acuerdos' },
+    { key: 'enviado',        label: 'Enviado' },
+    { key: 'resuelto',       label: 'Resuelto' },
 ];
 
 export default function ReunionesPage() {
@@ -167,22 +169,26 @@ export default function ReunionesPage() {
             key,
             label,
             align: 'center' as const,
-            render: (r: Reunion) => (
-                <button
-                    onClick={(e) => { e.stopPropagation(); handleToggle(r, key); }}
-                    className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
-                        r[key]
-                            ? 'bg-green-500 text-white hover:bg-green-600'
-                            : 'bg-neutral-100 text-neutral-300 hover:bg-neutral-200'
-                    }`}
-                >
-                    {r[key] ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
-                </button>
-            ),
+            render: (r: Reunion) => {
+                const locked = r.enviado || r.resuelto;
+                return (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); if (!locked) handleToggle(r, key); }}
+                        disabled={locked}
+                        className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
+                            r[key]
+                                ? locked ? 'bg-green-400 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
+                                : locked ? 'bg-neutral-100 text-neutral-200 cursor-not-allowed' : 'bg-neutral-100 text-neutral-300 hover:bg-neutral-200'
+                        }`}
+                    >
+                        {r[key] ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                    </button>
+                );
+            },
         })),
     ];
 
-    const handleAccion = async (reunion: Reunion, field: 'pasar_acuerdos' | 'vb_pendiente') => {
+    const handleAccion = async (reunion: Reunion, field: 'pasar_acuerdos' | 'vb_pendiente' | 'redactar_acta') => {
         if (reunion[field]) return; // Ya está marcado
         setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, [field]: true } : r));
         const { error } = await supabase.from('reuniones').update({ [field]: true }).eq('id', reunion.id);
@@ -190,12 +196,31 @@ export default function ReunionesPage() {
             toast.error('Error al actualizar');
             setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, [field]: false } : r));
         } else {
-            const label = field === 'pasar_acuerdos' ? 'Acuerdos pasados' : 'Visto bueno registrado';
+            const label = field === 'pasar_acuerdos' ? 'Acuerdos pasados' : field === 'vb_pendiente' ? 'Visto bueno registrado' : 'Acta redactada';
             toast.success(label);
         }
     };
 
+    const handleEnviado = async (reunion: Reunion) => {
+        if (reunion.enviado) return;
+        setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, enviado: true, resuelto: true } : r));
+        const { error } = await supabase.from('reuniones').update({ enviado: true, resuelto: true }).eq('id', reunion.id);
+        if (error) {
+            toast.error('Error al actualizar');
+            setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, enviado: false, resuelto: false } : r));
+        } else {
+            toast.success('Acta enviada — reunión marcada como resuelta');
+        }
+    };
+
     const rowActions = (r: Reunion): RowAction<Reunion>[] => [
+        {
+            label: r.redactar_acta ? 'Acta ✓' : 'Redactar Acta',
+            icon: <FileText className="w-3.5 h-3.5" />,
+            variant: r.redactar_acta ? 'success' : 'default',
+            disabled: r.redactar_acta,
+            onClick: (row) => handleAccion(row, 'redactar_acta'),
+        },
         {
             label: r.pasar_acuerdos ? 'Acuerdos ✓' : 'Pasar Acuerdo',
             icon: <FileCheck className="w-3.5 h-3.5" />,
@@ -209,11 +234,19 @@ export default function ReunionesPage() {
             variant: r.vb_pendiente ? 'success' : 'default',
             disabled: r.vb_pendiente,
             onClick: (row) => handleAccion(row, 'vb_pendiente'),
+        },
+        {
+            label: r.enviado ? 'Enviado ✓' : 'Enviado',
+            icon: <Send className="w-3.5 h-3.5" />,
+            variant: r.enviado ? 'success' : 'default',
+            disabled: r.enviado,
+            onClick: (row) => handleEnviado(row),
             separator: true,
         },
         {
             label: 'Editar',
             icon: <Pencil className="w-3.5 h-3.5" />,
+            disabled: r.enviado || r.resuelto,
             onClick: (row) => { setEditingId(row.id); setShowForm(true); },
         },
         {
