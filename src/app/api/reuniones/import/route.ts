@@ -16,6 +16,7 @@ interface ImportRow {
     acta_email: boolean;
     acta_carta: boolean;
     pasar_acuerdos: boolean;
+    resuelto: boolean;
 }
 
 export async function POST(req: NextRequest) {
@@ -58,6 +59,7 @@ export async function POST(req: NextRequest) {
                     acta_email:     row.acta_email,
                     acta_carta:     row.acta_carta,
                     pasar_acuerdos: row.pasar_acuerdos,
+                    resuelto:       row.resuelto,
                 });
 
                 if (error) {

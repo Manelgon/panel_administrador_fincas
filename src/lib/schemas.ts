@@ -159,7 +159,7 @@ export interface Morosidad {
 export const reunionFormSchema = z.object({
   comunidad_id: z.coerce.number().positive('Selecciona una comunidad'),
   fecha_reunion: z.string().min(1, 'La fecha es obligatoria'),
-  tipo: z.enum(['JGO', 'JGE', 'JV']),
+  tipo: z.enum(['JGO', 'JGE', 'JV', 'JD']),
   estado_cuentas: z.boolean().default(false),
   pto_ordinario: z.boolean().default(false),
   pto_extra: z.boolean().default(false),
@@ -182,7 +182,7 @@ export interface Reunion {
   comunidad?: string;
   codigo?: string;
   fecha_reunion: string;
-  tipo: 'JGO' | 'JGE' | 'JV';
+  tipo: 'JGO' | 'JGE' | 'JV' | 'JD';
   estado_cuentas: boolean;
   pto_ordinario: boolean;
   pto_extra: boolean;

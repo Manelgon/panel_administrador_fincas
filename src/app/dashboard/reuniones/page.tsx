@@ -16,6 +16,7 @@ const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
     JGO: { label: 'JGO', cls: 'bg-blue-100 text-blue-700' },
     JGE: { label: 'JGE', cls: 'bg-orange-100 text-orange-700' },
     JV:  { label: 'JV',  cls: 'bg-purple-100 text-purple-700' },
+    JD:  { label: 'JD',  cls: 'bg-teal-100 text-teal-700' },
 };
 
 const BOOL_FIELDS: { key: keyof Reunion; label: string }[] = [
@@ -234,6 +235,7 @@ export default function ReunionesPage() {
                 <option value="JGO">JGO — Junta General Ordinaria</option>
                 <option value="JGE">JGE — Junta General Extraordinaria</option>
                 <option value="JV">JV — Junta de Vocales</option>
+                <option value="JD">JD — Junta Directiva</option>
             </select>
             <select
                 value={filterComunidad}
