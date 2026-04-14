@@ -32,7 +32,6 @@ const BOOL_FIELDS: { key: keyof Reunion; label: string }[] = [
     { key: 'acta_carta',     label: 'Acta Carta' },
     { key: 'pasar_acuerdos', label: 'Acuerdos' },
     { key: 'enviado',        label: 'Enviado' },
-    { key: 'resuelto',       label: 'Resuelto' },
 ];
 
 export default function ReunionesPage() {
@@ -186,6 +185,14 @@ export default function ReunionesPage() {
                 );
             },
         })),
+        {
+            key: 'resuelto',
+            label: 'Resuelto',
+            align: 'center' as const,
+            render: (r: Reunion) => r.resuelto
+                ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Sí</span>
+                : <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-400">No</span>,
+        },
     ];
 
     const handleAccion = async (reunion: Reunion, field: 'pasar_acuerdos' | 'vb_pendiente' | 'redactar_acta') => {
