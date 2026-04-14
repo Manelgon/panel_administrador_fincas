@@ -298,7 +298,7 @@ export default function ReunionesPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-xl font-bold text-white tracking-tight">Reuniones</h1>
+                    <h1 className="text-xl font-bold text-neutral-900 tracking-tight">Reuniones y Actas</h1>
                     <p className="text-xs text-neutral-400 font-semibold uppercase tracking-widest mt-0.5">
                         Administración de juntas y reuniones
                     </p>

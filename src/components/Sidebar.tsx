@@ -31,7 +31,7 @@ const SECTIONS = [
         label: 'DOCUMENTACIÓN',
         items: [
             { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
-            { name: 'Reuniones', href: '/dashboard/reuniones', icon: CalendarDays },
+            { name: 'Reuniones y Actas', href: '/dashboard/reuniones', icon: CalendarDays },
             { name: 'Informe Comunidad', href: '/dashboard/informes-comunidad', icon: Building },
         ],
     },
