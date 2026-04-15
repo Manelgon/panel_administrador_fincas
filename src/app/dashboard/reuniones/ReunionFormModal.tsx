@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Loader2, Plus, AlertCircle, Clock, CheckCircle2 } from 'lucide-react';
+import { X, Loader2, Plus, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -271,12 +271,9 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                                             }`}>
                                                 {formData.confirmada === false && <div className="w-2 h-2 rounded-full bg-white" />}
                                             </div>
-                                            <div>
-                                                <Clock className={`w-4 h-4 mb-0.5 ${formData.confirmada === false ? 'text-amber-500' : 'text-neutral-400'}`} />
-                                                <p className={`text-[11px] font-bold leading-tight ${formData.confirmada === false ? 'text-amber-800' : 'text-neutral-600'}`}>
-                                                    Pendiente de confirmar
-                                                </p>
-                                            </div>
+                                            <p className={`text-[11px] font-bold leading-tight ${formData.confirmada === false ? 'text-amber-800' : 'text-neutral-600'}`}>
+                                                Pendiente de confirmar
+                                            </p>
                                         </button>
 
                                         {/* Confirmada */}
@@ -294,12 +291,9 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                                             }`}>
                                                 {formData.confirmada === true && <div className="w-2 h-2 rounded-full bg-white" />}
                                             </div>
-                                            <div>
-                                                <CheckCircle2 className={`w-4 h-4 mb-0.5 ${formData.confirmada === true ? 'text-blue-500' : 'text-neutral-400'}`} />
-                                                <p className={`text-[11px] font-bold leading-tight ${formData.confirmada === true ? 'text-blue-800' : 'text-neutral-600'}`}>
-                                                    Confirmada
-                                                </p>
-                                            </div>
+                                            <p className={`text-[11px] font-bold leading-tight ${formData.confirmada === true ? 'text-blue-800' : 'text-neutral-600'}`}>
+                                                Confirmada
+                                            </p>
                                         </button>
                                     </div>
                                     {errors.confirmada && (
