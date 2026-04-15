@@ -125,13 +125,14 @@ export async function POST(req: Request) {
 
         // --- Guardar campos de texto (JSON) ---
         const body = await req.json();
-        const { emisor_name, emisor_address, emisor_city, emisor_cif } = body;
+        const { emisor_name, emisor_address, emisor_city, emisor_cif, colegiado_nombre } = body;
 
         const updates = [
             { setting_key: "emisor_name", setting_value: String(emisor_name ?? ""), updated_at: new Date().toISOString() },
             { setting_key: "emisor_address", setting_value: String(emisor_address ?? ""), updated_at: new Date().toISOString() },
             { setting_key: "emisor_city", setting_value: String(emisor_city ?? ""), updated_at: new Date().toISOString() },
             { setting_key: "emisor_cif", setting_value: String(emisor_cif ?? ""), updated_at: new Date().toISOString() },
+            { setting_key: "colegiado_nombre", setting_value: String(colegiado_nombre ?? ""), updated_at: new Date().toISOString() },
         ];
 
         const { error } = await supabaseAdmin

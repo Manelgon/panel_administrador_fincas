@@ -83,6 +83,9 @@ export async function buildRentaCertificatePdf(
     data: any,
     assets: { logoBytes?: Buffer | null; selloBytes?: Buffer | null }
 ) {
+    const { nombre: emisorNombre, colegiado: colegiadoNombre } = await getEmisor();
+    const adminName = colegiadoNombre || "Roberto Díaz Rodríguez";
+
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([pageW, pageH]);
 
@@ -169,7 +172,7 @@ export async function buildRentaCertificatePdf(
 
     // Texto legal
     const p1 =
-        `Roberto Díaz Rodríguez, Administrador de Fincas colegiado, actuando en calidad de Secretario–Administrador, ` +
+        `${adminName}, Administrador de Fincas colegiado, actuando en calidad de Secretario–Administrador, ` +
         `CERTIFICA que en relación con el titular:\n` +
         `${apellidos}${apellidos && nombre ? ", " : ""}${nombre} con DNI/NIF ${nif}, ` +
         `domiciliado en ${dir2}${piso ? `, ${piso}` : ""}, ${cp} ${poblacion} (${provincia}).`;
@@ -253,7 +256,7 @@ export async function buildRentaCertificatePdf(
     }
 
     // Firma texto
-    page.drawText("Roberto Díaz Rodríguez", { x: marginX, y: 120, size: 10.5, font: bold, color: BLACK });
+    page.drawText(adminName, { x: marginX, y: 120, size: 10.5, font: bold, color: BLACK });
     page.drawText("Administrador de fincas", { x: marginX, y: 102, size: 10.5, font, color: BLACK });
 
     // 7. Global Footer

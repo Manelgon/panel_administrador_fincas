@@ -12,6 +12,7 @@ type Settings = {
     emisor_address: string;
     emisor_city: string;
     emisor_cif: string;
+    colegiado_nombre: string;
 };
 
 type ImageState = {
@@ -34,6 +35,7 @@ export default function AjustesEmisorPage() {
         emisor_address: "",
         emisor_city: "",
         emisor_cif: "",
+        colegiado_nombre: "",
     });
     const [logo, setLogo] = useState<ImageState>({ url: "", uploading: false });
     const [firma, setFirma] = useState<ImageState>({ url: "", uploading: false });
@@ -72,6 +74,7 @@ export default function AjustesEmisorPage() {
                 emisor_address: json.settings.emisor_address || "",
                 emisor_city: json.settings.emisor_city || "",
                 emisor_cif: json.settings.emisor_cif || "",
+                colegiado_nombre: json.settings.colegiado_nombre || "",
             });
             // isDefault = no hay path personalizado guardado aún
             const hasCustomLogo = !!json.settings?.logo_path;
@@ -213,6 +216,18 @@ export default function AjustesEmisorPage() {
                             />
                         </label>
                     </div>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-neutral-700">Nombre del Administrador Colegiado</span>
+                        <input
+                            type="text"
+                            value={settings.colegiado_nombre}
+                            onChange={e => setSettings(p => ({ ...p, colegiado_nombre: e.target.value }))}
+                            placeholder="Roberto Díaz Rodríguez"
+                            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                        />
+                        <p className="text-xs text-neutral-400 mt-1">Aparece en certificados y documentos firmados como administrador de fincas colegiado.</p>
+                    </label>
 
                     <div className="pt-2 flex justify-end">
                         <button

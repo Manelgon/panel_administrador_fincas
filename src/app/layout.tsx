@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'SaaS Factory App',
-  description: 'Built with SaaS Factory',
+  title: 'Panel de Gestión de Fincas — Serincosol',
+  description: 'Panel de administración y gestión de fincas para Serincosol',
 }
 
 export default function RootLayout({
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <body>{children}</body>
     </html>
   )

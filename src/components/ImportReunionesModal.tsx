@@ -11,17 +11,19 @@ interface ImportRow {
     comunidad_id: number | null;
     fecha_reunion: string;
     tipo: string;
-    estado_cuentas: boolean;
-    pto_ordinario: boolean;
-    pto_extra: boolean;
-    morosos: boolean;
-    citacion_email: boolean;
-    citacion_carta: boolean;
-    redactar_acta: boolean;
-    vb_pendiente: boolean;
-    acta_email: boolean;
-    acta_carta: boolean;
-    pasar_acuerdos: boolean;
+    estado_cuentas: boolean | null;
+    pto_ordinario: boolean | null;
+    pto_extra: boolean | null;
+    morosos: boolean | null;
+    citacion_email: boolean | null;
+    citacion_carta: boolean | null;
+    borrador_acta: boolean | null;
+    redactar_acta: boolean | null;
+    vb_pendiente: boolean | null;
+    imprimir_acta: boolean | null;
+    acta_email: boolean | null;
+    acta_carta: boolean | null;
+    pasar_acuerdos: boolean | null;
     status?: 'pending' | 'ok' | 'skipped' | 'error' | 'no_comunidad';
     message?: string;
 }
@@ -38,10 +40,12 @@ interface Props {
     comunidades: ComunidadOption[];
 }
 
-const parseBool = (val: string | null | undefined): boolean => {
-    if (!val) return false;
+const parseBool = (val: string | null | undefined): boolean | null => {
+    if (!val || String(val).trim() === '') return null;
     const s = String(val).trim().toUpperCase();
-    return s === 'SI' || s === 'SÍ' || s === 'YES' || s === 'TRUE' || s === '1' || s === 'X';
+    if (s === 'SI' || s === 'SÍ' || s === 'YES' || s === 'TRUE' || s === '1' || s === 'X') return true;
+    if (s === 'NO' || s === 'FALSE' || s === '0' || s === 'FALSO') return false;
+    return null;
 };
 
 const TIPOS_VALIDOS = ['JGO', 'JGE', 'JV', 'JD'];
@@ -136,8 +140,10 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
             const iMorosos     = col(['moroso']);
             const iCitEmail    = col(['citacion @', 'citacion@', 'cit. @', 'cit @', 'citacion email', 'cit email']);
             const iCitCarta    = col(['cit. carta', 'cit carta', 'citacion carta']);
+            const iBorrador    = col(['borrador acta', 'borrador']);
             const iRedactar    = col(['redactar']);
             const iVb          = col(['v\u00ba b\u00ba', 'vb', 'visto bueno']);
+            const iImprimirActa = col(['imprimir acta', 'imprimir']);
             const iActaEmail   = col(['acta @', 'acta@', 'acta email']);
             const iActaCarta   = col(['acta carta']);
             const iPasarAcuer  = col(['pasar acuerdo', 'acuerdo', 'acuerdos']);
@@ -178,8 +184,10 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                     morosos:        parseBool(iMorosos >= 0 ? r[iMorosos] : null),
                     citacion_email: parseBool(iCitEmail >= 0 ? r[iCitEmail] : null),
                     citacion_carta: parseBool(iCitCarta >= 0 ? r[iCitCarta] : null),
+                    borrador_acta:  parseBool(iBorrador >= 0 ? r[iBorrador] : null),
                     redactar_acta:  parseBool(iRedactar >= 0 ? r[iRedactar] : null),
                     vb_pendiente:   parseBool(iVb >= 0 ? r[iVb] : null),
+                    imprimir_acta:  parseBool(iImprimirActa >= 0 ? r[iImprimirActa] : null),
                     acta_email:     parseBool(iActaEmail >= 0 ? r[iActaEmail] : null),
                     acta_carta:     parseBool(iActaCarta >= 0 ? r[iActaCarta] : null),
                     pasar_acuerdos: parseBool(iPasarAcuer >= 0 ? r[iPasarAcuer] : null),
@@ -236,8 +244,10 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                     morosos: r.morosos,
                     citacion_email: r.citacion_email,
                     citacion_carta: r.citacion_carta,
+                    borrador_acta: r.borrador_acta,
                     redactar_acta: r.redactar_acta,
                     vb_pendiente: r.vb_pendiente,
+                    imprimir_acta: r.imprimir_acta,
                     acta_email: r.acta_email,
                     acta_carta: r.acta_carta,
                     pasar_acuerdos: r.pasar_acuerdos,
@@ -446,8 +456,10 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Mor</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Cit@</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Cit✉</th>
+                                                        <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Borr</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Acta</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">VºBº</th>
+                                                        <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">🖨️</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Acta@</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Acta✉</th>
                                                         <th className="text-center text-[9px] font-bold uppercase tracking-wider text-neutral-500 px-2 py-2 whitespace-nowrap">Acuerd</th>
@@ -465,9 +477,15 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                             row.status === 'error'   ? 'bg-red-50/60' :
                                                             sinComunidad             ? 'bg-amber-50/40' : '';
 
-                                                        const boolCell = (val: boolean) => (
+                                                        const boolCell = (val: boolean | null) => (
                                                             <td className="px-2 py-2 text-center">
-                                                                <span className={`inline-block w-3 h-3 rounded-sm ${val ? 'bg-green-500' : 'bg-neutral-200'}`} />
+                                                                <span className={`inline-flex w-3 h-3 rounded-sm items-center justify-center text-[7px] font-bold ${
+                                                                    val === true ? 'bg-green-500 text-white' : 
+                                                                    val === false ? 'bg-red-400 text-white' : 
+                                                                    'bg-neutral-200 text-neutral-400'
+                                                                }`}>
+                                                                    {val === true ? '✓' : val === false ? '✗' : '–'}
+                                                                </span>
                                                             </td>
                                                         );
 
@@ -520,8 +538,10 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                                 {boolCell(row.morosos)}
                                                                 {boolCell(row.citacion_email)}
                                                                 {boolCell(row.citacion_carta)}
+                                                                {boolCell(row.borrador_acta)}
                                                                 {boolCell(row.redactar_acta)}
                                                                 {boolCell(row.vb_pendiente)}
+                                                                {boolCell(row.imprimir_acta)}
                                                                 {boolCell(row.acta_email)}
                                                                 {boolCell(row.acta_carta)}
                                                                 {boolCell(row.pasar_acuerdos)}

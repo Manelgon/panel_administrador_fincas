@@ -40,7 +40,8 @@ export async function generateFichajePdf({
     entries: any[];
 }) {
     // --- ASSETS ---
-    const { headerPath, nombre } = await getEmisor();
+    const { headerPath, nombre, colegiado } = await getEmisor();
+    const adminName = colegiado || "Roberto Díaz Rodríguez";
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
     const selloBytes = await downloadAssetPng("certificados/sello-retenciones.png");
 
@@ -178,7 +179,7 @@ export async function generateFichajePdf({
             page.drawImage(seal, { x: margin, y: y - sealH, width: sealW, height: sealH });
 
             const sigY = y - sealH - 15;
-            page.drawText("Roberto Díaz Rodríguez", { x: margin, y: sigY, size: 10, font: bold, color: rgb(0, 0, 0) });
+            page.drawText(adminName, { x: margin, y: sigY, size: 10, font: bold, color: rgb(0, 0, 0) });
             page.drawText("Administrador de fincas", { x: margin, y: sigY - 12, size: 10, font, color: rgb(0, 0, 0) });
         } catch (e) {
             console.error("Seal embed error", e);

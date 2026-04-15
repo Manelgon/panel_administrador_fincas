@@ -727,12 +727,12 @@ on public.incidencias_serincobot for insert
 to authenticated
 with check (auth.uid() is not null);
 
-drop policy if exists "incidencias_serincobot: update authenticated" on public.incidencias_serincobot;
-create policy "incidencias_serincobot: update authenticated"
+drop policy if exists "incidencias_serincobot: update admin gestor" on public.incidencias_serincobot;
+create policy "incidencias_serincobot: update admin gestor"
 on public.incidencias_serincobot for update
 to authenticated
-using (true)
-with check (true);
+using ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'))
+with check ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'));
 
 drop policy if exists "incidencias_serincobot: delete admin" on public.incidencias_serincobot;
 create policy "incidencias_serincobot: delete admin"
@@ -747,18 +747,20 @@ on public.propietarios for select
 to authenticated
 using (true);
 
-drop policy if exists "propietarios: insert authenticated" on public.propietarios;
-create policy "propietarios: insert authenticated"
+drop policy if exists "propietarios: insert admin gestor" on public.propietarios;
+create policy "propietarios: insert admin gestor"
 on public.propietarios for insert
 to authenticated
-with check (auth.uid() is not null);
+with check (
+  (select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor')
+);
 
-drop policy if exists "propietarios: update authenticated" on public.propietarios;
-create policy "propietarios: update authenticated"
+drop policy if exists "propietarios: update admin gestor" on public.propietarios;
+create policy "propietarios: update admin gestor"
 on public.propietarios for update
 to authenticated
-using (true)
-with check (true);
+using ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'))
+with check ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'));
 
 drop policy if exists "propietarios: delete admin" on public.propietarios;
 create policy "propietarios: delete admin"
@@ -767,11 +769,11 @@ to authenticated
 using (public.is_admin());
 
 -- ---------- PROFILES ----------
-drop policy if exists "profiles: read own or admin" on public.profiles;
-create policy "profiles: read own or admin"
+drop policy if exists "profiles: read all authenticated" on public.profiles;
+create policy "profiles: read all authenticated"
 on public.profiles for select
 to authenticated
-using (user_id = auth.uid() or public.is_admin());
+using (true);
 
 drop policy if exists "profiles: update own or admin" on public.profiles;
 create policy "profiles: update own or admin"
@@ -799,13 +801,21 @@ on public.comunidades for select
 to authenticated
 using (true);
 
-drop policy if exists "comunidades: admin insert" on public.comunidades;
-create policy "comunidades: admin insert"
-on public.comunidades for insert
+drop policy if exists "comunidades: admin all" on public.comunidades;
+create policy "comunidades: admin all"
+on public.comunidades for all
 to authenticated
+using (public.is_admin())
 with check (public.is_admin());
 
-drop policy if exists "comunidades: admin update" on public.comunidades;
+drop policy if exists "comunidades: gestor insert" on public.comunidades;
+create policy "comunidades: gestor insert"
+on public.comunidades for insert
+to authenticated
+with check (
+  (select rol from public.profiles where user_id = auth.uid()) = 'gestor'
+);
+
 drop policy if exists "comunidades: gestor update" on public.comunidades;
 create policy "comunidades: gestor update"
 on public.comunidades for update
@@ -816,12 +826,6 @@ using (
 with check (
   (select rol from public.profiles where user_id = auth.uid()) in ('gestor', 'admin')
 );
-
-drop policy if exists "comunidades: admin delete" on public.comunidades;
-create policy "comunidades: admin delete"
-on public.comunidades for delete
-to authenticated
-using (public.is_admin());
 
 -- ---------- EMPLEADO_COMUNIDAD ----------
 drop policy if exists "empleado_comunidad: admin all" on public.empleado_comunidad;
@@ -1080,24 +1084,12 @@ to authenticated
 with check (public.is_admin());
 
 -- ---------- INVOICE_SEQUENCES ----------
-drop policy if exists "invoice_sequences: read authenticated" on public.invoice_sequences;
-create policy "invoice_sequences: read authenticated"
-on public.invoice_sequences for select
+drop policy if exists "invoice_sequences: admin all" on public.invoice_sequences;
+create policy "invoice_sequences: admin all"
+on public.invoice_sequences for all
 to authenticated
-using (true);
-
-drop policy if exists "invoice_sequences: insert authenticated" on public.invoice_sequences;
-create policy "invoice_sequences: insert authenticated"
-on public.invoice_sequences for insert
-to authenticated
-with check (auth.uid() is not null);
-
-drop policy if exists "invoice_sequences: update authenticated" on public.invoice_sequences;
-create policy "invoice_sequences: update authenticated"
-on public.invoice_sequences for update
-to authenticated
-using (true)
-with check (true);
+using (public.is_admin())
+with check (public.is_admin());
 
 -- ---------- EMAIL_REPORTS ----------
 drop policy if exists "email_reports: read authenticated" on public.email_reports;
@@ -1268,20 +1260,29 @@ CREATE TABLE IF NOT EXISTS reuniones (
   id              BIGSERIAL PRIMARY KEY,
   comunidad_id    INTEGER NOT NULL REFERENCES comunidades(id) ON DELETE CASCADE,
   fecha_reunion   DATE NOT NULL,
-  tipo            TEXT NOT NULL CHECK (tipo IN ('JGO', 'JGE', 'JV')),
+  tipo            TEXT NOT NULL CHECK (tipo IN ('JGO', 'JGE', 'JV', 'JD')),
 
-  -- Campos de proceso (booleanos del Excel "Seg. Juntas")
-  estado_cuentas  BOOLEAN NOT NULL DEFAULT FALSE,
-  pto_ordinario   BOOLEAN NOT NULL DEFAULT FALSE,
-  pto_extra       BOOLEAN NOT NULL DEFAULT FALSE,
-  morosos         BOOLEAN NOT NULL DEFAULT FALSE,
-  citacion_email  BOOLEAN NOT NULL DEFAULT FALSE,
-  citacion_carta  BOOLEAN NOT NULL DEFAULT FALSE,
-  redactar_acta   BOOLEAN NOT NULL DEFAULT FALSE,
-  vb_pendiente    BOOLEAN NOT NULL DEFAULT FALSE,
-  acta_email      BOOLEAN NOT NULL DEFAULT FALSE,
-  acta_carta      BOOLEAN NOT NULL DEFAULT FALSE,
-  pasar_acuerdos  BOOLEAN NOT NULL DEFAULT FALSE,
+  -- Documentos
+  estado_cuentas  BOOLEAN DEFAULT NULL,
+  pto_ordinario   BOOLEAN DEFAULT NULL,
+  pto_extra       BOOLEAN DEFAULT NULL,
+  morosos         BOOLEAN DEFAULT NULL,
+  -- Citación
+  citacion_email  BOOLEAN DEFAULT NULL,
+  citacion_carta  BOOLEAN DEFAULT NULL,
+  -- Acta
+  borrador_acta   BOOLEAN DEFAULT NULL,
+  redactar_acta   BOOLEAN DEFAULT NULL,
+  vb_pendiente    BOOLEAN DEFAULT NULL,
+  imprimir_acta   BOOLEAN DEFAULT NULL,
+  acta_email      BOOLEAN DEFAULT NULL,
+  acta_carta      BOOLEAN DEFAULT NULL,
+  -- Cierre
+  pasar_acuerdos  BOOLEAN DEFAULT NULL,
+
+  -- Estado
+  enviado         BOOLEAN NOT NULL DEFAULT FALSE,
+  resuelto        BOOLEAN NOT NULL DEFAULT FALSE,
 
   notas           TEXT,
   created_by      UUID REFERENCES auth.users(id),
@@ -1313,40 +1314,24 @@ CREATE INDEX IF NOT EXISTS idx_reuniones_tipo ON reuniones(tipo);
 
 ALTER TABLE reuniones ENABLE ROW LEVEL SECURITY;
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden ver reuniones') THEN
-    CREATE POLICY "Usuarios autenticados pueden ver reuniones"
-      ON reuniones FOR SELECT TO authenticated USING (true);
-  END IF;
-END $$;
+drop policy if exists "reuniones: read authenticated" on reuniones;
+create policy "reuniones: read authenticated"
+  on reuniones for select to authenticated using (true);
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden crear reuniones') THEN
-    CREATE POLICY "Usuarios autenticados pueden crear reuniones"
-      ON reuniones FOR INSERT TO authenticated WITH CHECK (auth.uid() IS NOT NULL);
-  END IF;
-END $$;
+drop policy if exists "reuniones: insert authenticated" on reuniones;
+create policy "reuniones: insert authenticated"
+  on reuniones for insert to authenticated with check (auth.uid() is not null);
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Usuarios autenticados pueden actualizar reuniones') THEN
-    CREATE POLICY "Usuarios autenticados pueden actualizar reuniones"
-      ON reuniones FOR UPDATE TO authenticated USING (true);
-  END IF;
-END $$;
+drop policy if exists "reuniones: update admin gestor" on reuniones;
+create policy "reuniones: update admin gestor"
+  on reuniones for update to authenticated
+  using ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'))
+  with check ((select rol from public.profiles where user_id = auth.uid()) in ('admin','gestor'));
 
-DO $$ BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'reuniones' AND policyname = 'Solo admin puede eliminar reuniones') THEN
-    CREATE POLICY "Solo admin puede eliminar reuniones"
-      ON reuniones FOR DELETE TO authenticated
-      USING (
-        EXISTS (
-          SELECT 1 FROM profiles
-          WHERE profiles.user_id = auth.uid()
-          AND profiles.rol = 'admin'
-        )
-      );
-  END IF;
-END $$;
+drop policy if exists "reuniones: delete admin" on reuniones;
+create policy "reuniones: delete admin"
+  on reuniones for delete to authenticated
+  using (public.is_admin());
 
 -- =========================================
 -- FIN DE LA MIGRACIÓN
