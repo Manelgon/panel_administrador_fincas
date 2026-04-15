@@ -23,6 +23,7 @@ export interface Column<T> {
     render?: (row: T) => React.ReactNode;
     getSearchValue?: (row: T) => string;
     defaultVisible?: boolean;
+    hideable?: boolean;
     align?: 'left' | 'center' | 'right';
     width?: string;
 }
@@ -40,6 +41,7 @@ interface DataTableProps<T> {
     onRowClick?: (row: T) => void;
     rowActions?: (row: T) => RowAction<T>[];
     extraFilters?: React.ReactNode;
+    headerExtras?: React.ReactNode;
     searchTerm?: string;
     onSearchChange?: (term: string) => void;
 }
@@ -57,6 +59,7 @@ export default function DataTable<T extends Record<string, any>>({
     onRowClick,
     rowActions,
     extraFilters,
+    headerExtras,
     searchTerm: externalSearchTerm,
     onSearchChange: setExternalSearchTerm,
 }: DataTableProps<T>) {
@@ -197,7 +200,7 @@ export default function DataTable<T extends Record<string, any>>({
     const searchFilteredData = data.filter((row) => {
         if (!searchTerm) return true;
         const searchLower = searchTerm.toLowerCase();
-        const colsToSearch = visibleColumns.size > 0 ? columns.filter(c => visibleColumns.has(c.key)) : columns;
+        const colsToSearch = visibleColumns.size > 0 ? columns.filter(c => visibleColumns.has(c.key) || c.hideable === false) : columns;
         return colsToSearch.some((col) => {
             let valueToSearch = '';
             if (col.getSearchValue) {
@@ -250,7 +253,7 @@ export default function DataTable<T extends Record<string, any>>({
 
     const isAllSelected = searchFilteredData.length > 0 && selectedKeys.size === searchFilteredData.length;
     const isIndeterminate = selectedKeys.size > 0 && selectedKeys.size < searchFilteredData.length;
-    const visibleCols = columns.filter(c => visibleColumns.has(c.key));
+    const visibleCols = columns.filter(c => visibleColumns.has(c.key) || c.hideable === false);
 
     // Dropdown portal
     const dropdown = activeRow && typeof document !== 'undefined' ? createPortal(
@@ -340,9 +343,11 @@ export default function DataTable<T extends Record<string, any>>({
                     </div>
                 )}
 
-                {/* Column selector */}
-                <div className="relative">
-                    <button
+                {/* Column selector and extras */}
+                <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto mt-2 sm:mt-0">
+                    {headerExtras}
+                    <div className="relative">
+                        <button
                         onClick={() => setShowColumnSelector(!showColumnSelector)}
                         className="flex items-center gap-1.5 px-3 py-2 border border-neutral-200 rounded-lg bg-white hover:bg-neutral-50 transition text-sm text-neutral-600 font-medium"
                     >
@@ -352,7 +357,7 @@ export default function DataTable<T extends Record<string, any>>({
                     {showColumnSelector && (
                         <div className="absolute right-0 mt-1.5 w-52 bg-white border border-neutral-200 rounded-xl shadow-lg z-20 p-2">
                             <p className="text-[10px] font-bold text-neutral-400 mb-1.5 px-2 uppercase tracking-wider">Mostrar columnas</p>
-                            {columns.map((col) => (
+                            {columns.filter(col => col.hideable !== false).map((col) => (
                                 <label key={col.key} className="flex items-center gap-2 px-2 py-1.5 hover:bg-neutral-50 rounded-lg cursor-pointer text-sm">
                                     <input
                                         type="checkbox"
@@ -365,6 +370,7 @@ export default function DataTable<T extends Record<string, any>>({
                             ))}
                         </div>
                     )}
+                    </div>
                 </div>
             </div>
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send, AlertTriangle, MoreVertical } from 'lucide-react';
 import DataTable, { Column, RowAction } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -22,20 +22,24 @@ const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
 
 const BOOL_FIELDS: { key: keyof Reunion; label: string; readonly?: boolean }[] = [
     // Documentos
-    { key: 'estado_cuentas', label: 'Est. Cuentas', readonly: true },
-    { key: 'pto_ordinario',  label: 'Pto. Ord.',    readonly: true },
-    { key: 'pto_extra',      label: 'Pto. Extra',   readonly: true },
-    { key: 'morosos',        label: 'Morosos',      readonly: true },
-    // Método de Envío
-    { key: 'citacion_email', label: 'Cit. @',       readonly: true },
-    { key: 'citacion_carta', label: 'Cit. Carta',   readonly: true },
-    { key: 'acta_email',     label: 'Acta @',       readonly: true },
-    { key: 'acta_carta',     label: 'Acta Carta',   readonly: true },
-    // Seguimiento
-    { key: 'redactar_acta',  label: 'Acta',         readonly: true },
-    { key: 'vb_pendiente',   label: 'Vº Bº Presi',  readonly: true },
-    { key: 'pasar_acuerdos', label: 'Acuerdos',     readonly: true },
+    { key: 'estado_cuentas', label: 'Est. Cuentas' },
+    { key: 'pto_ordinario',  label: 'Pto. Ord.'    },
+    { key: 'pto_extra',      label: 'Pto. Extra'   },
+    { key: 'morosos',        label: 'Morosos'      },
+    // Citación
+    { key: 'citacion_email', label: 'Cit. @'       },
+    { key: 'citacion_carta', label: 'Cit. Carta'   },
+    // Acta
+    { key: 'borrador_acta',  label: 'Borrador Acta' },
+    { key: 'redactar_acta',  label: 'Redactar Acta' },
+    { key: 'vb_pendiente',   label: 'Vº Bº Presi'  },
+    { key: 'imprimir_acta',  label: 'Imprimir Acta' },
+    { key: 'acta_email',     label: 'Acta @'        },
+    { key: 'acta_carta',     label: 'Acta Carta'    },
+    // Cierre
+    { key: 'pasar_acuerdos', label: 'Acuerdos'     },
 ];
+
 
 export default function ReunionesPage() {
     const [reuniones, setReuniones] = useState<Reunion[]>([]);
@@ -48,7 +52,7 @@ export default function ReunionesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [showImportModal, setShowImportModal] = useState(false);
-    const [envioConfirm, setEnvioConfirm] = useState<{ reunion: Reunion; faltantes: string[] } | null>(null);
+    const [envioConfirm, setEnvioConfirm] = useState<{ reunion: Reunion; noAplica: string[]; realizadas: string[] } | null>(null);
     const [isEnviando, setIsEnviando] = useState(false);
 
     // Filtros
@@ -94,7 +98,8 @@ export default function ReunionesPage() {
     };
 
     const handleToggle = async (reunion: Reunion, field: keyof Reunion) => {
-        const newVal = !reunion[field];
+        const current = reunion[field] as boolean | null;
+        const newVal = current === null ? true : current === true ? false : null;
         setReuniones(prev =>
             prev.map(r => r.id === reunion.id ? { ...r, [field]: newVal } : r)
         );
@@ -105,7 +110,7 @@ export default function ReunionesPage() {
         if (error) {
             toast.error('Error al actualizar');
             setReuniones(prev =>
-                prev.map(r => r.id === reunion.id ? { ...r, [field]: !newVal } : r)
+                prev.map(r => r.id === reunion.id ? { ...r, [field]: current } : r)
             );
         }
     };
@@ -172,68 +177,97 @@ export default function ReunionesPage() {
                 return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${t.cls}`}>{t.label}</span>;
             },
         },
-        ...BOOL_FIELDS.map(({ key, label, readonly: ro }) => ({
+        ...BOOL_FIELDS.map(({ key, label }) => ({
             key,
             label,
             align: 'center' as const,
             render: (r: Reunion) => {
-                const locked = ro || r.enviado || r.resuelto;
+                const val = r[key] as boolean | null;
+                const locked = r.enviado || r.resuelto;
                 return (
                     <button
                         onClick={(e) => { e.stopPropagation(); if (!locked) handleToggle(r, key); }}
                         disabled={locked}
                         className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
-                            r[key]
+                            val === true
                                 ? locked ? 'bg-green-400 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
-                                : locked ? 'bg-neutral-100 text-neutral-200 cursor-not-allowed' : 'bg-neutral-100 text-neutral-300 hover:bg-neutral-200'
+                                : val === false
+                                ? locked ? 'bg-red-300 text-white cursor-not-allowed' : 'bg-red-400 text-white hover:bg-red-500'
+                                : locked ? 'bg-neutral-100 text-neutral-200 cursor-not-allowed' : 'bg-neutral-100 text-neutral-400 hover:bg-neutral-200'
                         }`}
                     >
-                        {r[key] ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+                        {val === true
+                            ? <Check className="w-3 h-3" />
+                            : val === false
+                            ? <X className="w-3 h-3" />
+                            : <span className="block w-2 h-0.5 bg-current rounded-full" />}
                     </button>
                 );
             },
         })),
         {
+            key: 'notas',
+            label: 'Notas',
+            render: (r: Reunion) => (
+                <div className="max-w-[120px] sm:max-w-[200px] truncate text-[10px] text-neutral-500" title={r.notas || ''}>
+                    {r.notas || '-'}
+                </div>
+            ),
+        },
+        {
             key: 'enviado',
             label: 'Enviado',
             align: 'center' as const,
-            render: (r: Reunion) => r.enviado
-                ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Sí</span>
-                : <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-400">No</span>,
+            render: (r: Reunion) => (
+                r.enviado
+                    ? <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">Sí</span>
+                    : <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-100 text-neutral-400">No</span>
+            ),
+        },
+        {
+            key: 'acciones',
+            label: 'Acciones',
+            align: 'center' as const,
+            hideable: false,
+            render: () => (
+                <div className="flex justify-center">
+                    <button className="p-1 hover:bg-neutral-100 rounded text-neutral-400" title="Acciones">
+                        <MoreVertical className="w-4 h-4" />
+                    </button>
+                </div>
+            ),
         },
     ];
 
-    const handleAccion = async (reunion: Reunion, field: 'pasar_acuerdos' | 'vb_pendiente' | 'redactar_acta') => {
-        if (reunion[field]) return; // Ya está marcado
-        setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, [field]: true } : r));
-        const { error } = await supabase.from('reuniones').update({ [field]: true }).eq('id', reunion.id);
-        if (error) {
-            toast.error('Error al actualizar');
-            setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, [field]: false } : r));
-        } else {
-            const label = field === 'pasar_acuerdos' ? 'Acuerdos pasados' : field === 'vb_pendiente' ? 'Visto bueno registrado' : 'Acta redactada';
-            toast.success(label);
-        }
-    };
+    const MANDATORY_KEYS = ['redactar_acta', 'vb_pendiente', 'pasar_acuerdos'];
 
     const handleEnviado = (reunion: Reunion) => {
         if (reunion.enviado) return;
-        const faltantes = [
-            !reunion.redactar_acta && 'Redactar Acta',
-            !reunion.vb_pendiente && 'Vº Bº Pendiente',
-            !reunion.pasar_acuerdos && 'Pasar Acuerdos',
-        ].filter(Boolean) as string[];
-        setEnvioConfirm({ reunion, faltantes });
+        const pendientes = BOOL_FIELDS.filter(f => reunion[f.key] === null);
+        const noAplica = pendientes.filter(f => !MANDATORY_KEYS.includes(f.key)).map(f => f.label);
+        const realizadas = pendientes.filter(f => MANDATORY_KEYS.includes(f.key)).map(f => f.label);
+        setEnvioConfirm({ reunion, noAplica, realizadas });
     };
 
     const confirmarEnvio = async () => {
         if (!envioConfirm) return;
         setIsEnviando(true);
         const { reunion } = envioConfirm;
-        const update: Record<string, boolean> = { enviado: true, resuelto: true };
-        if (!reunion.redactar_acta) update.redactar_acta = true;
-        if (!reunion.vb_pendiente) update.vb_pendiente = true;
-        if (!reunion.pasar_acuerdos) update.pasar_acuerdos = true;
+        const update: Record<string, boolean | null> = { enviado: true, resuelto: true };
+        
+        // Todas las que estén pendientes (null) las marcamos como No Aplica (false) por defecto
+        BOOL_FIELDS.forEach(f => {
+            if (reunion[f.key] === null) {
+                update[f.key] = false;
+            }
+        });
+
+        // Redactar Acta, Vº Bº Presi y Acuerdos se marcan como obligatorias en true
+        const mandatoryKeys = ['redactar_acta', 'vb_pendiente', 'pasar_acuerdos'];
+        mandatoryKeys.forEach(key => {
+            update[key] = true;
+        });
+
         setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, ...update } : r));
         const { error } = await supabase.from('reuniones').update(update).eq('id', reunion.id);
         if (error) {
@@ -248,33 +282,11 @@ export default function ReunionesPage() {
 
     const rowActions = (r: Reunion): RowAction<Reunion>[] => [
         {
-            label: r.redactar_acta ? 'Redactar Acta ✓' : 'Redactar Acta',
-            icon: <FileText className="w-3.5 h-3.5" />,
-            variant: r.redactar_acta ? 'success' : 'default',
-            disabled: r.redactar_acta,
-            onClick: (row) => handleAccion(row, 'redactar_acta'),
-        },
-        {
-            label: r.vb_pendiente ? 'Vº Bº Presi ✓' : 'Vº Bº Presi',
-            icon: <UserCheck className="w-3.5 h-3.5" />,
-            variant: r.vb_pendiente ? 'success' : 'default',
-            disabled: r.vb_pendiente,
-            onClick: (row) => handleAccion(row, 'vb_pendiente'),
-        },
-        {
-            label: r.pasar_acuerdos ? 'Pasar Acuerdos ✓' : 'Pasar Acuerdos',
-            icon: <FileCheck className="w-3.5 h-3.5" />,
-            variant: r.pasar_acuerdos ? 'success' : 'default',
-            disabled: r.pasar_acuerdos,
-            onClick: (row) => handleAccion(row, 'pasar_acuerdos'),
-        },
-        {
-            label: r.enviado ? 'Enviado ✓' : 'Enviado',
+            label: r.enviado ? 'Enviado ✓' : 'Enviar',
             icon: <Send className="w-3.5 h-3.5" />,
             variant: r.enviado ? 'success' : 'default',
             disabled: r.enviado,
             onClick: (row) => handleEnviado(row),
-            separator: true,
         },
         {
             label: 'Editar',
@@ -286,6 +298,7 @@ export default function ReunionesPage() {
             label: 'Eliminar',
             icon: <Trash2 className="w-3.5 h-3.5" />,
             variant: 'danger',
+            separator: true,
             onClick: (row) => { setDeleteId(row.id); setShowDeleteModal(true); },
         },
     ];
@@ -326,6 +339,15 @@ export default function ReunionesPage() {
         </div>
     );
 
+    const leyenda = (
+        <div className="flex items-center gap-1.5 sm:gap-2.5 text-[9px] sm:text-[10px] lg:text-xs text-neutral-500 bg-white px-2 sm:px-3 py-1.5 rounded-lg border border-neutral-200 shadow-sm w-fit">
+            <span className="font-bold mr-1 hidden xl:inline">Leyenda:</span>
+            <span className="flex items-center gap-1 sm:gap-1.5"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-neutral-100 border border-neutral-200 flex items-center justify-center text-[8px] font-bold text-neutral-400">–</div> Pendiente</span>
+            <span className="flex items-center gap-1 sm:gap-1.5"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-green-500 flex items-center justify-center text-[8px] font-bold text-white">✓</div> Hecho</span>
+            <span className="flex items-center gap-1 sm:gap-1.5"><div className="w-3 h-3 sm:w-3.5 sm:h-3.5 rounded bg-red-400 flex items-center justify-center text-[8px] font-bold text-white">✗</div> No aplica</span>
+        </div>
+    );
+
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center gap-3">
@@ -350,26 +372,28 @@ export default function ReunionesPage() {
                 </div>
             </div>
 
-            {/* Tabs Pendientes / Resueltas / Todas */}
-            <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
-                <button
-                    onClick={() => setFilterResuelto('pendiente')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'pendiente' ? 'bg-amber-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Pendientes
-                </button>
-                <button
-                    onClick={() => setFilterResuelto('resuelto')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'resuelto' ? 'bg-green-500 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Resueltas
-                </button>
-                <button
-                    onClick={() => setFilterResuelto('all')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Todas
-                </button>
+            {/* Controles: Tabs */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                    <button
+                        onClick={() => setFilterResuelto('pendiente')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'pendiente' ? 'bg-amber-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Pendientes
+                    </button>
+                    <button
+                        onClick={() => setFilterResuelto('resuelto')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'resuelto' ? 'bg-green-500 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Resueltas
+                    </button>
+                    <button
+                        onClick={() => setFilterResuelto('all')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Todas
+                    </button>
+                </div>
             </div>
 
             {/* Tabla */}
@@ -382,6 +406,7 @@ export default function ReunionesPage() {
                 emptyMessage="No hay reuniones registradas"
                 rowActions={rowActions}
                 extraFilters={extraFilters}
+                headerExtras={leyenda}
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
             />
@@ -424,27 +449,46 @@ export default function ReunionesPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="mb-5 text-center">
-                            <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-3 ${envioConfirm.faltantes.length > 0 ? 'bg-amber-50' : 'bg-green-50'}`}>
-                                {envioConfirm.faltantes.length > 0
+                            <div className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center mb-3 ${(envioConfirm.noAplica.length > 0 || envioConfirm.realizadas.length > 0) ? 'bg-amber-50' : 'bg-green-50'}`}>
+                                {(envioConfirm.noAplica.length > 0 || envioConfirm.realizadas.length > 0)
                                     ? <AlertTriangle className="w-7 h-7 text-amber-500" />
                                     : <Send className="w-7 h-7 text-green-500" />
                                 }
                             </div>
                             <h3 className="text-lg font-black text-neutral-900 tracking-tight">
-                                {envioConfirm.faltantes.length > 0 ? 'Tareas pendientes' : 'Confirmar envío'}
+                                {(envioConfirm.noAplica.length > 0 || envioConfirm.realizadas.length > 0) ? 'Tareas pendientes' : 'Confirmar envío'}
                             </h3>
-                            {envioConfirm.faltantes.length > 0 ? (
+                            {(envioConfirm.noAplica.length > 0 || envioConfirm.realizadas.length > 0) ? (
                                 <div className="mt-2 text-sm text-neutral-600">
-                                    <p className="mb-2">Las siguientes tareas no están completadas:</p>
-                                    <ul className="text-left inline-block space-y-1">
-                                        {envioConfirm.faltantes.map(f => (
-                                            <li key={f} className="flex items-center gap-2 text-amber-700 font-semibold">
-                                                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
-                                                {f}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    <p className="mt-3 text-neutral-500">¿Quieres marcarlas como completadas y enviar el acta?</p>
+                                    <p className="mb-2">Las siguientes tareas están <strong className="text-amber-800">pendientes</strong>:</p>
+
+                                    {envioConfirm.noAplica.length > 0 && (
+                                        <div className="mt-2 text-left">
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Pasarán a &lsquo;No aplica&rsquo;:</p>
+                                            <ul className="space-y-1">
+                                                {envioConfirm.noAplica.map((f: string) => (
+                                                    <li key={f} className="flex items-center gap-2 text-red-600 font-semibold">
+                                                        <X className="w-3 h-3 shrink-0" />
+                                                        {f}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
+
+                                    {envioConfirm.realizadas.length > 0 && (
+                                        <div className="mt-3 text-left">
+                                            <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest mb-1">Pasarán a &lsquo;Realizada&rsquo;:</p>
+                                            <ul className="space-y-1">
+                                                {envioConfirm.realizadas.map((f: string) => (
+                                                    <li key={f} className="flex items-center gap-2 text-green-700 font-semibold">
+                                                        <Check className="w-3 h-3 shrink-0" />
+                                                        {f}
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <p className="mt-2 text-sm text-neutral-500">¿Confirmas que quieres enviar el acta?</p>
@@ -461,7 +505,7 @@ export default function ReunionesPage() {
                             <button
                                 onClick={confirmarEnvio}
                                 disabled={isEnviando}
-                                className={`flex-1 h-11 rounded-xl font-black text-xs uppercase tracking-widest transition disabled:opacity-50 flex items-center justify-center gap-2 text-white ${envioConfirm.faltantes.length > 0 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'}`}
+                                className={`flex-1 h-11 rounded-xl font-black text-xs uppercase tracking-widest transition disabled:opacity-50 flex items-center justify-center gap-2 text-white ${(envioConfirm.noAplica.length > 0 || envioConfirm.realizadas.length > 0) ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'}`}
                             >
                                 {isEnviando ? <><Send className="w-4 h-4 animate-pulse" />Enviando...</> : <><Send className="w-4 h-4" />Enviar Acta</>}
                             </button>

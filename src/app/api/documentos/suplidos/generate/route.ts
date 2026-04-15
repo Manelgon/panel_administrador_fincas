@@ -50,7 +50,7 @@ function n(v: any) {
 function moneyES(v: any) { return n(v).toFixed(2).replace(".", ","); }
 
 // --- HELPER: DRAW CELL (Facturas Style) ---
-function drawCell(page: any, font: any, bold: any, x: number, y: number, w: number, h: number, txt: string, opts?: { bold?: boolean; align?: "left" | "right" | "center"; bg?: any }) {
+function drawCell(page: any, font: any, bold: any, x: number, y: number, w: number, h: number, txt: string, opts?: { bold?: boolean; align?: "left" | "right" | "center"; bg?: any; borderColor?: any }) {
     page.drawRectangle({
         x,
         y,
@@ -58,7 +58,7 @@ function drawCell(page: any, font: any, bold: any, x: number, y: number, w: numb
         height: h,
         color: opts?.bg ?? rgb(1, 1, 1),
         borderWidth: 1,
-        borderColor: BORDER,
+        borderColor: opts?.borderColor ?? BORDER,
     });
 
     const f = opts?.bold ? bold : font;
@@ -125,7 +125,7 @@ function drawYellowBlock(params: {
     const h = paddingY * 2 + textLines.length * lineH;
     const y = yTop - h;
 
-    page.drawRectangle({ x, y, width: w, height: h, color: bg, borderColor: BORDER, borderWidth: 1 });
+    page.drawRectangle({ x, y, width: w, height: h, color: rgb(1, 1, 1), borderColor: bg, borderWidth: 1 });
 
     let ty = yTop - paddingY - size;
     for (const line of textLines) {
@@ -214,7 +214,7 @@ export async function buildSuplidoPdf(
     const fechaLabelY = headerBottomY; // Justo debajo del logo
 
     page.drawText("Fecha de emisión", { x: marginX, y: fechaLabelY, size: 10, font: bold, color: BLACK });
-    page.drawRectangle({ x: marginX + 120, y: fechaLabelY - 8, width: 240, height: 18, color: YELLOW });
+    page.drawRectangle({ x: marginX + 120, y: fechaLabelY - 8, width: 240, height: 18, color: rgb(1, 1, 1), borderWidth: 1, borderColor: YELLOW });
     page.drawText(fecha || " ", { x: marginX + 128, y: fechaLabelY - 4, size: 10, font, color: BLACK });
 
     // 3) Bloques Emisor y Cliente
@@ -284,11 +284,11 @@ export async function buildSuplidoPdf(
     const rowH = 22;
 
     let x = marginX;
-    drawCell(page, font, bold, x, tableTopY, c.n, headerH, "Nº", { bold: true, align: "center", bg: YELLOW }); x += c.n;
-    drawCell(page, font, bold, x, tableTopY, c.prod, headerH, "Productos", { bold: true, bg: YELLOW }); x += c.prod;
-    drawCell(page, font, bold, x, tableTopY, c.qty, headerH, "Cantidad", { bold: true, align: "center", bg: YELLOW }); x += c.qty;
-    drawCell(page, font, bold, x, tableTopY, c.price, headerH, "Precio", { bold: true, align: "center", bg: YELLOW }); x += c.price;
-    drawCell(page, font, bold, x, tableTopY, c.total, headerH, "Precio total", { bold: true, align: "center", bg: YELLOW });
+    drawCell(page, font, bold, x, tableTopY, c.n, headerH, "Nº", { bold: true, align: "center", borderColor: YELLOW }); x += c.n;
+    drawCell(page, font, bold, x, tableTopY, c.prod, headerH, "Productos", { bold: true, borderColor: YELLOW }); x += c.prod;
+    drawCell(page, font, bold, x, tableTopY, c.qty, headerH, "Cantidad", { bold: true, align: "center", borderColor: YELLOW }); x += c.qty;
+    drawCell(page, font, bold, x, tableTopY, c.price, headerH, "Precio", { bold: true, align: "center", borderColor: YELLOW }); x += c.price;
+    drawCell(page, font, bold, x, tableTopY, c.total, headerH, "Precio total", { bold: true, align: "center", borderColor: YELLOW });
 
     // Rows
     const rows = [
@@ -323,9 +323,9 @@ export async function buildSuplidoPdf(
         y: sumY,
         width: sumBoxW,
         height: sumBoxH,
-        color: YELLOW,
+        color: rgb(1, 1, 1),
         borderWidth: 1,
-        borderColor: BORDER
+        borderColor: YELLOW
     });
 
     const totalText = moneyES(payload["Suma final"]);

@@ -160,17 +160,19 @@ export const reunionFormSchema = z.object({
   comunidad_id: z.coerce.number().positive('Selecciona una comunidad'),
   fecha_reunion: z.string().min(1, 'La fecha es obligatoria'),
   tipo: z.enum(['JGO', 'JGE', 'JV', 'JD']),
-  estado_cuentas: z.boolean().default(false),
-  pto_ordinario: z.boolean().default(false),
-  pto_extra: z.boolean().default(false),
-  morosos: z.boolean().default(false),
-  citacion_email: z.boolean().default(false),
-  citacion_carta: z.boolean().default(false),
-  redactar_acta: z.boolean().default(false),
-  vb_pendiente: z.boolean().default(false),
-  acta_email: z.boolean().default(false),
-  acta_carta: z.boolean().default(false),
-  pasar_acuerdos: z.boolean().default(false),
+  estado_cuentas: z.boolean().nullable().default(null),
+  pto_ordinario: z.boolean().nullable().default(null),
+  pto_extra: z.boolean().nullable().default(null),
+  morosos: z.boolean().nullable().default(null),
+  citacion_email: z.boolean().nullable().default(null),
+  citacion_carta: z.boolean().nullable().default(null),
+  borrador_acta: z.boolean().nullable().default(null),
+  redactar_acta: z.boolean().nullable().default(null),
+  vb_pendiente: z.boolean().nullable().default(null),
+  imprimir_acta: z.boolean().nullable().default(null),
+  acta_email: z.boolean().nullable().default(null),
+  acta_carta: z.boolean().nullable().default(null),
+  pasar_acuerdos: z.boolean().nullable().default(null),
   enviado: z.boolean().default(false),
   notas: z.string().optional(),
 });
@@ -184,17 +186,19 @@ export interface Reunion {
   codigo?: string;
   fecha_reunion: string;
   tipo: 'JGO' | 'JGE' | 'JV' | 'JD';
-  estado_cuentas: boolean;
-  pto_ordinario: boolean;
-  pto_extra: boolean;
-  morosos: boolean;
-  citacion_email: boolean;
-  citacion_carta: boolean;
-  redactar_acta: boolean;
-  vb_pendiente: boolean;
-  acta_email: boolean;
-  acta_carta: boolean;
-  pasar_acuerdos: boolean;
+  estado_cuentas: boolean | null;
+  pto_ordinario: boolean | null;
+  pto_extra: boolean | null;
+  morosos: boolean | null;
+  citacion_email: boolean | null;
+  citacion_carta: boolean | null;
+  borrador_acta: boolean | null;
+  redactar_acta: boolean | null;
+  vb_pendiente: boolean | null;
+  imprimir_acta: boolean | null;
+  acta_email: boolean | null;
+  acta_carta: boolean | null;
+  pasar_acuerdos: boolean | null;
   enviado: boolean;
   resuelto: boolean;
   notas?: string;

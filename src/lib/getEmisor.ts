@@ -5,6 +5,7 @@ export interface EmisorData {
     direccion: string;
     ciudad: string;
     cif: string;
+    colegiado: string;
     logoPath: string;
     firmaPath: string;
     headerPath: string;
@@ -26,6 +27,7 @@ export async function getEmisor(): Promise<EmisorData> {
             direccion: process.env.EMISOR_ADDRESS || "",
             ciudad: process.env.EMISOR_CITY || "",
             cif: process.env.EMISOR_CIF || "",
+            colegiado: "",
             logoPath: "",
             firmaPath: "",
             headerPath: "",
@@ -42,6 +44,7 @@ export async function getEmisor(): Promise<EmisorData> {
         direccion: map["emisor_address"] || process.env.EMISOR_ADDRESS || "",
         ciudad: map["emisor_city"] || process.env.EMISOR_CITY || "",
         cif: map["emisor_cif"] || process.env.EMISOR_CIF || "",
+        colegiado: map["colegiado_nombre"] || "",
         logoPath: map["logo_path"] || "",
         firmaPath: map["firma_path"] || "",
         headerPath: map["header_path"] || "",

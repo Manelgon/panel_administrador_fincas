@@ -5,17 +5,19 @@ interface ImportRow {
     comunidad_id: number;
     fecha_reunion: string;
     tipo: string;
-    estado_cuentas: boolean;
-    pto_ordinario: boolean;
-    pto_extra: boolean;
-    morosos: boolean;
-    citacion_email: boolean;
-    citacion_carta: boolean;
-    redactar_acta: boolean;
-    vb_pendiente: boolean;
-    acta_email: boolean;
-    acta_carta: boolean;
-    pasar_acuerdos: boolean;
+    estado_cuentas: boolean | null;
+    pto_ordinario: boolean | null;
+    pto_extra: boolean | null;
+    morosos: boolean | null;
+    citacion_email: boolean | null;
+    citacion_carta: boolean | null;
+    borrador_acta: boolean | null;
+    redactar_acta: boolean | null;
+    vb_pendiente: boolean | null;
+    imprimir_acta: boolean | null;
+    acta_email: boolean | null;
+    acta_carta: boolean | null;
+    pasar_acuerdos: boolean | null;
     resuelto: boolean;
 }
 
@@ -54,8 +56,10 @@ export async function POST(req: NextRequest) {
                     morosos:        row.morosos,
                     citacion_email: row.citacion_email,
                     citacion_carta: row.citacion_carta,
+                    borrador_acta:  row.borrador_acta,
                     redactar_acta:  row.redactar_acta,
                     vb_pendiente:   row.vb_pendiente,
+                    imprimir_acta:  row.imprimir_acta,
                     acta_email:     row.acta_email,
                     acta_carta:     row.acta_carta,
                     pasar_acuerdos: row.pasar_acuerdos,

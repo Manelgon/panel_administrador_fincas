@@ -29,6 +29,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     const [toEmail, setToEmail] = useState("");
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [communities, setCommunities] = useState<Comunidad[]>([]);
+    const [showSelloConfirm, setShowSelloConfirm] = useState(false);
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -122,19 +123,28 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         return vals;
     };
 
-    const generate = async () => {
+    const generate = async (skipSello = false) => {
         setStatus("generating");
         setSubmissionIds(null);
         setPdfUrls(null);
 
         try {
+            const body = skipSello ? { ...values, skipSello: true } : values;
             const res = await fetch("/api/documentos/varios/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
+                body: JSON.stringify(body),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Error generando PDF");
+
+            if (!res.ok) {
+                if (data.error === "MISSING_SELLO") {
+                    setStatus("idle");
+                    setShowSelloConfirm(true);
+                    return;
+                }
+                throw new Error(data.error || "Error generando PDF");
+            }
 
             setPdfUrls({
                 factura: data.pdfUrlFactura,
@@ -146,11 +156,11 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
             });
 
             setStatus("ready");
-            toast.success("Documentos generados correctamente ✅");
-        } catch (error: any) {
+            toast.success("Documentos generados correctamente");
+        } catch (error: unknown) {
             console.error(error);
             setStatus("error");
-            toast.error(error.message);
+            toast.error(error instanceof Error ? error.message : "Error generando PDF");
         }
     };
 
@@ -495,7 +505,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                 </button>
                 <button
                     type="button"
-                    onClick={generate}
+                    onClick={() => generate()}
                     disabled={status === "generating" || !canGenerate}
                     className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
@@ -512,6 +522,42 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                     )}
                 </button>
             </div>
+
+            {/* Modal confirmación: sello no encontrado */}
+            {showSelloConfirm && (
+                <div className="fixed inset-0 bg-black/40 z-[10000] flex items-center justify-center p-4 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4 animate-in zoom-in-95 duration-200">
+                        <div className="flex items-start gap-3">
+                            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center shrink-0">
+                                <AlertCircle className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-neutral-900">Sello y firma no encontrados</h3>
+                                <p className="text-sm text-neutral-600 mt-1">
+                                    No se encontró la imagen del sello y firma en el sistema. Puede subirla en <strong>Ajustes &gt; Emisor</strong> para crear documentos firmados.
+                                </p>
+                                <p className="text-sm text-neutral-600 mt-2">
+                                    ¿Desea crear el documento sin el sello?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <button
+                                onClick={() => setShowSelloConfirm(false)}
+                                className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-sm font-bold transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => { setShowSelloConfirm(false); generate(true); }}
+                                className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg text-sm font-bold transition"
+                            >
+                                Crear sin sello
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
