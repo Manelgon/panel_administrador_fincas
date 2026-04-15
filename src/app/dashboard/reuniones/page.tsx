@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send, AlertTriangle, MoreVertical } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send, AlertTriangle, MoreVertical, Clock, CheckCircle2 } from 'lucide-react';
 import DataTable, { Column, RowAction } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -56,7 +56,7 @@ export default function ReunionesPage() {
     const [isEnviando, setIsEnviando] = useState(false);
 
     // Filtros
-    const [filterResuelto, setFilterResuelto] = useState<'pendiente' | 'resuelto' | 'all'>('pendiente');
+    const [filterResuelto, setFilterResuelto] = useState<'confirmadas' | 'pendiente' | 'resuelto' | 'all'>('confirmadas');
     const [filterTipo, setFilterTipo] = useState('all');
     const [filterComunidad, setFilterComunidad] = useState('all');
     const [filterAnio, setFilterAnio] = useState('all');
@@ -98,6 +98,7 @@ export default function ReunionesPage() {
     };
 
     const handleToggle = async (reunion: Reunion, field: keyof Reunion) => {
+        if (!reunion.confirmada || reunion.enviado || reunion.resuelto) return;
         const current = reunion[field] as boolean | null;
         const newVal = current === null ? true : current === true ? false : null;
         setReuniones(prev =>
@@ -112,6 +113,22 @@ export default function ReunionesPage() {
             setReuniones(prev =>
                 prev.map(r => r.id === reunion.id ? { ...r, [field]: current } : r)
             );
+        }
+    };
+
+    const handleConfirmar = async (reunion: Reunion) => {
+        if (reunion.confirmada) return;
+        setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, confirmada: true } : r));
+        const { error } = await supabase
+            .from('reuniones')
+            .update({ confirmada: true })
+            .eq('id', reunion.id);
+        if (error) {
+            toast.error('Error al confirmar la reunión');
+            setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, confirmada: false } : r));
+        } else {
+            toast.success('Reunión confirmada');
+            await logActivity({ action: 'update', entityType: 'reunion', entityId: reunion.id, entityName: `${reunion.tipo} - ${reunion.comunidad}` });
         }
     };
 
@@ -137,7 +154,8 @@ export default function ReunionesPage() {
 
     // Filtrado
     const filtered = reuniones.filter(r => {
-        if (filterResuelto === 'pendiente' && r.resuelto) return false;
+        if (filterResuelto === 'confirmadas' && !(r.confirmada && !r.resuelto && !r.enviado)) return false;
+        if (filterResuelto === 'pendiente' && r.confirmada) return false;
         if (filterResuelto === 'resuelto' && !r.resuelto) return false;
         if (filterTipo !== 'all' && r.tipo !== filterTipo) return false;
         if (filterComunidad !== 'all' && String(r.comunidad_id) !== filterComunidad) return false;
@@ -177,17 +195,45 @@ export default function ReunionesPage() {
                 return <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${t.cls}`}>{t.label}</span>;
             },
         },
+        {
+            key: 'confirmada',
+            label: 'Estado',
+            align: 'center' as const,
+            sortable: true,
+            render: (r: Reunion) => {
+                if (r.resuelto) {
+                    return (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-100 text-green-700">
+                            <Check className="w-2.5 h-2.5" />Resuelta
+                        </span>
+                    );
+                }
+                if (r.confirmada) {
+                    return (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                            <CheckCircle2 className="w-2.5 h-2.5" />Confirmada
+                        </span>
+                    );
+                }
+                return (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
+                        <Clock className="w-2.5 h-2.5" />Pendiente
+                    </span>
+                );
+            },
+        },
         ...BOOL_FIELDS.map(({ key, label }) => ({
             key,
             label,
             align: 'center' as const,
             render: (r: Reunion) => {
                 const val = r[key] as boolean | null;
-                const locked = r.enviado || r.resuelto;
+                const locked = !r.confirmada || r.enviado || r.resuelto;
                 return (
                     <button
                         onClick={(e) => { e.stopPropagation(); if (!locked) handleToggle(r, key); }}
                         disabled={locked}
+                        title={!r.confirmada ? 'Confirma la reunión para editar' : undefined}
                         className={`w-5 h-5 rounded flex items-center justify-center transition-colors ${
                             val === true
                                 ? locked ? 'bg-green-400 text-white cursor-not-allowed' : 'bg-green-500 text-white hover:bg-green-600'
@@ -281,17 +327,23 @@ export default function ReunionesPage() {
     };
 
     const rowActions = (r: Reunion): RowAction<Reunion>[] => [
+        ...(!r.confirmada && !r.resuelto ? [{
+            label: 'Confirmar reunión',
+            icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+            variant: 'default' as const,
+            onClick: (row: Reunion) => handleConfirmar(row),
+        }] : []),
         {
             label: r.enviado ? 'Enviado ✓' : 'Enviar',
             icon: <Send className="w-3.5 h-3.5" />,
             variant: r.enviado ? 'success' : 'default',
-            disabled: r.enviado,
+            disabled: r.enviado || !r.confirmada,
             onClick: (row) => handleEnviado(row),
         },
         {
             label: 'Editar',
             icon: <Pencil className="w-3.5 h-3.5" />,
-            disabled: r.enviado || r.resuelto,
+            disabled: !r.confirmada || r.enviado || r.resuelto,
             onClick: (row) => { setEditingId(row.id); setShowForm(true); },
         },
         {
@@ -374,7 +426,13 @@ export default function ReunionesPage() {
 
             {/* Controles: Tabs */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                    <button
+                        onClick={() => setFilterResuelto('confirmadas')}
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'confirmadas' ? 'bg-blue-500 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Confirmadas
+                    </button>
                     <button
                         onClick={() => setFilterResuelto('pendiente')}
                         className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'pendiente' ? 'bg-amber-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
