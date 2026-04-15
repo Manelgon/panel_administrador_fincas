@@ -160,6 +160,7 @@ export const reunionFormSchema = z.object({
   comunidad_id: z.coerce.number().positive('Selecciona una comunidad'),
   fecha_reunion: z.string().min(1, 'La fecha es obligatoria'),
   tipo: z.enum(['JGO', 'JGE', 'JV', 'JD']),
+  confirmada: z.boolean({ required_error: 'Selecciona el estado inicial de la reunión' }),
   estado_cuentas: z.boolean().nullable().default(null),
   pto_ordinario: z.boolean().nullable().default(null),
   pto_extra: z.boolean().nullable().default(null),
@@ -186,6 +187,7 @@ export interface Reunion {
   codigo?: string;
   fecha_reunion: string;
   tipo: 'JGO' | 'JGE' | 'JV' | 'JD';
+  confirmada: boolean;
   estado_cuentas: boolean | null;
   pto_ordinario: boolean | null;
   pto_extra: boolean | null;
