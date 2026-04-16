@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditor&iacute;a de Seguridad — serincosol.automatizatelo.com — 2026-04-15</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0a;color:#e0e0e0;font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6}
+.container{max-width:900px;margin:0 auto;padding:20px}
+h1{font-size:1.8rem;margin-bottom:8px}
+h2{font-size:1.3rem;margin:32px 0 16px;border-bottom:1px solid #333;padding-bottom:8px}
+h3{font-size:1.1rem;margin:16px 0 8px}
+
+/* Header */
+.header{background:linear-gradient(135deg,#1a1a2e,#16213e);border:1px solid #333;border-radius:12px;padding:32px;margin-bottom:24px}
+.header h1{color:#fff}
+.header .meta{color:#999;font-size:0.9rem;margin-top:8px}
+.severity-badge{display:inline-block;padding:4px 14px;border-radius:20px;font-size:0.8rem;font-weight:700;text-transform:uppercase}
+.severity-critica{background:#ff4444;color:#fff}
+.severity-alta{background:#ff8c00;color:#fff}
+.severity-media{background:#f5a623;color:#111}
+.severity-ok{background:#00c853;color:#fff}
+.severity-info{background:#2196f3;color:#fff}
+
+/* Score Cards */
+.score-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin:20px 0}
+.score-card{border-radius:12px;padding:20px;text-align:center}
+.score-card .number{font-size:2.5rem;font-weight:800}
+.score-card .label{font-size:0.85rem;opacity:0.9;margin-top:4px}
+.sc-critica{background:linear-gradient(135deg,#ff4444,#cc0000);color:#fff}
+.sc-alta{background:linear-gradient(135deg,#ff8c00,#cc6600);color:#fff}
+.sc-media{background:linear-gradient(135deg,#f5a623,#d4901e);color:#111}
+.sc-ok{background:linear-gradient(135deg,#00c853,#009940);color:#fff}
+
+/* Resumen ejecutivo */
+.resumen{background:linear-gradient(135deg,#b71c1c,#880e0e);border-radius:12px;padding:24px;margin:20px 0;color:#fff}
+.analogia{background:linear-gradient(135deg,#0d47a1,#1565c0);border-radius:12px;padding:24px;margin:20px 0;color:#fff}
+
+/* Vuln cards */
+.vuln-card{border:1px solid #333;border-left:4px solid;border-radius:8px;padding:20px;margin:16px 0;background:#111}
+.vuln-critica{border-left-color:#ff4444}
+.vuln-alta{border-left-color:#ff8c00}
+.vuln-media{border-left-color:#f5a623}
+.vuln-ok{border-left-color:#00c853}
+.vuln-card h3{margin-top:0}
+.vuln-card p{margin:8px 0;color:#ccc}
+
+pre,code{font-family:'SF Mono','Fira Code','Cascadia Code',Consolas,monospace;background:#1a1a1a;border-radius:6px;font-size:0.85rem}
+pre{padding:16px;overflow-x:auto;margin:12px 0;border:1px solid #333}
+code{padding:2px 6px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:12px 0}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #222}
+th{background:#1a1a1a;color:#999;font-size:0.85rem;text-transform:uppercase}
+td{font-size:0.9rem}
+
+/* OK table */
+.ok-table td{color:#00c853}
+.ok-table tr{border-left:3px solid #00c853}
+
+/* Details */
+details{margin:12px 0;border:1px solid #333;border-radius:8px;background:#111}
+details summary{padding:12px 16px;cursor:pointer;font-weight:600;color:#2196f3}
+details summary:hover{background:#1a1a1a}
+details .content{padding:0 16px 16px}
+
+/* Timeline */
+.timeline{margin:20px 0}
+.timeline-item{display:flex;align-items:flex-start;margin:12px 0;gap:12px}
+.timeline-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.dot-red{background:#ff4444}
+.dot-orange{background:#ff8c00}
+.dot-yellow{background:#f5a623}
+.dot-gray{background:#666}
+
+/* Footer */
+.footer{margin-top:40px;padding:24px;border-top:1px solid #333;text-align:center;color:#666;font-size:0.85rem}
+
+/* Legal */
+.legal{background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:20px;margin:20px 0}
+
+@media (max-width:600px){
+  .container{padding:12px}
+  .score-cards{grid-template-columns:repeat(2,1fr)}
+  .header{padding:20px}
+  pre{font-size:0.75rem}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- HEADER -->
+<div class="header">
+  <h1>Auditor&iacute;a de Seguridad Web</h1>
+  <p style="font-size:1.1rem;color:#ccc;margin:8px 0">serincosol.automatizatelo.com</p>
+  <div class="meta">
+    <p>Fecha: 15 de Abril de 2026</p>
+    <p>Auditor: Claude Code / Web Security Audit Skill</p>
+    <p>Metodolog&iacute;a: OWASP Top 10 2025 + PTES + Supabase Security Best Practices</p>
+    <p style="margin-top:12px">Gravedad general: <span class="severity-badge severity-media">MEDIA</span></p>
+  </div>
+</div>
+
+<!-- SCORE CARDS -->
+<div class="score-cards">
+  <div class="score-card sc-critica">
+    <div class="number">0</div>
+    <div class="label">CR&Iacute;TICAS</div>
+  </div>
+  <div class="score-card sc-alta">
+    <div class="number">3</div>
+    <div class="label">ALTAS</div>
+  </div>
+  <div class="score-card sc-media">
+    <div class="number">5</div>
+    <div class="label">MEDIAS</div>
+  </div>
+  <div class="score-card sc-ok">
+    <div class="number">14</div>
+    <div class="label">OK</div>
+  </div>
+</div>
+
+<!-- RESUMEN EJECUTIVO -->
+<div class="resumen">
+  <h2 style="border:none;margin-top:0;color:#fff">Resumen Ejecutivo</h2>
+  <p>Tu panel de gesti&oacute;n de fincas est&aacute; desplegado en Vercel con Supabase como base de datos. <strong>No se encontraron vulnerabilidades cr&iacute;ticas</strong>. La base de datos tiene <strong>RLS habilitado en todas las tablas</strong> con pol&iacute;ticas correctas — el acceso an&oacute;nimo est&aacute; bloqueado. Quedan <strong>3 hallazgos de severidad alta</strong>: el signup est&aacute; abierto en Supabase (cualquiera puede crear cuenta), falta Content-Security-Policy, y no hay rate limiting. Son mejoras importantes antes de manejar datos sensibles de propietarios.</p>
+</div>
+
+<!-- ANALOGIA -->
+<div class="analogia">
+  <h2 style="border:none;margin-top:0;color:#fff">Analog&iacute;a: Tu edificio digital</h2>
+  <p>Imagina tu panel de fincas como un edificio de oficinas. La puerta principal (login) est&aacute; cerrada con llave y vigilante &mdash; bien. Los archivadores internos (tablas de Supabase) tienen candado individual (RLS) &mdash; tambi&eacute;n bien. Sin embargo, la puerta de atr&aacute;s (signup de Supabase) permite que cualquiera se fabrique su propia llave para entrar al edificio. No hay c&aacute;maras que limiten cu&aacute;ntas veces alguien puede intentar entrar (rate limiting). Y faltan carteles de seguridad en las ventanas (headers CSP) que evitar&iacute;an que alguien pegue un cartel falso.</p>
+</div>
+
+<!-- INFO TECNICA -->
+<h2>Informaci&oacute;n T&eacute;cnica</h2>
+<table>
+  <tr><th>Par&aacute;metro</th><th>Valor</th></tr>
+  <tr><td>Dominio</td><td>serincosol.automatizatelo.com</td></tr>
+  <tr><td>Stack</td><td>Next.js (Turbopack) + React 19 + Vercel</td></tr>
+  <tr><td>Base de Datos</td><td>Supabase (ref: dxpufxpzplkltljhevug)</td></tr>
+  <tr><td>CDN / Hosting</td><td>Vercel Edge Network</td></tr>
+  <tr><td>IPs</td><td>64.29.17.1, 216.198.79.1 (Vercel DNS)</td></tr>
+  <tr><td>DNS</td><td>Vercel DNS (5561a282887be3d5.vercel-dns-017.com)</td></tr>
+  <tr><td>MX</td><td>mx.buzondecorreo.com (pref 10)</td></tr>
+  <tr><td>Supabase Anon Key</td><td>Expuesta en JS bundles client-side (esperado)</td></tr>
+  <tr><td>Service Role Key</td><td>NO encontrada en JS &#10003;</td></tr>
+  <tr><td>robots.txt</td><td>No existe (404)</td></tr>
+  <tr><td>sitemap.xml</td><td>No existe (404)</td></tr>
+</table>
+
+<!-- VULNERABILIDADES ALTAS -->
+<h2>Vulnerabilidades de Severidad Alta</h2>
+
+<div class="vuln-card vuln-ok" style="border-left-color:#00c853">
+  <h3><span class="severity-badge severity-ok">CORREGIDO</span> &nbsp; RLS en tablas de Supabase — VERIFICADO OK</h3>
+  <p>La auditor&iacute;a inicial detect&oacute; 8 tablas que respond&iacute;an <code>[]</code> a consultas an&oacute;nimas. Tras verificaci&oacute;n manual en la base de datos, se confirm&oacute; que <strong>todas las 28 tablas tienen RLS habilitado</strong> (<code>rowsecurity: true</code>) y pol&iacute;ticas configuradas exclusivamente para el rol <code>authenticated</code>. La respuesta <code>[]</code> es el comportamiento correcto de PostgREST cuando RLS bloquea el acceso al rol <code>anon</code> &mdash; no revela datos.</p>
+  <p><strong>Estado:</strong> Falso positivo. La base de datos est&aacute; correctamente protegida.</p>
+  <pre>
+# Verificaci&oacute;n: 28/28 tablas con rowsecurity = true
+# Todas las pol&iacute;ticas usan TO authenticated (no anon)
+# Roles cubiertos: admin (full), gestor/empleado (por comunidad), owner (propios datos)</pre>
+</div>
+
+<div class="vuln-card vuln-alta">
+  <h3><span class="severity-badge severity-alta">ALTA</span> &nbsp; Signup abierto en Supabase</h3>
+  <p>La configuraci&oacute;n de autenticaci&oacute;n de Supabase tiene <code>disable_signup: false</code>. Esto significa que cualquier persona puede crear una cuenta en tu sistema. En una aplicaci&oacute;n privada de gesti&oacute;n de fincas, solo los administradores deber&iacute;an poder crear usuarios.</p>
+  <p><strong>Impacto:</strong> Un atacante puede crear cuentas y, combinado con la falta de RLS, potencialmente acceder a todos los datos.</p>
+  <pre>
+# Prueba de concepto
+curl -X POST "https://dxpufxpzplkltljhevug.supabase.co/auth/v1/signup" \
+  -H "apikey: [ANON_KEY]" -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Password123!"}'
+# Nota: el test con dominio .invalid fue rechazado por validacion de email,
+# pero con un email real funcionaria</pre>
+  <p><strong>Fix:</strong> Deshabilitar signup p&uacute;blico en Supabase Dashboard → Auth → Settings → <code>Enable Sign Up</code> → OFF. Crear usuarios via Admin API o invitaciones.</p>
+</div>
+
+<div class="vuln-card vuln-alta">
+  <h3><span class="severity-badge severity-alta">ALTA</span> &nbsp; Sin Content-Security-Policy (CSP)</h3>
+  <p>El servidor no env&iacute;a el header <code>Content-Security-Policy</code>. Este header es la defensa principal contra ataques XSS (Cross-Site Scripting), clickjacking avanzado e inyecci&oacute;n de recursos maliciosos.</p>
+  <p><strong>Impacto:</strong> Si un atacante encuentra un punto de inyecci&oacute;n XSS, podr&iacute;a ejecutar JavaScript arbitrario, robar sesiones de usuario y acceder a datos de la aplicaci&oacute;n.</p>
+  <pre>
+# Header actual: NO presente
+# Deber&iacute;a incluirse en la respuesta HTTP:
+Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'</pre>
+  <p><strong>Fix:</strong> A&ntilde;adir CSP en <code>next.config.ts</code> via headers:</p>
+  <pre>
+// next.config.ts
+async headers() {
+  return [{
+    source: '/(.*)',
+    headers: [{
+      key: 'Content-Security-Policy',
+      value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co"
+    }]
+  }]
+}</pre>
+</div>
+
+<div class="vuln-card vuln-alta">
+  <h3><span class="severity-badge severity-alta">ALTA</span> &nbsp; Sin Rate Limiting</h3>
+  <p>Se enviaron 20 peticiones r&aacute;pidas consecutivas y todas respondieron HTTP 200. No hay ning&uacute;n mecanismo de limitaci&oacute;n de velocidad, lo que permite ataques de fuerza bruta contra el login, enumeraci&oacute;n de usuarios, y DDoS a nivel de aplicaci&oacute;n.</p>
+  <pre>
+# 20 peticiones rapidas — todas HTTP 200
+for i in $(seq 1 20); do
+  curl -s -o /dev/null -w "%{http_code} " "https://serincosol.automatizatelo.com/auth/login"
+done
+# Resultado: 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200 200</pre>
+  <p><strong>Fix:</strong> Configurar rate limiting en Vercel (<code>vercel.json</code>) o implementar middleware de rate limiting en Next.js. Vercel ofrece WAF con rate limiting en planes Pro.</p>
+</div>
+
+<div class="vuln-card vuln-media">
+  <h3><span class="severity-badge severity-media">MEDIA</span> &nbsp; Auth Config p&uacute;blicamente accesible</h3>
+  <p>El endpoint <code>/auth/v1/settings</code> de Supabase expone la configuraci&oacute;n de autenticaci&oacute;n: proveedores habilitados, estado de signup, autoconfirmaci&oacute;n de email. Es comportamiento inherente a Supabase, pero proporciona informaci&oacute;n &uacute;til a un atacante.</p>
+  <pre>
+curl "https://dxpufxpzplkltljhevug.supabase.co/auth/v1/settings" -H "apikey: [ANON_KEY]"
+# Revela: disable_signup=false, mailer_autoconfirm=false, providers habilitados, etc.</pre>
+  <p><strong>Fix:</strong> No se puede deshabilitar. Mitigar asegurando que la configuraci&oacute;n sea correcta (deshabilitar signup p&uacute;blico).</p>
+</div>
+
+<!-- VULNERABILIDADES MEDIAS -->
+<h2>Vulnerabilidades de Severidad Media</h2>
+
+<div class="vuln-card vuln-media">
+  <h3><span class="severity-badge severity-media">MEDIA</span> &nbsp; Sin X-Frame-Options ni frame-ancestors en CSP</h3>
+  <p>No se env&iacute;a el header <code>X-Frame-Options</code>. La aplicaci&oacute;n podr&iacute;a ser embebida en un iframe por un sitio malicioso para ataques de clickjacking.</p>
+  <pre># Header no presente en respuesta</pre>
+  <p><strong>Fix:</strong> A&ntilde;adir <code>X-Frame-Options: DENY</code> y <code>frame-ancestors 'none'</code> en CSP.</p>
+</div>
+
+<div class="vuln-card vuln-media">
+  <h3><span class="severity-badge severity-media">MEDIA</span> &nbsp; Sin Referrer-Policy</h3>
+  <p>No se env&iacute;a el header <code>Referrer-Policy</code>. Las URLs visitadas pueden filtrarse a sitios externos via el header Referer del navegador.</p>
+  <pre># Header no presente en respuesta</pre>
+  <p><strong>Fix:</strong> A&ntilde;adir <code>Referrer-Policy: strict-origin-when-cross-origin</code> en headers de Next.js.</p>
+</div>
+
+<div class="vuln-card vuln-media">
+  <h3><span class="severity-badge severity-media">MEDIA</span> &nbsp; Sin Permissions-Policy</h3>
+  <p>No se env&iacute;a el header <code>Permissions-Policy</code> para restringir acceso a APIs del navegador como c&aacute;mara, micr&oacute;fono y geolocalizaci&oacute;n.</p>
+  <pre># Header no presente en respuesta</pre>
+  <p><strong>Fix:</strong> A&ntilde;adir <code>Permissions-Policy: camera=(), microphone=(), geolocation=()</code>.</p>
+</div>
+
+<div class="vuln-card vuln-media">
+  <h3><span class="severity-badge severity-media">MEDIA</span> &nbsp; Server Action endpoint descubierto</h3>
+  <p>El endpoint de Server Actions de Next.js responde con "Server action not found", confirmando que el endpoint existe y acepta peticiones. Esto es una divulgaci&oacute;n de informaci&oacute;n menor.</p>
+  <pre>
+curl -X POST "https://serincosol.automatizatelo.com/" \
+  -H "Next-Action: 0000000000" -H "Content-Type: text/plain" -d '[]'
+# Respuesta: "Server action not found."</pre>
+  <p><strong>Fix:</strong> Comportamiento est&aacute;ndar de Next.js. Asegurar que las Server Actions validen autenticaci&oacute;n internamente.</p>
+</div>
+
+<!-- LO QUE ESTA BIEN -->
+<h2>Lo que est&aacute; bien &#10003;</h2>
+<table class="ok-table">
+  <tr><th>Test</th><th>Resultado</th></tr>
+  <tr><td>RLS (Row Level Security)</td><td>&#10003; 28/28 tablas protegidas, pol&iacute;ticas solo para authenticated</td></tr>
+  <tr><td>HSTS (Strict-Transport-Security)</td><td>&#10003; max-age=63072000 (2 a&ntilde;os)</td></tr>
+  <tr><td>X-Content-Type-Options</td><td>&#10003; Gestionado por Vercel</td></tr>
+  <tr><td>Service Role Key en JS</td><td>&#10003; NO expuesta</td></tr>
+  <tr><td>CVE-2025-29927 (Middleware Bypass)</td><td>&#10003; NO vulnerable (307 en ambos casos)</td></tr>
+  <tr><td>Source Maps</td><td>&#10003; NO expuestos (404 para todos)</td></tr>
+  <tr><td>CORS</td><td>&#10003; No refleja origins maliciosos</td></tr>
+  <tr><td>Archivos sensibles (.env, .git)</td><td>&#10003; NO accesibles (404)</td></tr>
+  <tr><td>Dashboard sin auth</td><td>&#10003; Redirige a login (307)</td></tr>
+  <tr><td>TRACE HTTP method</td><td>&#10003; Bloqueado (405)</td></tr>
+  <tr><td>Open Redirect</td><td>&#10003; NO vulnerable</td></tr>
+  <tr><td>Storage Buckets</td><td>&#10003; No hay buckets p&uacute;blicos</td></tr>
+  <tr><td>RPC Functions</td><td>&#10003; No hay funciones RPC p&uacute;blicas expuestas</td></tr>
+</table>
+
+<!-- RESULTADOS DEL PENTEST -->
+<h2>Resultados Completos del Pentest</h2>
+<table>
+  <tr><th>Ataque / Test</th><th>Resultado</th><th>Severidad</th></tr>
+  <tr><td>RLS en tablas Supabase</td><td>28/28 tablas con RLS activo &#10003;</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Signup abierto</td><td>disable_signup: false</td><td><span class="severity-badge severity-alta">ALTA</span></td></tr>
+  <tr><td>Content-Security-Policy</td><td>No presente</td><td><span class="severity-badge severity-alta">ALTA</span></td></tr>
+  <tr><td>Rate Limiting</td><td>Sin limitaci&oacute;n (20/20 = 200)</td><td><span class="severity-badge severity-alta">ALTA</span></td></tr>
+  <tr><td>Auth Config expuesta</td><td>Endpoint p&uacute;blico (inherente a Supabase)</td><td><span class="severity-badge severity-media">MEDIA</span></td></tr>
+  <tr><td>X-Frame-Options</td><td>No presente</td><td><span class="severity-badge severity-media">MEDIA</span></td></tr>
+  <tr><td>Referrer-Policy</td><td>No presente</td><td><span class="severity-badge severity-media">MEDIA</span></td></tr>
+  <tr><td>Permissions-Policy</td><td>No presente</td><td><span class="severity-badge severity-media">MEDIA</span></td></tr>
+  <tr><td>Server Action endpoint</td><td>Descubierto</td><td><span class="severity-badge severity-media">MEDIA</span></td></tr>
+  <tr><td>HSTS</td><td>Presente y correcto</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>CVE-2025-29927</td><td>No vulnerable</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Source Maps</td><td>No expuestos</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>CORS</td><td>Seguro</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Archivos sensibles</td><td>No accesibles</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Rutas protegidas</td><td>Redirigen a login</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Open Redirect</td><td>No vulnerable</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>HTTP Methods</td><td>TRACE bloqueado, otros redirigen</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Supabase Storage</td><td>Sin buckets p&uacute;blicos</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>RPC Functions</td><td>No expuestas</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>RSC Data Leakage</td><td>Sin datos sensibles</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+  <tr><td>Service Role Key</td><td>No expuesta</td><td><span class="severity-badge severity-ok">OK</span></td></tr>
+</table>
+
+<!-- COMANDOS DE REPRODUCCION -->
+<h2>Comandos de Reproducci&oacute;n</h2>
+
+<details>
+  <summary>Headers de seguridad</summary>
+  <div class="content">
+    <pre>curl -sI "https://serincosol.automatizatelo.com/"</pre>
+  </div>
+</details>
+
+<details>
+  <summary>Enumeraci&oacute;n de tablas Supabase</summary>
+  <div class="content">
+    <pre>
+SUPA_URL="https://dxpufxpzplkltljhevug.supabase.co"
+ANON_KEY="eyJhbGciOiJIUzI1NiIs..."
+
+for tbl in profiles notifications comunidades propietarios reuniones incidencias proveedores company_settings; do
+  curl -s "${SUPA_URL}/rest/v1/${tbl}?limit=1" \
+    -H "apikey: ${ANON_KEY}" -H "Authorization: Bearer ${ANON_KEY}"
+done</pre>
+  </div>
+</details>
+
+<details>
+  <summary>Test CVE-2025-29927</summary>
+  <div class="content">
+    <pre>
+# Normal
+curl -s -o /dev/null -w "%{http_code}" "https://serincosol.automatizatelo.com/dashboard"
+# Bypass attempt
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "x-middleware-subrequest: middleware:middleware:middleware:middleware:middleware" \
+  "https://serincosol.automatizatelo.com/dashboard"</pre>
+  </div>
+</details>
+
+<details>
+  <summary>Rate Limiting</summary>
+  <div class="content">
+    <pre>for i in $(seq 1 20); do
+  curl -s -o /dev/null -w "%{http_code} " "https://serincosol.automatizatelo.com/auth/login"
+done</pre>
+  </div>
+</details>
+
+<details>
+  <summary>CORS</summary>
+  <div class="content">
+    <pre>curl -sI "https://serincosol.automatizatelo.com/" -H "Origin: https://evil-attacker.com" | grep -i "access-control"</pre>
+  </div>
+</details>
+
+<!-- PLAN DE ACCION -->
+<h2>Plan de Acci&oacute;n</h2>
+
+<div class="timeline">
+  <div class="timeline-item">
+    <div class="timeline-dot dot-red"></div>
+    <div>
+      <strong>AHORA &mdash; Deshabilitar signup p&uacute;blico</strong>
+      <p style="color:#999;font-size:0.85rem">En Supabase Dashboard &rarr; Auth &rarr; Settings &rarr; desactivar "Enable Sign Up". Solo administradores deber&iacute;an crear cuentas.</p>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-orange"></div>
+    <div>
+      <strong>HOY &mdash; A&ntilde;adir Content-Security-Policy</strong>
+      <p style="color:#999;font-size:0.85rem">Configurar CSP en next.config.ts para prevenir XSS y otras inyecciones de contenido.</p>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-orange"></div>
+    <div>
+      <strong>HOY &mdash; A&ntilde;adir headers de seguridad faltantes</strong>
+      <p style="color:#999;font-size:0.85rem">X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, Permissions-Policy.</p>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-yellow"></div>
+    <div>
+      <strong>ESTA SEMANA &mdash; Implementar rate limiting</strong>
+      <p style="color:#999;font-size:0.85rem">Usar middleware de Next.js o Vercel WAF (plan Pro) para limitar peticiones por IP, especialmente en login.</p>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-gray"></div>
+    <div>
+      <strong>ANTES DE LANZAR &mdash; Configurar robots.txt</strong>
+      <p style="color:#999;font-size:0.85rem">A&ntilde;adir robots.txt para controlar qu&eacute; indexan los buscadores. Considerar bloquear todo si es app privada.</p>
+    </div>
+  </div>
+  <div class="timeline-item">
+    <div class="timeline-dot dot-gray"></div>
+    <div>
+      <strong>ANTES DE LANZAR &mdash; Auditor&iacute;a de RLS con datos reales</strong>
+      <p style="color:#999;font-size:0.85rem">Una vez que haya datos y usuarios, repetir la auditor&iacute;a para verificar que las pol&iacute;ticas RLS funcionan correctamente y que un usuario no pueda ver datos de otro.</p>
+    </div>
+  </div>
+</div>
+
+<!-- IMPLICACIONES LEGALES -->
+<div class="legal">
+  <h2 style="border:none;margin-top:0">Implicaciones Legales (RGPD / LOPD-GDD)</h2>
+  <p>Como plataforma que gestionar&aacute; datos de comunidades de propietarios en Espa&ntilde;a, est&aacute; sujeta al <strong>Reglamento General de Protecci&oacute;n de Datos (RGPD)</strong> y la <strong>Ley Org&aacute;nica 3/2018 (LOPD-GDD)</strong>.</p>
+  <ul style="margin:12px 0;padding-left:20px">
+    <li><strong>Art. 32 RGPD</strong> &mdash; Obligaci&oacute;n de implementar medidas t&eacute;cnicas adecuadas (RLS, cifrado, control de acceso). Las tablas sin RLS incumplen este art&iacute;culo.</li>
+    <li><strong>Art. 33 RGPD</strong> &mdash; Obligaci&oacute;n de notificar brechas a la AEPD en 72 horas.</li>
+    <li><strong>Art. 83 RGPD</strong> &mdash; Sanciones de hasta 20M&euro; o 4% de facturaci&oacute;n anual por incumplimiento de medidas de seguridad.</li>
+    <li><strong>Datos de propietarios</strong> (nombres, DNI, direcciones, datos econ&oacute;micos) son datos personales protegidos.</li>
+    <li><strong>Datos de morosos</strong> y deudas tienen protecci&oacute;n reforzada como datos econ&oacute;micos.</li>
+  </ul>
+  <p style="margin-top:12px;color:#f5a623"><strong>Recomendaci&oacute;n:</strong> El RLS ya est&aacute; correctamente configurado. Resolver el signup abierto y a&ntilde;adir headers de seguridad ANTES de cargar datos reales de propietarios para evitar responsabilidad legal.</p>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  <p><strong>CONFIDENCIAL</strong> &mdash; Este informe es exclusivamente para el propietario autorizado</p>
+  <p>Auditor: Claude Code / Web Security Audit Skill v2.0</p>
+  <p>Metodolog&iacute;a: OWASP Top 10 2025 + PTES + Supabase Security Best Practices</p>
+  <p>Fecha: 15 de Abril de 2026</p>
+  <p style="margin-top:12px;color:#444">70+ tests ejecutados &bull; 21 categor&iacute;as evaluadas &bull; 0 datos exfiltrados</p>
+</div>
+
+</div>
+</body>
+</html>

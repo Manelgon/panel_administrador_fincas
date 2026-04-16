@@ -4,8 +4,11 @@ export interface EmisorData {
     nombre: string;
     direccion: string;
     ciudad: string;
+    cp: string;
     cif: string;
     colegiado: string;
+    colegioCiudad: string;
+    iban: string;
     logoPath: string;
     firmaPath: string;
     headerPath: string;
@@ -26,8 +29,11 @@ export async function getEmisor(): Promise<EmisorData> {
             nombre: process.env.EMISOR_NAME || "EMPRESA",
             direccion: process.env.EMISOR_ADDRESS || "",
             ciudad: process.env.EMISOR_CITY || "",
+            cp: "",
             cif: process.env.EMISOR_CIF || "",
             colegiado: "",
+            colegioCiudad: "",
+            iban: "",
             logoPath: "",
             firmaPath: "",
             headerPath: "",
@@ -43,8 +49,11 @@ export async function getEmisor(): Promise<EmisorData> {
         nombre: map["emisor_name"] || process.env.EMISOR_NAME || "EMPRESA",
         direccion: map["emisor_address"] || process.env.EMISOR_ADDRESS || "",
         ciudad: map["emisor_city"] || process.env.EMISOR_CITY || "",
+        cp: map["emisor_cp"] || "",
         cif: map["emisor_cif"] || process.env.EMISOR_CIF || "",
         colegiado: map["colegiado_nombre"] || "",
+        colegioCiudad: map["colegio_ciudad"] || "",
+        iban: map["emisor_iban"] || "",
         logoPath: map["logo_path"] || "",
         firmaPath: map["firma_path"] || "",
         headerPath: map["header_path"] || "",
