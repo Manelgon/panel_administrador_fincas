@@ -13,7 +13,7 @@ interface ImportRow {
     tipo: string;
     estado_cuentas: boolean | null;
     pto_ordinario: boolean | null;
-    pto_extra: boolean | null;
+    informe_incidencias: boolean | null;
     morosos: boolean | null;
     citacion_email: boolean | null;
     citacion_carta: boolean | null;
@@ -180,7 +180,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                     tipo,
                     estado_cuentas: parseBool(iEstadoCtas >= 0 ? r[iEstadoCtas] : null),
                     pto_ordinario:  parseBool(iPtoOrd >= 0 ? r[iPtoOrd] : null),
-                    pto_extra:      parseBool(iPtoExtra >= 0 ? r[iPtoExtra] : null),
+                    informe_incidencias: parseBool(iPtoExtra >= 0 ? r[iPtoExtra] : null),
                     morosos:        parseBool(iMorosos >= 0 ? r[iMorosos] : null),
                     citacion_email: parseBool(iCitEmail >= 0 ? r[iCitEmail] : null),
                     citacion_carta: parseBool(iCitCarta >= 0 ? r[iCitCarta] : null),
@@ -240,7 +240,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                     tipo: r.tipo,
                     estado_cuentas: r.estado_cuentas,
                     pto_ordinario: r.pto_ordinario,
-                    pto_extra: r.pto_extra,
+                    informe_incidencias: r.informe_incidencias,
                     morosos: r.morosos,
                     citacion_email: r.citacion_email,
                     citacion_carta: r.citacion_carta,
@@ -534,7 +534,7 @@ export default function ImportReunionesModal({ onClose, onImported, comunidades 
                                                                 </td>
                                                                 {boolCell(row.estado_cuentas)}
                                                                 {boolCell(row.pto_ordinario)}
-                                                                {boolCell(row.pto_extra)}
+                                                                {boolCell(row.informe_incidencias)}
                                                                 {boolCell(row.morosos)}
                                                                 {boolCell(row.citacion_email)}
                                                                 {boolCell(row.citacion_carta)}

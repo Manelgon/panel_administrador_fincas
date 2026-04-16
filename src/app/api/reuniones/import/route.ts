@@ -7,7 +7,7 @@ interface ImportRow {
     tipo: string;
     estado_cuentas: boolean | null;
     pto_ordinario: boolean | null;
-    pto_extra: boolean | null;
+    informe_incidencias: boolean | null;
     morosos: boolean | null;
     citacion_email: boolean | null;
     citacion_carta: boolean | null;
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
                     tipo:           row.tipo,
                     estado_cuentas: row.estado_cuentas,
                     pto_ordinario:  row.pto_ordinario,
-                    pto_extra:      row.pto_extra,
+                    informe_incidencias: row.informe_incidencias,
                     morosos:        row.morosos,
                     citacion_email: row.citacion_email,
                     citacion_carta: row.citacion_carta,
