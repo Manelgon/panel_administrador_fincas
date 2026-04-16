@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { logActivity } from '@/lib/logActivity';
 import { Reunion, Profile } from '@/lib/schemas';
+import SearchableSelect from '@/components/SearchableSelect';
 
 const TICKET_TYPES = [
     { value: 'Estado de cuentas',               label: '1 · Estado de cuentas' },
@@ -15,13 +16,6 @@ const TICKET_TYPES = [
     { value: 'Portadas convocatoria y acta',     label: '4 · Portadas convocatoria y acta' },
     { value: 'Listado morosidad',                label: '5 · Listado morosidad' },
 ];
-
-const SELECT_CLS = [
-    'w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2',
-    'text-sm text-neutral-900 focus:outline-none focus:ring-2',
-    'focus:ring-[#f5a623]/40 focus:border-[#f5a623] focus:bg-white',
-    'appearance-none transition',
-].join(' ');
 
 interface TicketRow { id: number; tipo: string; gestor_id: string; }
 
@@ -203,42 +197,34 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                         </h3>
                         <div className="space-y-2">
                             {tickets.map((ticket, idx) => (
-                                <div key={ticket.id} className="flex items-center gap-2">
+                                <div key={ticket.id} className="grid grid-cols-[24px_1fr_140px_32px] items-center gap-2">
                                     {/* Número */}
-                                    <div className="w-6 h-6 rounded-full bg-[#f5a623]/20 text-[#f5a623] text-[10px] font-black flex items-center justify-center shrink-0">
+                                    <div className="w-6 h-6 rounded-full bg-[#f5a623]/20 text-[#f5a623] text-[10px] font-black flex items-center justify-center">
                                         {idx + 1}
                                     </div>
 
                                     {/* Tipo */}
-                                    <select
+                                    <SearchableSelect
                                         value={ticket.tipo}
-                                        onChange={e => updateTicket(ticket.id, 'tipo', e.target.value)}
-                                        className={`flex-1 min-w-0 ${SELECT_CLS}`}
-                                    >
-                                        <option value="">Tipo de ticket...</option>
-                                        {TICKET_TYPES.map(t => (
-                                            <option key={t.value} value={t.value}>{t.label}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => updateTicket(ticket.id, 'tipo', String(val))}
+                                        options={TICKET_TYPES}
+                                        placeholder="Tipo de ticket..."
+                                    />
 
                                     {/* Gestor */}
-                                    <select
+                                    <SearchableSelect
                                         value={ticket.gestor_id}
-                                        onChange={e => updateTicket(ticket.id, 'gestor_id', e.target.value)}
-                                        className={`w-[140px] shrink-0 ${SELECT_CLS}`}
-                                    >
-                                        <option value="">Gestor...</option>
-                                        {profiles.map(p => (
-                                            <option key={p.user_id} value={p.user_id}>{p.nombre}</option>
-                                        ))}
-                                    </select>
+                                        onChange={val => updateTicket(ticket.id, 'gestor_id', String(val))}
+                                        options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                                        placeholder="Gestor..."
+                                    />
 
                                     {/* Borrar */}
                                     <button
                                         type="button"
                                         onClick={() => removeTicket(ticket.id)}
                                         disabled={tickets.length === 1}
-                                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+                                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed justify-self-center"
                                     >
                                         <Trash2 className="w-4 h-4" />
                                     </button>

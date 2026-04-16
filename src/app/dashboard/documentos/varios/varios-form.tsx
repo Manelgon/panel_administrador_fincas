@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import { Download, Loader2, FileText, Plus, AlertCircle, Trash2 } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
-import SelectFilter from "@/components/SelectFilter";
 import { createBrowserClient } from "@supabase/ssr";
 
 interface Comunidad {
@@ -362,11 +361,10 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                             </div>
                             <div className="sm:col-span-1 lg:col-span-2">
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Tipo Inmueble<RequiredAsterisk /></label>
-                                <SelectFilter
+                                <SearchableSelect
                                     disabled={isDisabled}
                                     value={values.tipo_inmueble || ""}
-                                    onChange={v => handleChange("tipo_inmueble", v)}
-                                    size="md"
+                                    onChange={v => handleChange("tipo_inmueble", String(v))}
                                     className="w-full"
                                     placeholder="Seleccionar tipo..."
                                     options={[
