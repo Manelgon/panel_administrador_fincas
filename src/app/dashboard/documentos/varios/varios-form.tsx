@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Download, Loader2, FileText, Plus, AlertCircle } from "lucide-react";
+import { Download, Loader2, FileText, Plus, AlertCircle, Trash2 } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
+import SelectFilter from "@/components/SelectFilter";
 import { createBrowserClient } from "@supabase/ssr";
 
 interface Comunidad {
@@ -17,12 +18,15 @@ interface Comunidad {
     provincia: string;
 }
 
+function RequiredAsterisk() {
+    return <span className="ml-1 text-yellow-500">*</span>;
+}
+
 export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCancel?: () => void }) {
     const [values, setValues] = useState<Record<string, any>>({
-        // Inicializar filas vacías
-        fecha_emision: new Date().toISOString().split('T')[0],
-        // iva1: 0, iva2: 0, iva3: 0  <-- REMOVED default initialization with 0
+        fecha_emision: "",
     });
+    const [conceptRows, setConceptRows] = useState([1]);
     const [status, setStatus] = useState<"idle" | "generating" | "ready" | "sending" | "error">("idle");
     const [pdfUrls, setPdfUrls] = useState<{ factura: string; certificado: string } | null>(null);
     const [submissionIds, setSubmissionIds] = useState<{ factura: number; certificado: number } | null>(null);
@@ -58,7 +62,9 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     const handleChange = (field: string, val: string | number) => {
         setValues(prev => {
             const next = { ...prev, [field]: val };
-            // Recalcular autumáticamente
+            if (field === "nombre" || field === "apellidos") {
+                next.nombre_apellidos = [next.nombre, next.apellidos].filter(Boolean).join(" ").trim();
+            }
             return calculate(next);
         });
     };
@@ -67,7 +73,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         const comunidad = communities.find(c => c.codigo === codigo);
 
         setValues(prev => {
-            const next = {
+            const next: Record<string, any> = {
                 ...prev,
                 codigo: codigo,
                 nombre_comunidad: comunidad?.nombre_cdad || "",
@@ -76,7 +82,6 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
             if (comunidad) {
                 Object.assign(next, {
                     cliente: comunidad.nombre_cdad,
-                    // nif: comunidad.cif,  <-- REMOVED as per user request
                     domicilio: comunidad.direccion,
                     cp: comunidad.cp,
                     ciudad: comunidad.ciudad,
@@ -84,25 +89,23 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                 });
             }
 
+            next.nombre_apellidos = [next.nombre, next.apellidos].filter(Boolean).join(" ").trim();
             return calculate(next);
         });
     };
 
     const calculate = (vals: Record<string, any>) => {
-        // Filas
         let sum = 0;
         let vatTotal = 0;
+        const n = (v: any) => {
+            if (typeof v === "number") return v;
+            return Number(String(v || "0").replace(",", ".")) || 0;
+        };
 
-        for (let i = 1; i <= 3; i++) {
-            // Helper to parse European numbers (comma -> dot) or fallback to 0
-            const n = (v: any) => {
-                if (typeof v === "number") return v;
-                return Number(String(v || "0").replace(",", ".")) || 0;
-            };
-
+        for (const i of conceptRows) {
             const qty = n(vals[`und${i}`]);
             const price = n(vals[`importe${i}`]);
-            const vatRate = n(vals[`iva${i}`]); // Uses row specific VAT
+            const vatRate = n(vals[`iva${i}`]);
 
             const sub = qty * price;
             const vat = sub * (vatRate / 100);
@@ -110,8 +113,8 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
 
             vals[`suma${i}`] = total.toFixed(2);
 
-            if (vals[`descripcion${i}`] || qty > 0 || price > 0) { // Sum if active
-                sum += sub; // Base Imponible accumulation
+            if (vals[`descripcion${i}`] || qty > 0 || price > 0 || vatRate > 0) {
+                sum += sub;
                 vatTotal += vat;
             }
         }
@@ -124,12 +127,36 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     };
 
     const generate = async (skipSello = false) => {
+        const conceptErrors: Record<string, string> = {};
+
+        for (const i of conceptRows) {
+            const descripcion = String(values[`descripcion${i}`] || "").trim();
+            const und = String(values[`und${i}`] || "").trim();
+            const importe = String(values[`importe${i}`] || "").trim();
+            const iva = String(values[`iva${i}`] || "").trim();
+            const filledCount = [descripcion, und, importe, iva].filter(Boolean).length;
+
+            if (filledCount === 4) {
+                continue;
+            }
+
+            conceptErrors[`concepto${i}`] = "Este concepto es obligatorio: completa unidad, descripción, importe e IVA o elimínalo.";
+        }
+
+        if (Object.keys(conceptErrors).length > 0) {
+            setFormErrors(prev => ({ ...prev, ...conceptErrors }));
+            toast.error("Revisa los conceptos de factura obligatorios");
+            return;
+        }
+
         setStatus("generating");
         setSubmissionIds(null);
         setPdfUrls(null);
 
         try {
-            const body = skipSello ? { ...values, skipSello: true } : values;
+            const body = skipSello
+                ? { ...values, skipSello: true, conceptCount: conceptRows.length }
+                : { ...values, conceptCount: conceptRows.length };
             const res = await fetch("/api/documentos/varios/generate", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -282,7 +309,35 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     }
 
     const isDisabled = status === "generating";
-    const canGenerate = values.codigo && values.cliente && values.nombre_apellidos && values.nif;
+    const allConceptsComplete = conceptRows.every((i) => {
+        const descripcion = String(values[`descripcion${i}`] || "").trim();
+        const und = String(values[`und${i}`] || "").trim();
+        const importe = String(values[`importe${i}`] || "").trim();
+        const iva = String(values[`iva${i}`] || "").trim();
+        return Boolean(descripcion && und && importe && iva);
+    });
+    const canGenerate = values.codigo && values.cliente && values.nombre && values.apellidos && values.nif && values.tipo_inmueble && allConceptsComplete;
+    const addConceptRow = () => {
+        setConceptRows((prev) => [...prev, prev.length ? Math.max(...prev) + 1 : 1]);
+    };
+    const removeConceptRow = (rowId: number) => {
+        if (rowId === 1) return;
+        setConceptRows((prev) => prev.filter((id) => id !== rowId));
+        setValues((prev) => {
+            const next = { ...prev };
+            delete next[`und${rowId}`];
+            delete next[`descripcion${rowId}`];
+            delete next[`importe${rowId}`];
+            delete next[`iva${rowId}`];
+            delete next[`suma${rowId}`];
+            return calculate(next);
+        });
+        setFormErrors((prev) => {
+            const next = { ...prev };
+            delete next[`concepto${rowId}`];
+            return next;
+        });
+    };
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -292,9 +347,9 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                     {/* Cliente */}
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Información del Cliente</h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                            <div className="sm:col-span-2 lg:col-span-1">
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Comunidad</label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                            <div className="sm:col-span-1 lg:col-span-2">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Comunidad<RequiredAsterisk /></label>
                                 <SearchableSelect
                                     value={values.codigo || ""}
                                     onChange={(val) => handleCommunityChange(String(val))}
@@ -305,44 +360,46 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                     placeholder="Selecciona comunidad..."
                                 />
                             </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Cliente / Comunidad</label>
-                                <input
+                            <div className="sm:col-span-1 lg:col-span-2">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Tipo Inmueble<RequiredAsterisk /></label>
+                                <SelectFilter
                                     disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Nombre de la comunidad"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.cliente || ""}
-                                    onChange={e => handleChange("cliente", e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Nombre y Apellidos</label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Ej: Juan Pérez"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.nombre_apellidos || ""}
-                                    onChange={e => handleChange("nombre_apellidos", e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Tipo Inmueble</label>
-                                <select
-                                    disabled={isDisabled}
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white appearance-none disabled:bg-neutral-100 disabled:text-neutral-400 transition"
                                     value={values.tipo_inmueble || ""}
-                                    onChange={(e) => handleChange("tipo_inmueble", e.target.value)}
-                                >
-                                    <option value="">Seleccionar tipo...</option>
-                                    <option value="Vivienda">Vivienda</option>
-                                    <option value="Trastero">Trastero</option>
-                                    <option value="Aparcamiento">Aparcamiento</option>
-                                </select>
+                                    onChange={v => handleChange("tipo_inmueble", v)}
+                                    size="md"
+                                    className="w-full"
+                                    placeholder="Seleccionar tipo..."
+                                    options={[
+                                        { value: 'Vivienda', label: 'Vivienda' },
+                                        { value: 'Trastero', label: 'Trastero' },
+                                        { value: 'Aparcamiento', label: 'Aparcamiento' },
+                                    ]}
+                                />
+                            </div>
+                            <div className="sm:col-span-1 lg:col-span-2">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Nombre<RequiredAsterisk /></label>
+                                <input
+                                    disabled={isDisabled}
+                                    type="text"
+                                    placeholder="Ej: Juan"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                    value={values.nombre || ""}
+                                    onChange={e => handleChange("nombre", e.target.value)}
+                                />
+                            </div>
+                            <div className="sm:col-span-1 lg:col-span-2">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Apellidos<RequiredAsterisk /></label>
+                                <input
+                                    disabled={isDisabled}
+                                    type="text"
+                                    placeholder="Ej: Pérez"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                    value={values.apellidos || ""}
+                                    onChange={e => handleChange("apellidos", e.target.value)}
+                                />
                             </div>
                             <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">NIF</label>
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">NIF<RequiredAsterisk /></label>
                                 <input
                                     disabled={isDisabled}
                                     type="text"
@@ -412,33 +469,45 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                     {/* Factura Lines */}
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Conceptos Factura</h3>
+                        {formErrors.conceptos && (
+                            <p className="flex items-center gap-1 text-[11px] font-semibold text-red-500">
+                                <AlertCircle className="w-3 h-3 shrink-0" />
+                                {formErrors.conceptos}
+                            </p>
+                        )}
 
-                        {[1, 2, 3].map(i => (
+                        {conceptRows.map(i => (
                             <div key={i} className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-end bg-neutral-50/60 p-4 rounded-lg border border-neutral-100">
                                 <div className="sm:col-span-1">
-                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Und</label>
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Und{i === 1 ? <RequiredAsterisk /> : null}</label>
                                     <input
                                         disabled={isDisabled}
                                         type="number"
                                         placeholder="0"
                                         className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
                                         value={values[`und${i}`] || ""}
-                                        onChange={e => handleChange(`und${i}`, e.target.value)}
+                                        onChange={e => {
+                                            setFormErrors(prev => ({ ...prev, [`concepto${i}`]: "", conceptos: "" }));
+                                            handleChange(`und${i}`, e.target.value);
+                                        }}
                                     />
                                 </div>
                                 <div className="sm:col-span-5">
-                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Descripción {i}</label>
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Descripción {i}{i === 1 ? <RequiredAsterisk /> : null}</label>
                                     <input
                                         disabled={isDisabled}
                                         type="text"
                                         placeholder="Concepto..."
                                         className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
                                         value={values[`descripcion${i}`] || ""}
-                                        onChange={e => handleChange(`descripcion${i}`, e.target.value)}
+                                        onChange={e => {
+                                            setFormErrors(prev => ({ ...prev, [`concepto${i}`]: "", conceptos: "" }));
+                                            handleChange(`descripcion${i}`, e.target.value);
+                                        }}
                                     />
                                 </div>
                                 <div className="sm:col-span-2">
-                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Importe</label>
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Importe{i === 1 ? <RequiredAsterisk /> : null}</label>
                                     <input
                                         disabled={isDisabled}
                                         type="number"
@@ -446,21 +515,27 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                         placeholder="0.00"
                                         className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
                                         value={values[`importe${i}`] || ""}
-                                        onChange={e => handleChange(`importe${i}`, e.target.value)}
+                                        onChange={e => {
+                                            setFormErrors(prev => ({ ...prev, [`concepto${i}`]: "", conceptos: "" }));
+                                            handleChange(`importe${i}`, e.target.value);
+                                        }}
                                     />
                                 </div>
                                 <div className="sm:col-span-1">
-                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">IVA%</label>
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">IVA%{i === 1 ? <RequiredAsterisk /> : null}</label>
                                     <input
                                         disabled={isDisabled}
                                         type="number"
                                         placeholder="21"
                                         className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
                                         value={values[`iva${i}`] ?? ""}
-                                        onChange={e => handleChange(`iva${i}`, e.target.value)}
+                                        onChange={e => {
+                                            setFormErrors(prev => ({ ...prev, [`concepto${i}`]: "", conceptos: "" }));
+                                            handleChange(`iva${i}`, e.target.value);
+                                        }}
                                     />
                                 </div>
-                                <div className="sm:col-span-3">
+                                <div className="sm:col-span-2">
                                     <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Total (Auto)</label>
                                     <input
                                         disabled
@@ -470,8 +545,41 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                         value={values[`suma${i}`] || 0}
                                     />
                                 </div>
+                                <div className="sm:col-span-1 flex justify-end">
+                                    {i !== 1 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeConceptRow(i)}
+                                            disabled={isDisabled}
+                                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 bg-white text-red-600 transition hover:bg-red-50 disabled:opacity-50"
+                                            title="Eliminar concepto"
+                                            aria-label="Eliminar concepto"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                {formErrors[`concepto${i}`] && (
+                                    <div className="sm:col-span-12">
+                                        <p className="flex items-center gap-1 text-[11px] font-semibold text-red-500">
+                                            <AlertCircle className="w-3 h-3 shrink-0" />
+                                            {formErrors[`concepto${i}`]}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         ))}
+                        <div>
+                            <button
+                                type="button"
+                                onClick={addConceptRow}
+                                disabled={isDisabled}
+                                className="inline-flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 disabled:opacity-50"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Añadir concepto
+                            </button>
+                        </div>
 
                         {/* Totals Section */}
                         <div className="bg-neutral-50/60 p-4 rounded-lg border border-neutral-100 mt-4">
