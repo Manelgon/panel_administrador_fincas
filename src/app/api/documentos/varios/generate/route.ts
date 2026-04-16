@@ -659,16 +659,25 @@ export async function POST(req: Request) {
         const headerStoragePath = emisorData.headerPath || "certificados/logo-retenciones.png";
         assets.logo = await downloadAssetPng(headerStoragePath);
 
-        // Sello: intentar descargarlo, si falla y no viene skipSello → error especial
-        try {
-            assets.sello = await downloadAssetPng("certificados/sello-retenciones.png");
-        } catch {
-            if (!payload.skipSello) {
-                return NextResponse.json({
-                    error: "MISSING_SELLO",
-                    message: "No se encontró la imagen del sello y firma en el sistema. Suba el sello en Ajustes > Emisor para crear documentos firmados."
-                }, { status: 422 });
+        // Firma/sello: usar la imagen configurada en Ajustes > Emisor
+        if (emisorData.firmaPath) {
+            try {
+                assets.sello = await downloadAssetPng(emisorData.firmaPath);
+            } catch {
+                if (!payload.skipSello) {
+                    return NextResponse.json({
+                        error: "MISSING_SELLO",
+                        message: "No se pudo cargar la firma configurada en Ajustes > Emisor. Revise la imagen subida para crear documentos firmados."
+                    }, { status: 422 });
+                }
+                assets.sello = undefined;
             }
+        } else if (!payload.skipSello) {
+            return NextResponse.json({
+                error: "MISSING_SELLO",
+                message: "No hay una firma configurada en Ajustes > Emisor para crear documentos firmados."
+            }, { status: 422 });
+        } else {
             assets.sello = undefined;
         }
 
