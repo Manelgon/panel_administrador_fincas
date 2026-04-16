@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { Download, Loader2, FileText, Plus, AlertCircle } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Comunidad {
     id: number;
@@ -64,6 +65,7 @@ const INITIAL_DATA: RecordData = {
 };
 
 export default function CertificadoForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCancel?: () => void }) {
+    const { withLoading } = useGlobalLoading();
     const [values, setValues] = useState<RecordData>(INITIAL_DATA);
     const [status, setStatus] = useState<"idle" | "generating" | "ready" | "sending" | "error">("idle");
     const [submissionId, setSubmissionId] = useState<number | null>(null);
@@ -128,27 +130,29 @@ export default function CertificadoForm({ onSuccess, onCancel }: { onSuccess?: (
         }
         setFormErrors(prev => ({ ...prev, mail: '' }));
 
-        setStatus("generating");
-        setPdfUrl("");
-        setSubmissionId(null);
+        await withLoading(async () => {
+            setStatus("generating");
+            setPdfUrl("");
+            setSubmissionId(null);
 
-        try {
-            const res = await fetch("/api/documentos/certificado-renta/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(values),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Error generando PDF");
+            try {
+                const res = await fetch("/api/documentos/certificado-renta/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(values),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error || "Error generando PDF");
 
-            setPdfUrl(data.pdfUrl);
-            setSubmissionId(data.submissionId);
-            setStatus("ready");
-            toast.success("PDF generado correctamente ✅");
-        } catch (e: any) {
-            setStatus("error");
-            toast.error(e?.message || "Error inesperado");
-        }
+                setPdfUrl(data.pdfUrl);
+                setSubmissionId(data.submissionId);
+                setStatus("ready");
+                toast.success("PDF generado correctamente ✅");
+            } catch (e: any) {
+                setStatus("error");
+                toast.error(e?.message || "Error inesperado");
+            }
+        }, 'Generando certificado...');
     };
 
     const download = () => {
@@ -165,23 +169,25 @@ export default function CertificadoForm({ onSuccess, onCancel }: { onSuccess?: (
         }
         setFormErrors(prev => ({ ...prev, toEmail: '' }));
 
-        setStatus("sending");
+        await withLoading(async () => {
+            setStatus("sending");
 
-        try {
-            const res = await fetch("/api/documentos/certificado-renta/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ submissionId, toEmail }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Error enviando email");
+            try {
+                const res = await fetch("/api/documentos/certificado-renta/send", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ submissionId, toEmail }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error || "Error enviando email");
 
-            setStatus("ready");
-            toast.success("Email enviado correctamente ✅");
-        } catch (e: any) {
-            setStatus("ready");
-            toast.error(e?.message || "Error enviando");
-        }
+                setStatus("ready");
+                toast.success("Email enviado correctamente ✅");
+            } catch (e: any) {
+                setStatus("ready");
+                toast.error(e?.message || "Error enviando");
+            }
+        }, 'Enviando email...');
     };
 
     // SUCCESS VIEW

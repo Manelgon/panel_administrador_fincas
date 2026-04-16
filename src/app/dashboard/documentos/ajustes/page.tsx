@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { Save, Loader2, DollarSign, ArrowLeft } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 type SettingsType = {
     precio_1: number;
@@ -16,6 +17,7 @@ type SettingsType = {
 }
 
 export default function AjustesSuplidosPage() {
+    const { withLoading } = useGlobalLoading();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -64,34 +66,37 @@ export default function AjustesSuplidosPage() {
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSaving(true);
 
-        try {
-            // Prepare upsert data
-            const upsertData = Object.entries(settings).map(([key, value]) => ({
-                doc_key: 'suplidos',
-                setting_key: key,
-                setting_value: value
-            }));
+        await withLoading(async () => {
+            setSaving(true);
 
-            const { error } = await supabase
-                .from("document_settings")
-                .upsert(upsertData, { onConflict: 'doc_key, setting_key' });
+            try {
+                // Prepare upsert data
+                const upsertData = Object.entries(settings).map(([key, value]) => ({
+                    doc_key: 'suplidos',
+                    setting_key: key,
+                    setting_value: value
+                }));
 
-            if (error) throw error;
+                const { error } = await supabase
+                    .from("document_settings")
+                    .upsert(upsertData, { onConflict: 'doc_key, setting_key' });
 
-            toast.success("Precios actualizados correctamente");
+                if (error) throw error;
 
-            // Redirect back to documents dashboard after a short delay or immediately
-            router.push("/dashboard/documentos");
-            router.refresh();
+                toast.success("Precios actualizados correctamente");
 
-        } catch (error: any) {
-            console.error(error);
-            toast.error(error.message || "Error al guardar");
-        } finally {
-            setSaving(false);
-        }
+                // Redirect back to documents dashboard after a short delay or immediately
+                router.push("/dashboard/documentos");
+                router.refresh();
+
+            } catch (error: any) {
+                console.error(error);
+                toast.error(error.message || "Error al guardar");
+            } finally {
+                setSaving(false);
+            }
+        }, 'Guardando precios...');
     };
 
     const handleChange = (key: keyof SettingsType, val: string) => {

@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Folder, FileText, ChevronRight, Home, RefreshCw, ExternalLink, Download, Search, Plus, Upload, MoveHorizontal } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { supabase } from '@/lib/supabaseClient';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { useRef } from 'react';
 
 interface BucketItem {
@@ -19,6 +20,7 @@ interface BucketItem {
 }
 
 export default function FacturasComunidadesPage() {
+    const { withLoading } = useGlobalLoading();
     const [path, setPath] = useState<string[]>([]);
     const [items, setItems] = useState<BucketItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -138,30 +140,31 @@ export default function FacturasComunidadesPage() {
             return;
         }
 
-        setIsCreating(true);
-        const loadingToast = toast.loading(`Creando carpeta ${newFolderName}...`);
-        try {
-            const res = await fetch('/api/facturas-comunidades/create-folder', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ path: currentPathString, folderName: newFolderName.trim() }),
-            });
+        await withLoading(async () => {
+            setIsCreating(true);
+            try {
+                const res = await fetch('/api/facturas-comunidades/create-folder', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ path: currentPathString, folderName: newFolderName.trim() }),
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            if (!res.ok) throw new Error(data.error || 'Error al crear la carpeta');
+                if (!res.ok) throw new Error(data.error || 'Error al crear la carpeta');
 
-            toast.success('Carpeta creada correctamente', { id: loadingToast });
-            setShowCreateModal(false);
-            setNewFolderName('');
-            fetchItems();
-        } catch (error: any) {
-            toast.error(error.message, { id: loadingToast });
-        } finally {
-            setIsCreating(false);
-        }
+                toast.success('Carpeta creada correctamente');
+                setShowCreateModal(false);
+                setNewFolderName('');
+                fetchItems();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsCreating(false);
+            }
+        }, `Creando carpeta ${newFolderName}...`);
     };
 
     const handleUploadClick = () => {
@@ -172,28 +175,29 @@ export default function FacturasComunidadesPage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const loadingToast = toast.loading(`Subiendo ${file.name}...`);
-        try {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('path', currentPathString);
+        await withLoading(async () => {
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', currentPathString);
 
-            const res = await fetch('/api/facturas-comunidades/upload', {
-                method: 'POST',
-                body: formData,
-            });
+                const res = await fetch('/api/facturas-comunidades/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
 
-            const data = await res.json();
+                const data = await res.json();
 
-            if (!res.ok) throw new Error(data.error || 'Error al subir el archivo');
+                if (!res.ok) throw new Error(data.error || 'Error al subir el archivo');
 
-            toast.success('Archivo subido correctamente', { id: loadingToast });
-            fetchItems();
-        } catch (error: any) {
-            toast.error(error.message, { id: loadingToast });
-        } finally {
-            if (fileInputRef.current) fileInputRef.current.value = '';
-        }
+                toast.success('Archivo subido correctamente');
+                fetchItems();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            }
+        }, `Subiendo ${file.name}...`);
     };
 
     // Move logic
@@ -231,31 +235,32 @@ export default function FacturasComunidadesPage() {
     const handleMoveConfirm = async () => {
         if (!movingFile) return;
 
-        setIsMoving(true);
-        const loadingToast = toast.loading('Moviendo archivo...');
-        try {
-            const fromPath = currentPathString ? `${currentPathString}/${movingFile.name}` : movingFile.name;
-            const toPathStr = movePath.join('/');
-            const toPath = toPathStr ? `${toPathStr}/${movingFile.name}` : movingFile.name;
+        await withLoading(async () => {
+            setIsMoving(true);
+            try {
+                const fromPath = currentPathString ? `${currentPathString}/${movingFile.name}` : movingFile.name;
+                const toPathStr = movePath.join('/');
+                const toPath = toPathStr ? `${toPathStr}/${movingFile.name}` : movingFile.name;
 
-            const res = await fetch('/api/facturas-comunidades/move', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fromPath, toPath }),
-            });
+                const res = await fetch('/api/facturas-comunidades/move', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fromPath, toPath }),
+                });
 
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Error al mover el archivo');
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al mover el archivo');
 
-            toast.success('Archivo movido correctamente', { id: loadingToast });
-            setShowMoveModal(false);
-            setMovingFile(null);
-            fetchItems();
-        } catch (error: any) {
-            toast.error(error.message, { id: loadingToast });
-        } finally {
-            setIsMoving(false);
-        }
+                toast.success('Archivo movido correctamente');
+                setShowMoveModal(false);
+                setMovingFile(null);
+                fetchItems();
+            } catch (error: any) {
+                toast.error(error.message);
+            } finally {
+                setIsMoving(false);
+            }
+        }, 'Moviendo archivo...');
     };
 
     const navigateTo = (index: number) => {

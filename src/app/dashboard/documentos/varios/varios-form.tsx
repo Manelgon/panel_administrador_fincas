@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { Download, Loader2, FileText, Plus, AlertCircle, Trash2 } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Comunidad {
     id: number;
@@ -22,6 +23,7 @@ function RequiredAsterisk() {
 }
 
 export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCancel?: () => void }) {
+    const { withLoading } = useGlobalLoading();
     const [values, setValues] = useState<Record<string, any>>({
         fecha_emision: "",
     });
@@ -148,46 +150,48 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
             return;
         }
 
-        setStatus("generating");
-        setSubmissionIds(null);
-        setPdfUrls(null);
+        await withLoading(async () => {
+            setStatus("generating");
+            setSubmissionIds(null);
+            setPdfUrls(null);
 
-        try {
-            const body = skipSello
-                ? { ...values, skipSello: true, conceptCount: conceptRows.length }
-                : { ...values, conceptCount: conceptRows.length };
-            const res = await fetch("/api/documentos/varios/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-            const data = await res.json();
+            try {
+                const body = skipSello
+                    ? { ...values, skipSello: true, conceptCount: conceptRows.length }
+                    : { ...values, conceptCount: conceptRows.length };
+                const res = await fetch("/api/documentos/varios/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body),
+                });
+                const data = await res.json();
 
-            if (!res.ok) {
-                if (data.error === "MISSING_SELLO") {
-                    setStatus("idle");
-                    setShowSelloConfirm(true);
-                    return;
+                if (!res.ok) {
+                    if (data.error === "MISSING_SELLO") {
+                        setStatus("idle");
+                        setShowSelloConfirm(true);
+                        return;
+                    }
+                    throw new Error(data.error || "Error generando PDF");
                 }
-                throw new Error(data.error || "Error generando PDF");
+
+                setPdfUrls({
+                    factura: data.pdfUrlFactura,
+                    certificado: data.pdfUrlCertificado,
+                });
+                setSubmissionIds({
+                    factura: data.submissionIdFactura,
+                    certificado: data.submissionIdCertificado,
+                });
+
+                setStatus("ready");
+                toast.success("Documentos generados correctamente");
+            } catch (error: unknown) {
+                console.error(error);
+                setStatus("error");
+                toast.error(error instanceof Error ? error.message : "Error generando PDF");
             }
-
-            setPdfUrls({
-                factura: data.pdfUrlFactura,
-                certificado: data.pdfUrlCertificado,
-            });
-            setSubmissionIds({
-                factura: data.submissionIdFactura,
-                certificado: data.submissionIdCertificado,
-            });
-
-            setStatus("ready");
-            toast.success("Documentos generados correctamente");
-        } catch (error: unknown) {
-            console.error(error);
-            setStatus("error");
-            toast.error(error instanceof Error ? error.message : "Error generando PDF");
-        }
+        }, 'Generando documentos...');
     };
 
     const downloadFactura = () => {
@@ -207,27 +211,29 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         }
         setFormErrors(prev => ({ ...prev, toEmail: '' }));
 
-        setStatus("sending");
+        await withLoading(async () => {
+            setStatus("sending");
 
-        try {
-            const res = await fetch("/api/documentos/varios/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    submissionIdFactura: submissionIds.factura,
-                    submissionIdCertificado: submissionIds.certificado,
-                    toEmail
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Error enviando email");
+            try {
+                const res = await fetch("/api/documentos/varios/send", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        submissionIdFactura: submissionIds.factura,
+                        submissionIdCertificado: submissionIds.certificado,
+                        toEmail
+                    }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error || "Error enviando email");
 
-            setStatus("ready");
-            toast.success("Email enviado correctamente ✅");
-        } catch (e: any) {
-            setStatus("ready");
-            toast.error(e?.message || "Error enviando");
-        }
+                setStatus("ready");
+                toast.success("Email enviado correctamente ✅");
+            } catch (e: any) {
+                setStatus("ready");
+                toast.error(e?.message || "Error enviando");
+            }
+        }, 'Enviando email...');
     };
 
     if (status === "ready" || status === "sending") {

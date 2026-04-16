@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { ComunidadOption } from '@/lib/schemas';
 
 interface Props {
@@ -61,6 +62,7 @@ const emptyForm = {
 };
 
 export default function ReunionFormModal({ show, editingId, comunidades, onClose, onSaved }: Props) {
+    const { withLoading } = useGlobalLoading();
     const [formData, setFormData] = useState<typeof emptyForm>({ ...emptyForm });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -114,53 +116,57 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
         const errs = validate();
         if (Object.keys(errs).length > 0) { setErrors(errs); return; }
         setErrors({});
-        setIsSubmitting(true);
 
-        const payload = {
-            comunidad_id: Number(formData.comunidad_id),
-            fecha_reunion: formData.fecha_reunion,
-            tipo: formData.tipo,
-            confirmada: formData.confirmada as boolean,
-            estado_cuentas: formData.estado_cuentas,
-            pto_ordinario: formData.pto_ordinario,
-            informe_incidencias: formData.informe_incidencias,
-            morosos: formData.morosos,
-            citacion_email: formData.citacion_email,
-            citacion_carta: formData.citacion_carta,
-            borrador_acta: formData.borrador_acta,
-            redactar_acta: formData.redactar_acta,
-            vb_pendiente: formData.vb_pendiente,
-            imprimir_acta: formData.imprimir_acta,
-            acta_email: formData.acta_email,
-            acta_carta: formData.acta_carta,
-            pasar_acuerdos: formData.pasar_acuerdos,
-            notas: formData.notas || null,
-        };
+        const label = editingId ? 'Guardando reunión...' : 'Creando reunión...';
+        await withLoading(async () => {
+            setIsSubmitting(true);
 
-        if (editingId) {
-            const { error } = await supabase.from('reuniones').update(payload).eq('id', editingId);
-            if (error) {
-                toast.error('Error al guardar la reunión');
+            const payload = {
+                comunidad_id: Number(formData.comunidad_id),
+                fecha_reunion: formData.fecha_reunion,
+                tipo: formData.tipo,
+                confirmada: formData.confirmada as boolean,
+                estado_cuentas: formData.estado_cuentas,
+                pto_ordinario: formData.pto_ordinario,
+                informe_incidencias: formData.informe_incidencias,
+                morosos: formData.morosos,
+                citacion_email: formData.citacion_email,
+                citacion_carta: formData.citacion_carta,
+                borrador_acta: formData.borrador_acta,
+                redactar_acta: formData.redactar_acta,
+                vb_pendiente: formData.vb_pendiente,
+                imprimir_acta: formData.imprimir_acta,
+                acta_email: formData.acta_email,
+                acta_carta: formData.acta_carta,
+                pasar_acuerdos: formData.pasar_acuerdos,
+                notas: formData.notas || null,
+            };
+
+            if (editingId) {
+                const { error } = await supabase.from('reuniones').update(payload).eq('id', editingId);
+                if (error) {
+                    toast.error('Error al guardar la reunión');
+                } else {
+                    toast.success('Reunión actualizada');
+                    await logActivity({ action: 'update', entityType: 'reunion', entityId: editingId, entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
+                    onSaved();
+                    onClose();
+                }
             } else {
-                toast.success('Reunión actualizada');
-                await logActivity({ action: 'update', entityType: 'reunion', entityId: editingId, entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
-                onSaved();
-                onClose();
+                const { data: { user } } = await supabase.auth.getUser();
+                const { error } = await supabase.from('reuniones').insert([{ ...payload, created_by: user?.id }]);
+                if (error) {
+                    console.error('Error creando reunión:', error);
+                    toast.error(`Error al crear la reunión: ${error.message}`);
+                } else {
+                    toast.success('Reunión creada');
+                    await logActivity({ action: 'create', entityType: 'reunion', entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
+                    onSaved();
+                    onClose();
+                }
             }
-        } else {
-            const { data: { user } } = await supabase.auth.getUser();
-            const { error } = await supabase.from('reuniones').insert([{ ...payload, created_by: user?.id }]);
-            if (error) {
-                console.error('Error creando reunión:', error);
-                toast.error(`Error al crear la reunión: ${error.message}`);
-            } else {
-                toast.success('Reunión creada');
-                await logActivity({ action: 'create', entityType: 'reunion', entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
-                onSaved();
-                onClose();
-            }
-        }
-        setIsSubmitting(false);
+            setIsSubmitting(false);
+        }, label);
     };
 
     const toggle = (key: string) => {
