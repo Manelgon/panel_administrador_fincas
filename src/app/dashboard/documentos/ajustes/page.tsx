@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
-import { Save, Loader2, DollarSign } from "lucide-react";
+import { Save, Loader2, DollarSign, ArrowLeft } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
 
 type SettingsType = {
@@ -107,9 +107,19 @@ export default function AjustesSuplidosPage() {
 
     return (
         <div className="max-w-4xl mx-auto space-y-6">
-            <div className="flex items-center gap-3 mb-6">
-                <DollarSign className="w-6 h-6 text-yellow-500" />
-                <h1 className="text-xl font-bold text-neutral-900">Ajustes de Precios · Suplidos (Admin)</h1>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+                <div className="flex items-center gap-3">
+                    <DollarSign className="w-6 h-6 text-yellow-500" />
+                    <h1 className="text-xl font-bold text-neutral-900">Ajustes de Precios · Suplidos (Admin)</h1>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => router.push("/dashboard/documentos")}
+                    className="inline-flex items-center gap-2 self-start rounded-lg border border-neutral-200 bg-white px-4 py-2 text-sm font-semibold text-neutral-700 hover:bg-neutral-50 transition"
+                >
+                    <ArrowLeft className="w-4 h-4" />
+                    Volver
+                </button>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
