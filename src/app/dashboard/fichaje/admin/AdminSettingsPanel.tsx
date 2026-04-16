@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { Settings, ShieldAlert, Plus, Trash2, Save, Calendar, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface AdminSettingsProps {
     adminId: string;
 }
 
 export default function AdminSettingsPanel({ adminId }: AdminSettingsProps) {
+    const { withLoading } = useGlobalLoading();
     const [policy, setPolicy] = useState<any>(null);
     const [blockedDates, setBlockedDates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -41,68 +43,74 @@ export default function AdminSettingsPanel({ adminId }: AdminSettingsProps) {
     };
 
     const handleUpdatePolicy = async () => {
-        setSaving(true);
-        try {
-            const res = await fetch("/api/admin/vacations/settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    adminId,
-                    action: "update_policy",
-                    data: policy
-                })
-            });
-            if (res.ok) toast.success("Política actualizada");
-            else throw new Error("Error update");
-        } catch (error) {
-            toast.error("Error al guardar política");
-        } finally {
-            setSaving(false);
-        }
+        await withLoading(async () => {
+            setSaving(true);
+            try {
+                const res = await fetch("/api/admin/vacations/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        adminId,
+                        action: "update_policy",
+                        data: policy
+                    })
+                });
+                if (res.ok) toast.success("Política actualizada");
+                else throw new Error("Error update");
+            } catch (error) {
+                toast.error("Error al guardar política");
+            } finally {
+                setSaving(false);
+            }
+        }, 'Guardando política...');
     };
 
     const handleAddBlockedDate = async () => {
         if (!newBlocked.date_from || !newBlocked.date_to || !newBlocked.reason) {
             return toast.error("Completa todos los campos");
         }
-        try {
-            const res = await fetch("/api/admin/vacations/settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    adminId,
-                    action: "add_blocked_date",
-                    data: newBlocked
-                })
-            });
-            if (res.ok) {
-                toast.success("Fecha bloqueada añadida");
-                setNewBlocked({ date_from: "", date_to: "", reason: "" });
-                fetchData();
+        await withLoading(async () => {
+            try {
+                const res = await fetch("/api/admin/vacations/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        adminId,
+                        action: "add_blocked_date",
+                        data: newBlocked
+                    })
+                });
+                if (res.ok) {
+                    toast.success("Fecha bloqueada añadida");
+                    setNewBlocked({ date_from: "", date_to: "", reason: "" });
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error("Error al añadir");
             }
-        } catch (error) {
-            toast.error("Error al añadir");
-        }
+        }, 'Añadiendo fecha bloqueada...');
     };
 
     const handleDeleteBlockedDate = async (id: string) => {
-        try {
-            const res = await fetch("/api/admin/vacations/settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    adminId,
-                    action: "delete_blocked_date",
-                    data: { id }
-                })
-            });
-            if (res.ok) {
-                toast.success("Fecha eliminada");
-                fetchData();
+        await withLoading(async () => {
+            try {
+                const res = await fetch("/api/admin/vacations/settings", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        adminId,
+                        action: "delete_blocked_date",
+                        data: { id }
+                    })
+                });
+                if (res.ok) {
+                    toast.success("Fecha eliminada");
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error("Error al eliminar");
             }
-        } catch (error) {
-            toast.error("Error al eliminar");
-        }
+        }, 'Eliminando fecha...');
     };
 
     if (loading) return <div className="p-8 text-center text-neutral-500">Cargando ajustes...</div>;

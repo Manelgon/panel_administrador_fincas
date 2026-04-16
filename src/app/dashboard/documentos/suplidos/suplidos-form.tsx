@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { Download, Send, Loader2, Plus, AlertCircle } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 type Status = "idle" | "generating" | "ready" | "sending" | "error";
 
@@ -91,6 +92,7 @@ const compute = (vals: Record<string, any>) => {
 };
 
 export default function SuplidosForm({ onSuccess, onCancel }: { onSuccess?: () => void; onCancel?: () => void }) {
+    const { withLoading } = useGlobalLoading();
     const [values, setValues] = useState<Record<string, any>>({
         "Número de Cartas": "",
         "Copias": "",
@@ -201,29 +203,31 @@ export default function SuplidosForm({ onSuccess, onCancel }: { onSuccess?: () =
     };
 
     const generate = async () => {
-        setStatus("generating");
-        try {
-            const rawPayload = { ...values, ...compute(values) };
-            const payload = Object.fromEntries(
-                Object.entries(rawPayload).map(([k, v]) => [k, (v as any) === "" ? 0 : v])
-            );
+        await withLoading(async () => {
+            setStatus("generating");
+            try {
+                const rawPayload = { ...values, ...compute(values) };
+                const payload = Object.fromEntries(
+                    Object.entries(rawPayload).map(([k, v]) => [k, (v as any) === "" ? 0 : v])
+                );
 
-            const res = await fetch("/api/documentos/suplidos/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data?.error || "Error generando PDF");
+                const res = await fetch("/api/documentos/suplidos/generate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data?.error || "Error generando PDF");
 
-            setPdfUrl(data.pdfUrl);
-            setSubmissionId(data.submissionId);
-            setStatus("ready");
-            toast.success("PDF generado ✅");
-        } catch (e: any) {
-            setStatus("error");
-            toast.error(e?.message || "Error inesperado");
-        }
+                setPdfUrl(data.pdfUrl);
+                setSubmissionId(data.submissionId);
+                setStatus("ready");
+                toast.success("PDF generado ✅");
+            } catch (e: any) {
+                setStatus("error");
+                toast.error(e?.message || "Error inesperado");
+            }
+        }, 'Generando PDF...');
     };
 
     const download = () => pdfUrl && window.open(pdfUrl, "_blank");
@@ -237,20 +241,22 @@ export default function SuplidosForm({ onSuccess, onCancel }: { onSuccess?: () =
         }
         setFormErrors(prev => ({ ...prev, toEmail: '' }));
 
-        setStatus("sending");
-        try {
-            const res = await fetch("/api/documentos/suplidos/send", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ submissionId, toEmail }),
-            });
-            if (!res.ok) throw new Error("Error enviando email");
-            setStatus("ready");
-            toast.success("Email enviado correctamente ✅");
-        } catch (e: any) {
-            setStatus("ready");
-            toast.error(e?.message || "Error enviando");
-        }
+        await withLoading(async () => {
+            setStatus("sending");
+            try {
+                const res = await fetch("/api/documentos/suplidos/send", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ submissionId, toEmail }),
+                });
+                if (!res.ok) throw new Error("Error enviando email");
+                setStatus("ready");
+                toast.success("Email enviado correctamente ✅");
+            } catch (e: any) {
+                setStatus("ready");
+                toast.error(e?.message || "Error enviando");
+            }
+        }, 'Enviando email...');
     };
 
     if (status === "ready" || status === "sending") {

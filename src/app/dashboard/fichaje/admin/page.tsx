@@ -7,6 +7,7 @@ import { Users, Calendar, Filter, X, Clock } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import EmployeeResume from '@/components/fichaje/EmployeeResume';
 import VacationManager from './VacationManager';
 import ModalPortal from '@/components/ModalPortal';
@@ -34,6 +35,7 @@ interface Profile {
 }
 
 export default function FichajeAdminPage() {
+    const { withLoading } = useGlobalLoading();
     const [entries, setEntries] = useState<TimeEntryWithProfile[]>([]);
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
@@ -106,25 +108,27 @@ export default function FichajeAdminPage() {
     };
 
     const saveSettings = async () => {
-        setSavingSettings(true);
-        const { error } = await supabase
-            .from('fichaje_settings')
-            .update({
-                auto_close_enabled: settings.auto_close_enabled,
-                max_hours_duration: settings.max_hours_duration,
-                max_minutes_duration: settings.max_minutes_duration,
-                daily_execution_hour: settings.daily_execution_hour,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', 1); // Singleton
+        await withLoading(async () => {
+            setSavingSettings(true);
+            const { error } = await supabase
+                .from('fichaje_settings')
+                .update({
+                    auto_close_enabled: settings.auto_close_enabled,
+                    max_hours_duration: settings.max_hours_duration,
+                    max_minutes_duration: settings.max_minutes_duration,
+                    daily_execution_hour: settings.daily_execution_hour,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', 1); // Singleton
 
-        if (error) {
-            toast.error('Error al guardar ajustes');
-            console.error(error);
-        } else {
-            toast.success('Ajustes guardados correctamente');
-        }
-        setSavingSettings(false);
+            if (error) {
+                toast.error('Error al guardar ajustes');
+                console.error(error);
+            } else {
+                toast.success('Ajustes guardados correctamente');
+            }
+            setSavingSettings(false);
+        }, 'Guardando ajustes...');
     };
 
     const fetchProfiles = async () => {
@@ -163,33 +167,35 @@ export default function FichajeAdminPage() {
     const handleConfirmClose = async () => {
         if (!sessionToClose) return;
 
-        setIsClosing(true);
-        const { error } = await supabase.rpc('admin_clock_out', {
-            _user_id: sessionToClose
-        });
-
-        if (error) {
-            toast.error('Error al cerrar sesión: ' + error.message);
-        } else {
-            toast.success('Sesión cerrada correctamente');
-
-            // Log Activity
-            const entry = entries.find(e => e.user_id === sessionToClose && !e.end_at);
-            const userName = entry?.profiles?.nombre ? `${entry.profiles.nombre} ${entry.profiles.apellido || ''}` : 'Usuario';
-
-            await logActivity({
-                action: 'clock_out',
-                entityType: 'fichaje',
-                entityId: entry?.id || 0,
-                entityName: `Fichaje - ${userName}`,
-                details: { method: 'admin_forced', closed_user_id: sessionToClose }
+        await withLoading(async () => {
+            setIsClosing(true);
+            const { error } = await supabase.rpc('admin_clock_out', {
+                _user_id: sessionToClose
             });
 
-            fetchEntries();
-            setShowConfirmModal(false);
-            setSessionToClose(null);
-        }
-        setIsClosing(false);
+            if (error) {
+                toast.error('Error al cerrar sesión: ' + error.message);
+            } else {
+                toast.success('Sesión cerrada correctamente');
+
+                // Log Activity
+                const entry = entries.find(e => e.user_id === sessionToClose && !e.end_at);
+                const userName = entry?.profiles?.nombre ? `${entry.profiles.nombre} ${entry.profiles.apellido || ''}` : 'Usuario';
+
+                await logActivity({
+                    action: 'clock_out',
+                    entityType: 'fichaje',
+                    entityId: entry?.id || 0,
+                    entityName: `Fichaje - ${userName}`,
+                    details: { method: 'admin_forced', closed_user_id: sessionToClose }
+                });
+
+                fetchEntries();
+                setShowConfirmModal(false);
+                setSessionToClose(null);
+            }
+            setIsClosing(false);
+        }, 'Cerrando sesión...');
     };
 
     const formatDuration = (start: string, end: string | null) => {
