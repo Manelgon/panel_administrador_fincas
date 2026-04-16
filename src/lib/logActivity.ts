@@ -1,6 +1,6 @@
 import { supabase as defaultSupabase } from './supabaseClient';
 
-export type ActivityAction = 'create' | 'update' | 'delete' | 'mark_paid' | 'toggle_active' | 'update_password' | 'clock_in' | 'clock_out' | 'generate' | 'read' | 'start_task' | 'stop_task' | 'import_pdf';
+export type ActivityAction = 'create' | 'update' | 'delete' | 'confirm' | 'resolve' | 'mark_paid' | 'toggle_active' | 'update_password' | 'clock_in' | 'clock_out' | 'generate' | 'read' | 'start_task' | 'stop_task' | 'import_pdf';
 export type EntityType = 'comunidad' | 'incidencia' | 'morosidad' | 'profile' | 'fichaje' | 'documento' | 'aviso' | 'proveedor' | 'sofia_incidencia' | 'informe_email' | 'task_timer' | 'importacion_pdf' | 'reunion';
 
 

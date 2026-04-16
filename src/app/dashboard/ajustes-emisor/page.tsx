@@ -11,8 +11,11 @@ type Settings = {
     emisor_name: string;
     emisor_address: string;
     emisor_city: string;
+    emisor_cp: string;
     emisor_cif: string;
     colegiado_nombre: string;
+    colegio_ciudad: string;
+    emisor_iban: string;
 };
 
 type ImageState = {
@@ -34,8 +37,11 @@ export default function AjustesEmisorPage() {
         emisor_name: "",
         emisor_address: "",
         emisor_city: "",
+        emisor_cp: "",
         emisor_cif: "",
         colegiado_nombre: "",
+        colegio_ciudad: "",
+        emisor_iban: "",
     });
     const [logo, setLogo] = useState<ImageState>({ url: "", uploading: false });
     const [firma, setFirma] = useState<ImageState>({ url: "", uploading: false });
@@ -73,8 +79,11 @@ export default function AjustesEmisorPage() {
                 emisor_name: json.settings.emisor_name || "",
                 emisor_address: json.settings.emisor_address || "",
                 emisor_city: json.settings.emisor_city || "",
+                emisor_cp: json.settings.emisor_cp || "",
                 emisor_cif: json.settings.emisor_cif || "",
                 colegiado_nombre: json.settings.colegiado_nombre || "",
+                colegio_ciudad: json.settings.colegio_ciudad || "",
+                emisor_iban: json.settings.emisor_iban || "",
             });
             // isDefault = no hay path personalizado guardado aún
             const hasCustomLogo = !!json.settings?.logo_path;
@@ -194,14 +203,24 @@ export default function AjustesEmisorPage() {
                         />
                     </label>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <label className="block">
-                            <span className="text-sm font-medium text-neutral-700">Ciudad y CP</span>
+                            <span className="text-sm font-medium text-neutral-700">Municipio</span>
                             <input
                                 type="text"
                                 value={settings.emisor_city}
                                 onChange={e => setSettings(p => ({ ...p, emisor_city: e.target.value }))}
-                                placeholder="29010 Málaga"
+                                placeholder="Málaga"
+                                className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                            />
+                        </label>
+                        <label className="block">
+                            <span className="text-sm font-medium text-neutral-700">Código Postal</span>
+                            <input
+                                type="text"
+                                value={settings.emisor_cp}
+                                onChange={e => setSettings(p => ({ ...p, emisor_cp: e.target.value }))}
+                                placeholder="29010"
                                 className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                             />
                         </label>
@@ -227,6 +246,30 @@ export default function AjustesEmisorPage() {
                             className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                         />
                         <p className="text-xs text-neutral-400 mt-1">Aparece en certificados y documentos firmados como administrador de fincas colegiado.</p>
+                    </label>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-neutral-700">Provincia del Colegio de Administradores</span>
+                        <input
+                            type="text"
+                            value={settings.colegio_ciudad}
+                            onChange={e => setSettings(p => ({ ...p, colegio_ciudad: e.target.value }))}
+                            placeholder="Málaga"
+                            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                        />
+                        <p className="text-xs text-neutral-400 mt-1">Aparece en certificados: &quot;Ilustre Colegio Territorial de Administradores de Fincas de [provincia]&quot;.</p>
+                    </label>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-neutral-700">N.º de cuenta (IBAN)</span>
+                        <input
+                            type="text"
+                            value={settings.emisor_iban}
+                            onChange={e => setSettings(p => ({ ...p, emisor_iban: e.target.value }))}
+                            placeholder="ES00 0000 0000 0000 0000 0000"
+                            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-[#bf4b50] focus:outline-none font-mono"
+                        />
+                        <p className="text-xs text-neutral-400 mt-1">Aparece en facturas como N.º c/c ingreso.</p>
                     </label>
 
                     <div className="pt-2 flex justify-end">

@@ -163,7 +163,7 @@ export const reunionFormSchema = z.object({
   confirmada: z.boolean(),
   estado_cuentas: z.boolean().nullable().default(null),
   pto_ordinario: z.boolean().nullable().default(null),
-  pto_extra: z.boolean().nullable().default(null),
+  informe_incidencias: z.boolean().nullable().default(null),
   morosos: z.boolean().nullable().default(null),
   citacion_email: z.boolean().nullable().default(null),
   citacion_carta: z.boolean().nullable().default(null),
@@ -190,7 +190,7 @@ export interface Reunion {
   confirmada: boolean;
   estado_cuentas: boolean | null;
   pto_ordinario: boolean | null;
-  pto_extra: boolean | null;
+  informe_incidencias: boolean | null;
   morosos: boolean | null;
   citacion_email: boolean | null;
   citacion_carta: boolean | null;

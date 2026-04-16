@@ -443,7 +443,7 @@ export default function IncidenciasPage() {
                         action: 'edit',
                         comunidad: comunidad?.nombre_cdad,
                         mensaje: formData.mensaje,
-                        asignado_a: gestorAsignado?.nombre || formData.gestor_asignado
+                        asignado_a: gestorAsignado?.nombre || 'Sin asignar'
                     }
                 });
             } else {
@@ -471,17 +471,18 @@ export default function IncidenciasPage() {
                 toast.success('Incidencia creada');
 
                 const gestorAsignado = profiles.find(p => p.user_id === formData.gestor_asignado);
-                const gestorAsignadoNombre = gestorAsignado?.nombre || formData.gestor_asignado;
+                const gestorAsignadoNombre = gestorAsignado?.nombre || 'Sin asignar';
+                const receptorProfile = profiles.find(p => p.user_id === formData.recibido_por);
                 await logActivity({
                     action: 'create',
                     entityType: 'incidencia',
                     entityId: incidenciaId,
                     entityName: `Incidencia - ${formData.nombre_cliente}`,
                     details: {
-                        id: incidenciaId,
                         comunidad: comunidad?.nombre_cdad,
-                        mensaje: formData.mensaje,
-                        asignado_a: gestorAsignadoNombre
+                        recibido_por: receptorProfile?.nombre || 'Sin especificar',
+                        asignado_a: gestorAsignadoNombre,
+                        entrada: formData.source || 'Sin especificar',
                     }
                 });
 
@@ -1042,6 +1043,8 @@ export default function IncidenciasPage() {
             }
 
             // 3. Log de Actividad del Sistema
+            const currentUserProfile = profiles.find(p => p.user_id === user.id);
+            const currentUserName = currentUserProfile?.nombre || user.email || 'Desconocido';
             await logActivity({
                 action: 'update',
                 entityType: 'incidencia',
@@ -1051,7 +1054,7 @@ export default function IncidenciasPage() {
                     change: 'reasignacion',
                     old_gestor: oldGestorName,
                     new_gestor: newGestorName,
-                    by: user.id
+                    by: currentUserName
                 }
             });
 
@@ -1127,6 +1130,7 @@ export default function IncidenciasPage() {
                     'Whatsapp': '💬',
                     'App 360': '📱',
                     'Acuerdo Junta': '📋',
+                    'Gestión Interna': '🏢',
                 };
                 return (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium capitalize">
@@ -1506,6 +1510,7 @@ export default function IncidenciasPage() {
                                                     { value: 'Whatsapp', label: '💬 Whatsapp' },
                                                     { value: 'App 360', label: '📱 App 360' },
                                                     { value: 'Acuerdo Junta', label: '📋 Acuerdo Junta' },
+                                                    { value: 'Gestión Interna', label: '🏢 Gestión Interna' },
                                                 ]}
                                                 placeholder="Seleccionar entrada..."
                                             />

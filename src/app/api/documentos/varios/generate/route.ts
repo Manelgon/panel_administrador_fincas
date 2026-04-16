@@ -481,8 +481,9 @@ function drawJustifiedLine(
  * assets.logoBytes y assets.selloBytes vienen descargados de tu bucket privado (doc-assets).
  */
 export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint8Array; selloBytes?: Uint8Array }) {
-    const { nombre: emisorNombre, colegiado: colegiadoNombre } = await getEmisor();
+    const { nombre: emisorNombre, colegiado: colegiadoNombre, colegioCiudad } = await getEmisor();
     const adminName = colegiadoNombre || "Roberto Díaz Rodríguez";
+    const provinciaCol = colegioCiudad || "Málaga";
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([A4.w, A4.h]);
 
@@ -545,7 +546,7 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     const p1 =
         `${adminName}, Administrador de Fincas colegiado en el Ilustre Colegio Territorial de ` +
-        `Administradores de Fincas de Málaga, actuando en calidad de Secretario–Administrador de la Comunidad de ` +
+        `Administradores de Fincas de ${provinciaCol}, actuando en calidad de Secretario–Administrador de la Comunidad de ` +
         `Propietarios ${comunidad}, sita en ${domicilio}.`;
 
     const p2 =
@@ -589,7 +590,7 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
     drawPara(p2);
 
     // Línea final con fecha (si hay espacio, si no, igual no pisa sello)
-    const cierre = `Lo que certifico a los efectos oportunos en Málaga a ${fecha || "________________"}.`;
+    const cierre = `Lo que certifico a los efectos oportunos en ${provinciaCol} a ${fecha || "________________"}.`;
     drawPara(cierre);
 
     // 5) Sello + firma anclados abajo, SIEMPRE en zona segura
@@ -671,16 +672,18 @@ export async function POST(req: Request) {
             assets.sello = undefined;
         }
 
-        // 2) Fetch Settings (IBAN)
-        assets.iban = "ES37 0081 7442 0600 0119 3630"; // Default hardcoded just in case
-        const { data: settingsData } = await supabase
-            .from("document_settings")
-            .select("setting_key, setting_value")
-            .eq("doc_key", "facturas_varias");
+        // 2) Fetch Settings (IBAN) — prioridad: emisor > document_settings > fallback
+        assets.iban = emisorData.iban || "";
+        if (!assets.iban) {
+            const { data: settingsData } = await supabase
+                .from("document_settings")
+                .select("setting_key, setting_value")
+                .eq("doc_key", "facturas_varias");
 
-        if (settingsData) {
-            const row = settingsData.find(r => r.setting_key === "iban");
-            if (row) assets.iban = row.setting_value;
+            if (settingsData) {
+                const row = settingsData.find(r => r.setting_key === "iban");
+                if (row) assets.iban = row.setting_value;
+            }
         }
 
         let pdfBytesFactura: Uint8Array | null = null;

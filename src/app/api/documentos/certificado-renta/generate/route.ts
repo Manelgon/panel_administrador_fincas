@@ -83,8 +83,9 @@ export async function buildRentaCertificatePdf(
     data: any,
     assets: { logoBytes?: Buffer | null; selloBytes?: Buffer | null }
 ) {
-    const { nombre: emisorNombre, colegiado: colegiadoNombre } = await getEmisor();
+    const { nombre: emisorNombre, colegiado: colegiadoNombre, colegioCiudad } = await getEmisor();
     const adminName = colegiadoNombre || "Roberto Díaz Rodríguez";
+    const provinciaCol = colegioCiudad || "Málaga";
 
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage([pageW, pageH]);
@@ -233,7 +234,7 @@ export async function buildRentaCertificatePdf(
     const now = new Date();
     const todayEU = `${String(now.getDate()).padStart(2, '0')}-${String(now.getMonth() + 1).padStart(2, '0')}-${now.getFullYear()}`;
     const fechaStr = fechaEmision || todayEU;
-    const pie = `Lo que certifica a los efectos oportunos en Málaga a ${fechaStr}.`;
+    const pie = `Lo que certifica a los efectos oportunos en ${provinciaCol} a ${fechaStr}.`;
 
     const pieLines = wrapText(pie, font, bodySize, maxTextW);
     for (const ln of pieLines) {

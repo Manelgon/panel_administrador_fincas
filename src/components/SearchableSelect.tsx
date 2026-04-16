@@ -185,7 +185,7 @@ export default function SearchableSelect({
     const dropdown = isOpen ? (
         <div
             style={dropdownStyle}
-            className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-60 overflow-hidden flex flex-col"
+            className="bg-white border border-gray-200 rounded-lg shadow-xl max-h-80 overflow-hidden flex flex-col"
         >
             <div
                 ref={listRef}
