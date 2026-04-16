@@ -31,6 +31,7 @@ const SECTIONS = [
         label: 'DOCUMENTACIÓN',
         items: [
             { name: 'Documentos', href: '/dashboard/documentos', icon: FileText },
+            { name: 'Reuniones y Actas', href: '/dashboard/reuniones', icon: CalendarDays },
             { name: 'Informe Comunidad', href: '/dashboard/informes-comunidad', icon: Building },
         ],
     },
@@ -56,7 +57,6 @@ const ADMIN_SECTION = {
 const LOCAL_SECTION = {
     label: 'LOCAL',
     items: [
-        { name: 'Reuniones y Actas', href: '/dashboard/reuniones', icon: CalendarDays },
         { name: 'Sofia (Local)', href: '/dashboard/sofia', icon: AlertCircle },
         { name: 'Propietarios Sofia', href: '/dashboard/propietarios-sofia', icon: Users },
         { name: 'Facturas', href: '/dashboard/facturas-comunidades', icon: Folder },
