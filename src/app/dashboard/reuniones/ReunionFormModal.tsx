@@ -20,7 +20,7 @@ interface Props {
 const DOCS_FIELDS: { key: string; label: string }[] = [
     { key: 'estado_cuentas', label: 'Estado de Cuentas' },
     { key: 'pto_ordinario',  label: 'Pto. Ordinario' },
-    { key: 'pto_extra',      label: 'Pto. Extra' },
+    { key: 'informe_incidencias', label: 'Informe Incidencias' },
     { key: 'morosos',        label: 'Morosos' },
 ];
 
@@ -46,7 +46,7 @@ const emptyForm = {
     confirmada: null as boolean | null,
     estado_cuentas: null as boolean | null,
     pto_ordinario: null as boolean | null,
-    pto_extra: null as boolean | null,
+    informe_incidencias: null as boolean | null,
     morosos: null as boolean | null,
     citacion_email: null as boolean | null,
     citacion_carta: null as boolean | null,
@@ -77,7 +77,7 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                         confirmada: data.confirmada as boolean,
                         estado_cuentas: data.estado_cuentas as boolean | null,
                         pto_ordinario: data.pto_ordinario as boolean | null,
-                        pto_extra: data.pto_extra as boolean | null,
+                        informe_incidencias: data.informe_incidencias as boolean | null,
                         morosos: data.morosos as boolean | null,
                         citacion_email: data.citacion_email as boolean | null,
                         citacion_carta: data.citacion_carta as boolean | null,
@@ -123,7 +123,7 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
             confirmada: formData.confirmada as boolean,
             estado_cuentas: formData.estado_cuentas,
             pto_ordinario: formData.pto_ordinario,
-            pto_extra: formData.pto_extra,
+            informe_incidencias: formData.informe_incidencias,
             morosos: formData.morosos,
             citacion_email: formData.citacion_email,
             citacion_carta: formData.citacion_carta,

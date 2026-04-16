@@ -9,9 +9,10 @@ import DataTable, { Column, RowAction } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import { logActivity } from '@/lib/logActivity';
-import { Reunion, ComunidadOption } from '@/lib/schemas';
+import { Reunion, ComunidadOption, Profile } from '@/lib/schemas';
 import ReunionFormModal from './ReunionFormModal';
 import ImportReunionesModal from '@/components/ImportReunionesModal';
+import ConfirmarReunionTicketsModal from './ConfirmarReunionTicketsModal';
 
 const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
     JGO: { label: 'JGO', cls: 'bg-blue-100 text-blue-700' },
@@ -24,7 +25,7 @@ const BOOL_FIELDS: { key: keyof Reunion; label: string; readonly?: boolean }[] =
     // Documentos
     { key: 'estado_cuentas', label: 'Est. Cuentas' },
     { key: 'pto_ordinario',  label: 'Pto. Ord.'    },
-    { key: 'pto_extra',      label: 'Pto. Extra'   },
+    { key: 'informe_incidencias', label: 'Inf. Incidencias' },
     { key: 'morosos',        label: 'Morosos'      },
     // Citación
     { key: 'citacion_email', label: 'Cit. @'       },
@@ -44,6 +45,7 @@ const BOOL_FIELDS: { key: keyof Reunion; label: string; readonly?: boolean }[] =
 export default function ReunionesPage() {
     const [reuniones, setReuniones] = useState<Reunion[]>([]);
     const [comunidades, setComunidades] = useState<ComunidadOption[]>([]);
+    const [profiles, setProfiles] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
@@ -52,6 +54,7 @@ export default function ReunionesPage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [showImportModal, setShowImportModal] = useState(false);
+    const [confirmarReunion, setConfirmarReunion] = useState<Reunion | null>(null);
     const [envioConfirm, setEnvioConfirm] = useState<{ reunion: Reunion; noAplica: string[]; realizadas: string[] } | null>(null);
     const [isEnviando, setIsEnviando] = useState(false);
 
@@ -67,7 +70,7 @@ export default function ReunionesPage() {
 
     const fetchAll = async () => {
         setLoading(true);
-        await Promise.all([fetchReuniones(), fetchComunidades()]);
+        await Promise.all([fetchReuniones(), fetchComunidades(), fetchProfiles()]);
         setLoading(false);
     };
 
@@ -97,6 +100,14 @@ export default function ReunionesPage() {
         if (data) setComunidades(data);
     };
 
+    const fetchProfiles = async () => {
+        const { data } = await supabase
+            .from('profiles')
+            .select('user_id, nombre, rol')
+            .order('nombre', { ascending: true });
+        if (data) setProfiles(data);
+    };
+
     const handleToggle = async (reunion: Reunion, field: keyof Reunion) => {
         if (!reunion.confirmada || reunion.enviado || reunion.resuelto) return;
         const current = reunion[field] as boolean | null;
@@ -116,20 +127,15 @@ export default function ReunionesPage() {
         }
     };
 
-    const handleConfirmar = async (reunion: Reunion) => {
+    const handleConfirmar = (reunion: Reunion) => {
         if (reunion.confirmada) return;
-        setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, confirmada: true } : r));
-        const { error } = await supabase
-            .from('reuniones')
-            .update({ confirmada: true })
-            .eq('id', reunion.id);
-        if (error) {
-            toast.error('Error al confirmar la reunión');
-            setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, confirmada: false } : r));
-        } else {
-            toast.success('Reunión confirmada');
-            await logActivity({ action: 'update', entityType: 'reunion', entityId: reunion.id, entityName: `${reunion.tipo} - ${reunion.comunidad}` });
-        }
+        setConfirmarReunion(reunion);
+    };
+
+    const onReunionConfirmada = () => {
+        if (!confirmarReunion) return;
+        setReuniones(prev => prev.map(r => r.id === confirmarReunion.id ? { ...r, confirmada: true } : r));
+        setConfirmarReunion(null);
     };
 
     const handleDelete = async () => {
@@ -321,6 +327,13 @@ export default function ReunionesPage() {
             setReuniones(prev => prev.map(r => r.id === reunion.id ? { ...r, enviado: false, resuelto: false } : r));
         } else {
             toast.success('Acta enviada — reunión marcada como resuelta');
+            await logActivity({
+                action: 'resolve',
+                entityType: 'reunion',
+                entityId: reunion.id,
+                entityName: `${reunion.tipo} - ${reunion.comunidad}`,
+                details: { fecha: reunion.fecha_reunion },
+            });
         }
         setIsEnviando(false);
         setEnvioConfirm(null);
@@ -468,6 +481,15 @@ export default function ReunionesPage() {
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
             />
+
+            {/* Modal Confirmar reunión + crear tickets */}
+            {confirmarReunion && (
+                <ConfirmarReunionTicketsModal
+                    reunion={confirmarReunion}
+                    onClose={() => setConfirmarReunion(null)}
+                    onConfirmed={onReunionConfirmada}
+                />
+            )}
 
             {/* Modal Formulario */}
             {showForm && (
