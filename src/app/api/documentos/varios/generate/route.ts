@@ -68,6 +68,23 @@ function n(v: any) {
     return Number.isFinite(x) ? x : 0;
 }
 function moneyES(v: any) { return n(v).toFixed(2).replace(".", ","); }
+function getConceptIndexes(payload: Record<string, any>) {
+    const indexedKeys = Object.keys(payload)
+        .map((key) => key.match(/^descripcion(\d+)$/)?.[1])
+        .filter(Boolean)
+        .map((value) => Number(value))
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+
+    if (indexedKeys.length > 0) return indexedKeys;
+
+    const conceptCount = Number(payload.conceptCount || 0);
+    if (conceptCount > 0) {
+        return Array.from({ length: conceptCount }, (_, index) => index + 1);
+    }
+
+    return [1, 2, 3];
+}
 
 function drawRect(page: any, x: number, y: number, w: number, h: number, fill?: any) {
     page.drawRectangle({
@@ -307,26 +324,18 @@ export async function buildFacturaVariosPdf(
     drawCell(page, font, bold, x, tableTopY, c.total, headerH, "TOTAL", { bold: true, borderColor: YELLOW, align: "right" });
 
     // Data Rows
-    const lines = [
-        {
-            und: txt(payload["und1"] ?? payload["Unidad 1"] ?? ""),
-            desc: txt(payload["descripcion1"] ?? payload["Descripción 1"] ?? payload["Concepto 1"] ?? ""),
-            base: n(payload["importe1"] ?? payload["Importe 1"] ?? 0),
-            ivaPercent: n(payload["iva1"] ?? payload["IVA 1"] ?? 0),
-        },
-        {
-            und: txt(payload["und2"] ?? payload["Unidad 2"] ?? ""),
-            desc: txt(payload["Concepto2"] ?? payload["Descripción 2"] ?? payload["Concepto 2"] ?? ""),
-            base: n(payload["importe2"] ?? payload["Importe 2"] ?? 0),
-            ivaPercent: n(payload["iva2"] ?? payload["IVA 2"] ?? 0),
-        },
-        {
-            und: txt(payload["und3"] ?? payload["Unidad 3"] ?? ""),
-            desc: txt(payload["Concepto3"] ?? payload["Descripción 3"] ?? payload["Concepto 3"] ?? ""),
-            base: n(payload["importe3"] ?? payload["Importe 3"] ?? 0),
-            ivaPercent: n(payload["iva3"] ?? payload["IVA 3"] ?? 0),
-        },
-    ].filter(l => l.und || l.desc || l.base || l.ivaPercent);
+    const lines = getConceptIndexes(payload).map((index) => ({
+        und: txt(payload[`und${index}`] ?? payload[`Unidad ${index}`] ?? ""),
+        desc: txt(
+            payload[`descripcion${index}`]
+            ?? payload[`Concepto${index}`]
+            ?? payload[`Descripción ${index}`]
+            ?? payload[`Concepto ${index}`]
+            ?? ""
+        ),
+        base: n(payload[`importe${index}`] ?? payload[`Importe ${index}`] ?? 0),
+        ivaPercent: n(payload[`iva${index}`] ?? payload[`IVA ${index}`] ?? 0),
+    })).filter((l) => l.und || l.desc || l.base || l.ivaPercent);
 
     let baseTotal = 0;
     let ivaTotal = 0;
@@ -601,13 +610,22 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
             const sealH = (sealImg.height / sealImg.width) * sealW;
 
             const sx = marginX;
-            const sy = 155; // fija abajo (no depende del texto)
+            const sy = 175; // se sube un poco para dejar sitio al texto legal
             page.drawImage(sealImg, { x: sx, y: sy, width: sealW, height: sealH });
         } catch { }
     }
 
-    page.drawText(adminName, { x: marginX, y: 110, size: 11, font: bold, color: BLACK });
-    page.drawText("Administrador de fincas", { x: marginX, y: 92, size: 11, font, color: BLACK });
+    page.drawText(adminName, { x: marginX, y: 130, size: 11, font: bold, color: BLACK });
+    page.drawText("Administrador de fincas", { x: marginX, y: 112, size: 11, font, color: BLACK });
+
+    const legalNotice =
+        "Es obligación de la persona que transmite comunicar a la secretaría de la Comunidad el cambio de titularidad de la finca. Mientras no lo comunique responde solidariamente de las deudas de la Comunidad (artículo 9.1.i. LPH).";
+    const legalLines = wrapText(legalNotice, font, 8.5, maxW);
+    let legalY = 84;
+    for (const line of legalLines) {
+        page.drawText(line, { x: marginX, y: legalY, size: 8.5, font, color: BLACK });
+        legalY -= 10;
+    }
 
     // Global Footer
     const footerText = emisorNombre || "Serincosol | Administración de Fincas Málaga";
@@ -731,7 +749,7 @@ export async function POST(req: Request) {
             const calc = (v: any) => Number(String(v || "0").replace(",", ".")) || 0;
             let sumBase = 0;
             let vatTotal = 0;
-            for (let i = 1; i <= 3; i++) {
+            for (const i of getConceptIndexes(payload)) {
                 const base = calc(payload[`importe${i}`]);
                 const ivap = calc(payload[`iva${i}`]);
                 sumBase += base;
