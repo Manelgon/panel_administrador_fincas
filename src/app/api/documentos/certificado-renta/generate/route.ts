@@ -292,10 +292,10 @@ export async function POST(req: Request) {
     if (!payload) return NextResponse.json({ error: "Body inválido" }, { status: 400 });
 
     try {
-        // 1) Descargar assets (header y sello) usando Admin Client
-        const { headerPath } = await getEmisor();
+        // 1) Descargar assets (header y firma) usando la configuración del emisor
+        const { headerPath, firmaPath } = await getEmisor();
         const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
-        const selloBytes = await downloadAssetPng("certificados/sello-retenciones.png");
+        const selloBytes = firmaPath ? await downloadAssetPng(firmaPath) : null;
 
         // 2) Generar PDF usando assets descargados
         const pdfBytes = await buildRentaCertificatePdf(payload, { logoBytes, selloBytes });

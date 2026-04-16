@@ -40,10 +40,10 @@ export async function generateFichajePdf({
     entries: any[];
 }) {
     // --- ASSETS ---
-    const { headerPath, nombre, colegiado } = await getEmisor();
+    const { headerPath, nombre, colegiado, firmaPath } = await getEmisor();
     const adminName = colegiado || "Roberto Díaz Rodríguez";
     const logoBytes = await downloadAssetPng(headerPath || "certificados/logo-retenciones.png");
-    const selloBytes = await downloadAssetPng("certificados/sello-retenciones.png");
+    const selloBytes = firmaPath ? await downloadAssetPng(firmaPath) : null;
 
     // --- PDF GENERATION ---
     const pdfDoc = await PDFDocument.create();
