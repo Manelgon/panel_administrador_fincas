@@ -11,6 +11,10 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import Badge from '@/components/ui/Badge';
 import SearchableSelect from '@/components/SearchableSelect';
+import PageHeader from '@/components/PageHeader';
+import FilterBar from '@/components/FilterBar';
+import FormSection from '@/components/FormSection';
+import FormField from '@/components/FormField';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
 import { getSecureUrl } from '@/lib/storage';
@@ -738,61 +742,25 @@ export default function MorosidadPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-3">
-                <h1 className="text-xl font-bold text-neutral-900">Gestión de Deudas</h1>
-                <button
-                    onClick={() => {
-                        setShowForm(!showForm);
-                        if (showForm) {
-                            setEditingId(null);
-                            setFormErrors({});
-                            setFormData({
-                                comunidad_id: '',
-                                nombre_deudor: '',
-                                apellidos: '',
-                                telefono_deudor: '',
-                                email_deudor: '',
-                                titulo_documento: '',
-                                fecha_notificacion: '',
-                                importe: '',
-                                observaciones: '',
-                                gestor: '',
-                                documento: '',
-                                aviso: null,
-                                id_email_deuda: '',
-                            });
-                        }
-                    }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm flex-shrink-0"
-                >
-                    <Plus className={`w-4 h-4 flex-shrink-0 ${showForm ? 'rotate-45' : ''} transition-transform`} />
-                    <span className="hidden sm:inline">{showForm ? 'Cancelar' : 'Registrar Deuda'}</span>
-                    <span className="sm:hidden">{showForm ? 'Cancelar' : 'Deuda'}</span>
-                </button>
-            </div>
+            <PageHeader
+                title="Gestión de Deudas"
+                showForm={showForm}
+                onToggleForm={() => showForm ? resetForm() : setShowForm(true)}
+                newButtonLabel="Registrar Deuda"
+                newButtonShortLabel="Deuda"
+            />
 
             {/* Filters */}
             <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
-                    <button
-                        onClick={() => setFilterEstado('pendiente')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Pendientes
-                    </button>
-                    <button
-                        onClick={() => setFilterEstado('resuelto')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'resuelto' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Resueltas
-                    </button>
-                    <button
-                        onClick={() => setFilterEstado('all')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Todas
-                    </button>
-                </div>
+                <FilterBar
+                    value={filterEstado}
+                    onChange={(v) => setFilterEstado(v)}
+                    options={[
+                        { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-yellow-400 text-neutral-950' },
+                        { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-neutral-900 text-white' },
+                        { value: 'all', label: 'Todas', activeClass: 'bg-neutral-900 text-white' },
+                    ]}
+                />
 
                 {/* Export Actions (Visible only if selection) */}
                 {selectedIds.size > 0 && (
@@ -849,8 +817,7 @@ export default function MorosidadPage() {
                             <form id="morosidad-form" onSubmit={handleSubmit} className="space-y-6">
 
                                 {/* Sección: Identificación del Deudor */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Identificación del Deudor</h3>
+                                <FormSection title="Identificación del Deudor">
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div className="md:col-span-4">
                                             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
@@ -927,11 +894,10 @@ export default function MorosidadPage() {
                                             {formErrors.email_deudor && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.email_deudor}</p>}
                                         </div>
                                     </div>
-                                </div>
+                                </FormSection>
 
                                 {/* Sección: Datos de la Deuda */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Datos de la Deuda</h3>
+                                <FormSection title="Datos de la Deuda">
                                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                                         <div className="md:col-span-4">
                                             <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
@@ -987,11 +953,10 @@ export default function MorosidadPage() {
                                             />
                                         </div>
                                     </div>
-                                </div>
+                                </FormSection>
 
                                 {/* Sección: Archivos */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Archivos</h3>
+                                <FormSection title="Archivos">
                                     <div>
                                         <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
                                             Adjuntar Documento
@@ -1006,11 +971,10 @@ export default function MorosidadPage() {
                                             {uploading && <span className="absolute right-4 top-3 text-xs font-bold text-amber-500 uppercase tracking-widest animate-pulse">Subiendo...</span>}
                                         </div>
                                     </div>
-                                </div>
+                                </FormSection>
 
                                 {/* Sección: Notificación */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Notificación al Propietario</h3>
+                                <FormSection title="Notificación al Propietario">
                                     <div className="flex flex-col gap-3">
                                         {/* Checkboxes de canal */}
                                         <div className="bg-white border border-neutral-200 rounded-xl p-4">
@@ -1104,7 +1068,7 @@ export default function MorosidadPage() {
                                             <p className="flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.contacto}</p>
                                         )}
                                     </div>
-                                </div>
+                                </FormSection>
                             </form>
                         </div>
 
@@ -1339,8 +1303,7 @@ export default function MorosidadPage() {
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
                             {/* Deudor */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Información del Deudor</h3>
+                            <FormSection title="Información del Deudor">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nombre</label>
@@ -1363,11 +1326,10 @@ export default function MorosidadPage() {
                                         <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailMorosidad.comunidades?.nombre_cdad || '—'}</div>
                                     </div>
                                 </div>
-                            </div>
+                            </FormSection>
 
                             {/* Deuda */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Datos de la Deuda</h3>
+                            <FormSection title="Datos de la Deuda">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="lg:col-span-2">
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Concepto</label>
@@ -1416,12 +1378,11 @@ export default function MorosidadPage() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </FormSection>
 
                             {/* Documentación */}
                             {selectedDetailMorosidad.documento && (
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Documentación</h3>
+                                <FormSection title="Documentación">
                                     <a
                                         href={getSecureUrl(selectedDetailMorosidad.documento)}
                                         target="_blank"
@@ -1431,14 +1392,13 @@ export default function MorosidadPage() {
                                         <Paperclip className="w-3.5 h-3.5" />
                                         Ver documento adjunto
                                     </a>
-                                </div>
+                                </FormSection>
                             )}
 
                             {/* Chat de Gestores */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Chat de Gestores</h3>
+                            <FormSection title="Chat de Gestores">
                                 <TimelineChat entityType="morosidad" entityId={selectedDetailMorosidad.id} />
-                            </div>
+                            </FormSection>
 
                         </div>
 

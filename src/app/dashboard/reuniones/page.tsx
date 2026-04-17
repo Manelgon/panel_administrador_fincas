@@ -4,10 +4,12 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, Pencil, Trash2, Check, X, FileCheck, UserCheck, Upload, FileText, Send, AlertTriangle, MoreVertical, Clock, CheckCircle2 } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Upload, Send, AlertTriangle, MoreVertical, Clock, CheckCircle2 } from 'lucide-react';
 import DataTable, { Column, RowAction } from '@/components/DataTable';
 import SearchableSelect from '@/components/SearchableSelect';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import PageHeader from '@/components/PageHeader';
+import FilterBar from '@/components/FilterBar';
 import { logActivity } from '@/lib/logActivity';
 import { Reunion, ComunidadOption, Profile } from '@/lib/schemas';
 import { useGlobalLoading } from '@/lib/globalLoading';
@@ -421,9 +423,12 @@ export default function ReunionesPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-3">
-                <h1 className="text-xl font-bold text-neutral-900 min-w-0 truncate">Reuniones y Actas</h1>
-                <div className="flex items-center gap-2 flex-shrink-0">
+            <PageHeader
+                title="Reuniones y Actas"
+                onToggleForm={() => { setEditingId(null); setShowForm(true); }}
+                newButtonLabel="Nueva Reunión"
+                newButtonShortLabel="Nueva"
+                extraButtons={
                     <button
                         onClick={() => setShowImportModal(true)}
                         className="border border-neutral-200 bg-white hover:bg-neutral-50 text-neutral-700 px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-semibold text-sm shadow-sm"
@@ -432,46 +437,19 @@ export default function ReunionesPage() {
                         <span className="hidden sm:inline">Importar Excel</span>
                         <span className="sm:hidden">Importar</span>
                     </button>
-                    <button
-                        onClick={() => { setEditingId(null); setShowForm(true); }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-semibold text-sm shadow-sm"
-                    >
-                        <Plus className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden sm:inline">Nueva Reunión</span>
-                        <span className="sm:hidden">Nueva</span>
-                    </button>
-                </div>
-            </div>
+                }
+            />
 
-            {/* Controles: Tabs */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
-                    <button
-                        onClick={() => setFilterResuelto('confirmadas')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'confirmadas' ? 'bg-blue-500 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Confirmadas
-                    </button>
-                    <button
-                        onClick={() => setFilterResuelto('pendiente')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'pendiente' ? 'bg-amber-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Pendientes
-                    </button>
-                    <button
-                        onClick={() => setFilterResuelto('resuelto')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'resuelto' ? 'bg-green-500 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Resueltas
-                    </button>
-                    <button
-                        onClick={() => setFilterResuelto('all')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterResuelto === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Todas
-                    </button>
-                </div>
-            </div>
+            <FilterBar
+                value={filterResuelto}
+                onChange={(v) => setFilterResuelto(v as 'confirmadas' | 'pendiente' | 'resuelto' | 'all')}
+                options={[
+                    { value: 'confirmadas', label: 'Confirmadas', activeClass: 'bg-blue-500 text-white' },
+                    { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-amber-400 text-neutral-950' },
+                    { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-green-500 text-white' },
+                    { value: 'all', label: 'Todas', activeClass: 'bg-neutral-900 text-white' },
+                ]}
+            />
 
             {/* Tabla */}
             <DataTable<Reunion>

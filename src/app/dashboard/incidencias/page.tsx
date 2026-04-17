@@ -11,6 +11,9 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
 import Badge from '@/components/ui/Badge';
 import SearchableSelect from '@/components/SearchableSelect';
+import PageHeader from '@/components/PageHeader';
+import FilterBar from '@/components/FilterBar';
+import FormSection from '@/components/FormSection';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
 import { getSecureUrl } from '@/lib/storage';
@@ -1298,19 +1301,31 @@ export default function IncidenciasPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-3">
-                <h1 className="text-xl font-bold text-neutral-900">Gestión de Tickets</h1>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                    <input
-                        ref={pdfImportInputRef}
-                        type="file"
-                        accept=".pdf"
-                        className="hidden"
-                        onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleImportPdf(file);
-                        }}
-                    />
+            <input
+                ref={pdfImportInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportPdf(file);
+                }}
+            />
+            <PageHeader
+                title="Gestión de Tickets"
+                showForm={showForm}
+                onToggleForm={() => {
+                    setEditingId(null);
+                    setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10) });
+                    setIsManualDate(false);
+                    setEnviarAviso(null);
+                    setFiles([]);
+                    setFormErrors({});
+                    setShowForm(!showForm);
+                }}
+                newButtonLabel="Nuevo Ticket"
+                newButtonShortLabel="Ticket"
+                extraButtons={
                     <button
                         onClick={() => pdfImportInputRef.current?.click()}
                         disabled={importingPdf}
@@ -1320,54 +1335,21 @@ export default function IncidenciasPage() {
                         <span className="hidden sm:inline">Importar desde PDF</span>
                         <span className="sm:hidden">Importar</span>
                     </button>
-                    <button
-                        onClick={() => {
-                            setEditingId(null);
-                            setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10) });
-                            setIsManualDate(false);
-                            setEnviarAviso(null);
-                            setFiles([]);
-                            setFormErrors({});
-                            setShowForm(!showForm);
-                        }}
-                        className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm"
-                    >
-                        <Plus className="w-4 h-4 flex-shrink-0" />
-                        <span className="hidden sm:inline">Nuevo Ticket</span>
-                        <span className="sm:hidden">Ticket</span>
-                    </button>
-                </div>
-            </div>
+                }
+            />
 
             {/* Filters and Actions */}
             <div className="flex flex-col gap-3">
-                <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2">
-                    <button
-                        onClick={() => setFilterEstado('pendiente')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'pendiente' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Pendientes
-                    </button>
-                    <button
-                        onClick={() => setFilterEstado('aplazado')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition flex items-center justify-center gap-1.5 ${filterEstado === 'aplazado' ? 'bg-orange-400 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        <Pause className="w-3 h-3" />
-                        Aplazadas
-                    </button>
-                    <button
-                        onClick={() => setFilterEstado('resuelto')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'resuelto' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Resueltas
-                    </button>
-                    <button
-                        onClick={() => setFilterEstado('all')}
-                        className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                    >
-                        Todas
-                    </button>
-                </div>
+                <FilterBar
+                    value={filterEstado}
+                    onChange={(v) => setFilterEstado(v)}
+                    options={[
+                        { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-yellow-400 text-neutral-950' },
+                        { value: 'aplazado', label: 'Aplazadas', activeClass: 'bg-orange-400 text-white' },
+                        { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-neutral-900 text-white' },
+                        { value: 'all', label: 'Todas', activeClass: 'bg-neutral-900 text-white' },
+                    ]}
+                />
 
                 {/* Export Actions (Visible only if selection) */}
                 {selectedIds.size > 0 && (
@@ -2003,10 +1985,7 @@ export default function IncidenciasPage() {
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
                             {/* Sección 1: Identificación del Cliente */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">
-                                    Identificación del Cliente
-                                </h3>
+                            <FormSection title="Identificación del Cliente">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="lg:col-span-2">
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Comunidad</label>
@@ -2033,13 +2012,10 @@ export default function IncidenciasPage() {
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </FormSection>
 
                             {/* Sección 2: Datos de la Incidencia */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">
-                                    Datos de la Incidencia
-                                </h3>
+                            <FormSection title="Datos de la Incidencia">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Clasificación</label>
@@ -2116,14 +2092,11 @@ export default function IncidenciasPage() {
                                         </div>
                                     )}
                                 </div>
-                            </div>
+                            </FormSection>
 
                             {/* Sección 3: Documentación */}
                             {selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0 && (
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">
-                                        Documentación
-                                    </h3>
+                                <FormSection title="Documentación">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
                                             <div key={i} className="flex items-center justify-between bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2.5">
@@ -2153,16 +2126,13 @@ export default function IncidenciasPage() {
                                             </div>
                                         ))}
                                     </div>
-                                </div>
+                                </FormSection>
                             )}
 
                             {/* Sección 4: Chat de Gestores */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">
-                                    Chat de Gestores
-                                </h3>
+                            <FormSection title="Chat de Gestores">
                                 <TimelineChat entityType="incidencia" entityId={selectedDetailIncidencia.id} />
-                            </div>
+                            </FormSection>
 
                         </div>
 
