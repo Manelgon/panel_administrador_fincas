@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Phone, Mail, Trash2, X, Edit2, Plus, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
-import { supabase } from '@/lib/supabaseClient';
-import { toast } from 'react-hot-toast';
-import { Plus, Trash2, X, Edit2, Phone, Mail, MapPin, Building2, CreditCard, Clock, Loader2, Check, AlertCircle } from 'lucide-react';
-import ModalActionsMenu from '@/components/ModalActionsMenu';
-import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import { useCRUDPage } from '@/hooks/useCRUDPage';
 import DataTable, { Column } from '@/components/DataTable';
-import { logActivity } from '@/lib/logActivity';
-import { useGlobalLoading } from '@/lib/globalLoading';
+import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import ModalActionsMenu from '@/components/ModalActionsMenu';
+import PageHeader from '@/components/PageHeader';
+import FilterBar from '@/components/FilterBar';
+import FormModal from '@/components/FormModal';
+import FormSection from '@/components/FormSection';
+import FormField from '@/components/FormField';
 
 interface Proveedor {
     id: number;
@@ -24,185 +25,49 @@ interface Proveedor {
     activo: boolean;
 }
 
+const defaultFormData = {
+    nombre: '',
+    telefono: '',
+    email: '',
+    cif: '',
+    direccion: '',
+    cp: '',
+    ciudad: '',
+    provincia: '',
+};
+
+type FormData = typeof defaultFormData;
+
 export default function ProveedoresPage() {
-    const { withLoading } = useGlobalLoading();
-    const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [editingId, setEditingId] = useState<number | null>(null);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
-    const [deleteEmail, setDeleteEmail] = useState('');
-    const [deletePassword, setDeletePassword] = useState('');
-    const [deleteId, setDeleteId] = useState<number | null>(null);
-    const [isDeleting, setIsDeleting] = useState(false);
-
-    // Detail Modal
-    const [showDetailModal, setShowDetailModal] = useState(false);
-    const [selectedDetailProveedor, setSelectedDetailProveedor] = useState<Proveedor | null>(null);
-
-    const [formData, setFormData] = useState({
-        nombre: '',
-        telefono: '',
-        email: '',
-        cif: '',
-        direccion: '',
-        cp: '',
-        ciudad: '',
-        provincia: ''
+    const crud = useCRUDPage<Proveedor, FormData>({
+        entityType: 'proveedor',
+        entityLabel: 'proveedor',
+        tableName: 'proveedores',
+        defaultFormData,
+        orderBy: { column: 'nombre', ascending: true },
+        nameField: 'nombre',
     });
 
-    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-    const [filterEstado, setFilterEstado] = useState<'all' | 'activo' | 'inactivo'>('activo');
-
-    const filteredProveedores = proveedores.filter(p => {
-        if (filterEstado === 'all') return true;
-        if (filterEstado === 'activo') return p.activo;
-        if (filterEstado === 'inactivo') return !p.activo;
-        return true;
-    });
-
-    useEffect(() => {
-        fetchProveedores();
-    }, []);
-
-    // Portal ready (client-only)
-    const [portalReady, setPortalReady] = useState(false);
-    useEffect(() => setPortalReady(true), []);
-
-    // Prevent body scroll when any modal is open
-    useEffect(() => {
-        if (showForm || showDetailModal || showDeleteModal) {
-            document.body.style.overflow = 'hidden';
-        } else {
-            document.body.style.overflow = 'unset';
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-        };
-    }, [showForm, showDetailModal, showDeleteModal]);
-
-    const fetchProveedores = async () => {
-        try {
-            const { data, error } = await supabase
-                .from('proveedores')
-                .select('*')
-                .order('nombre', { ascending: true });
-
-            if (error) throw error;
-            setProveedores(data || []);
-        } catch (error: any) {
-            toast.error('Error cargando proveedores');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        const errors: Record<string, string> = {};
-        if (!formData.nombre?.trim()) errors.nombre = 'El nombre del proveedor es obligatorio';
-        const phoneRegex = /^\d{9}$/;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (formData.telefono && !phoneRegex.test(formData.telefono)) errors.telefono = 'El teléfono debe tener exactamente 9 dígitos';
-        if (formData.email && !emailRegex.test(formData.email)) errors.email = 'El formato del email no es válido';
-        if (Object.keys(errors).length > 0) { setFormErrors(errors); return; }
-        setFormErrors({});
-
-        const label = editingId ? 'Actualizando proveedor...' : 'Creando proveedor...';
-        await withLoading(async () => {
-            if (editingId) {
-                try {
-                    const { error } = await supabase.from('proveedores').update(formData).eq('id', editingId);
-                    if (error) throw error;
-                    toast.success('Proveedor actualizado correctamente');
-                    await logActivity({ action: 'update', entityType: 'proveedor', entityId: editingId, entityName: formData.nombre, details: { email: formData.email } });
-                    setShowForm(false); setFormErrors({}); setEditingId(null);
-                    setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
-                    fetchProveedores();
-                } catch (error: any) {
-                    toast.error('Error al actualizar: ' + error.message);
-                }
-            } else {
-                try {
-                    const { error } = await supabase.from('proveedores').insert([{ ...formData, activo: true }]).select();
-                    if (error) throw error;
-                    toast.success('Proveedor creado correctamente');
-                    await logActivity({ action: 'create', entityType: 'proveedor', entityName: formData.nombre, details: { email: formData.email } });
-                    setShowForm(false); setFormErrors({});
-                    setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
-                    fetchProveedores();
-                } catch (error: any) {
-                    toast.error('Error al crear: ' + (error.message || 'Error desconocido'));
-                }
-            }
-        }, label);
-    };
-
-    const handleDeleteClick = (id: number) => {
-        setDeleteId(id);
-        setShowDeleteModal(true);
-        setDeletePassword('');
-    };
-
-    const handleConfirmDelete = async ({ email, password }: any) => {
-        if (deleteId === null || !email || !password) return;
-
-        await withLoading(async () => {
-            setIsDeleting(true);
-            try {
-                const res = await fetch('/api/admin/universal-delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: deleteId, email, password, type: 'proveedor' })
-                });
-                const data = await res.json();
-                if (!res.ok) throw new Error(data.error || 'Error al eliminar');
-
-                toast.success('Proveedor eliminado correctamente');
-                const deleted = proveedores.find(p => p.id === deleteId);
-                setProveedores(proveedores.filter(p => p.id !== deleteId));
-                await logActivity({ action: 'delete', entityType: 'proveedor', entityId: deleteId, entityName: deleted?.nombre, details: { deleted_by_admin: email } });
-                setShowDeleteModal(false);
-                setDeleteId(null);
-            } catch (error: any) {
-                toast.error(error.message);
-            } finally {
-                setIsDeleting(false);
-            }
-        }, 'Eliminando proveedor...');
-    };
-
-    const toggleActive = async (id: number, currentStatus: boolean) => {
-        await withLoading(async () => {
-            try {
-                const { error } = await supabase.from('proveedores').update({ activo: !currentStatus }).eq('id', id);
-                if (error) throw error;
-                toast.success(currentStatus ? 'Proveedor desactivado' : 'Proveedor activado');
-                setProveedores(prev => prev.map(p => p.id === id ? { ...p, activo: !currentStatus } : p));
-                const proveedor = proveedores.find(p => p.id === id);
-                await logActivity({ action: 'toggle_active', entityType: 'proveedor', entityId: id, entityName: proveedor?.nombre, details: { activo: !currentStatus } });
-            } catch (error: any) {
-                toast.error('Error al actualizar estado');
-            }
-        }, currentStatus ? 'Desactivando proveedor...' : 'Activando proveedor...');
-    };
-
-    const handleEdit = (proveedor: Proveedor) => {
-        setEditingId(proveedor.id);
-        setFormData({
-            nombre: proveedor.nombre,
-            telefono: proveedor.telefono || '',
-            email: proveedor.email || '',
-            cif: proveedor.cif || '',
-            direccion: proveedor.direccion || '',
-            cp: proveedor.cp || '',
-            ciudad: proveedor.ciudad || '',
-            provincia: proveedor.provincia || ''
+        await crud.handleSubmit(crud.formData, () => {
+            const errors: Record<string, string> = {};
+            if (!crud.formData.nombre?.trim()) errors.nombre = 'El nombre del proveedor es obligatorio';
+            const phoneRegex = /^\d{9}$/;
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (crud.formData.telefono && !phoneRegex.test(crud.formData.telefono)) errors.telefono = 'El teléfono debe tener exactamente 9 dígitos';
+            if (crud.formData.email && !emailRegex.test(crud.formData.email)) errors.email = 'El formato del email no es válido';
+            return errors;
         });
-        setShowForm(true);
     };
+
+    const updateField = (field: keyof FormData, value: string) => {
+        crud.setFormData({ ...crud.formData, [field]: value });
+        crud.setFormErrors(prev => ({ ...prev, [field]: '' }));
+    };
+
+    const inputClass = (field?: string) =>
+        `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${field && crud.formErrors[field] ? 'border-red-400' : 'border-neutral-200'}`;
 
     const columns: Column<Proveedor>[] = [
         {
@@ -228,7 +93,7 @@ export default function ProveedoresPage() {
                     <Phone className="w-3.5 h-3.5 text-neutral-400" />
                     <span>{row.telefono || '-'}</span>
                 </div>
-            )
+            ),
         },
         {
             key: 'email',
@@ -238,204 +103,110 @@ export default function ProveedoresPage() {
                     <Mail className="w-3.5 h-3.5 text-neutral-400" />
                     <span>{row.email || '-'}</span>
                 </div>
-            )
+            ),
         },
-        {
-            key: 'cif',
-            label: 'CIF',
-        },
-        {
-            key: 'ciudad',
-            label: 'Ciudad',
-        },
+        { key: 'cif', label: 'CIF' },
+        { key: 'ciudad', label: 'Ciudad' },
         {
             key: 'activo',
             label: 'Estado',
             render: (row) => (
-                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${row.activo
-                    ? 'bg-yellow-400 text-neutral-950'
-                    : 'bg-neutral-900 text-white'
-                    }`}>
+                <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${row.activo ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-900 text-white'}`}>
                     {row.activo ? 'Activo' : 'Inactivo'}
                 </span>
             ),
         },
     ];
 
+    const readonlyClass = "w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900";
+
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-3">
-                <h1 className="text-xl font-bold text-neutral-900 min-w-0 truncate">Gestión de Proveedores</h1>
-                <button
-                    onClick={() => {
-                        setShowForm(!showForm);
-                        if (showForm) {
-                            setEditingId(null);
-                            setFormErrors({});
-                            setFormData({ nombre: '', telefono: '', email: '', cif: '', direccion: '', cp: '', ciudad: '', provincia: '' });
-                        }
-                    }}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-semibold text-sm shadow-sm flex-shrink-0"
-                >
-                    <Plus className="w-4 h-4 flex-shrink-0" />
-                    <span className="hidden sm:inline">{showForm ? 'Cancelar' : 'Nuevo Proveedor'}</span>
-                    <span className="sm:hidden">{showForm ? 'Cancelar' : 'Nuevo'}</span>
-                </button>
-            </div>
+            <PageHeader
+                title="Gestión de Proveedores"
+                showForm={crud.showForm}
+                onToggleForm={() => crud.showForm ? crud.closeForm() : crud.openNewForm()}
+                newButtonLabel="Nuevo Proveedor"
+                newButtonShortLabel="Nuevo"
+            />
 
-            <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-2">
-                <button
-                    onClick={() => setFilterEstado('activo')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'activo' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Activos
-                </button>
-                <button
-                    onClick={() => setFilterEstado('inactivo')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'inactivo' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Inactivos
-                </button>
-                <button
-                    onClick={() => setFilterEstado('all')}
-                    className={`px-3 py-1 rounded-full text-sm font-medium transition ${filterEstado === 'all' ? 'bg-neutral-900 text-white' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
-                >
-                    Todos
-                </button>
-            </div>
+            <FilterBar
+                value={crud.filterEstado}
+                onChange={(v) => crud.setFilterEstado(v as 'all' | 'activo' | 'inactivo')}
+            />
 
-            {portalReady && showForm && createPortal(
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6">
-                    <div
-                        className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Header */}
-                        <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white shrink-0">
-                            <div>
-                                <h2 className="text-xl font-black text-neutral-900 tracking-tight">
-                                    {editingId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
-                                </h2>
-                                <p className="text-xs text-neutral-500 mt-0.5">
-                                    {editingId ? 'Modifique los datos del proveedor' : 'Complete los datos para registrar un nuevo proveedor'}
-                                </p>
-                            </div>
-                            <button
-                                onClick={() => { setShowForm(false); setFormErrors({}); }}
-                                className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                        </div>
-
-                        {/* Body */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            <form id="proveedor-form" onSubmit={handleSubmit} className="space-y-6">
-
-                                {/* Sección: Identificación */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Identificación</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        <div className="lg:col-span-2">
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nombre / Razón Social <span className="text-red-500">*</span></label>
-                                            <input required type="text" placeholder="Servicios Integrales S.L." className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${formErrors.nombre ? 'border-red-400' : 'border-neutral-200'}`} value={formData.nombre} onChange={e => { setFormData({ ...formData, nombre: e.target.value }); setFormErrors(prev => ({ ...prev, nombre: '' })); }} />
-                                            {formErrors.nombre && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.nombre}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">CIF</label>
-                                            <input type="text" placeholder="B12345678" pattern="[A-Za-z0-9]{1,9}" maxLength={9} className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all uppercase" value={formData.cif} onChange={e => { const value = e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase(); setFormData({ ...formData, cif: value }); }} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sección: Contacto */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Contacto</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Teléfono</label>
-                                            <input type="tel" placeholder="600 000 000" className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${formErrors.telefono ? 'border-red-400' : 'border-neutral-200'}`} value={formData.telefono} onChange={e => { setFormData({ ...formData, telefono: e.target.value }); setFormErrors(prev => ({ ...prev, telefono: '' })); }} />
-                                            {formErrors.telefono && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.telefono}</p>}
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Email</label>
-                                            <input type="email" placeholder="admin@servicios.com" className={`w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${formErrors.email ? 'border-red-400' : 'border-neutral-200'}`} value={formData.email} onChange={e => { setFormData({ ...formData, email: e.target.value }); setFormErrors(prev => ({ ...prev, email: '' })); }} />
-                                            {formErrors.email && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.email}</p>}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Sección: Ubicación */}
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Ubicación</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                        <div className="lg:col-span-3">
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Dirección</label>
-                                            <input type="text" placeholder="Polígono Industrial Nave 4" className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all" value={formData.direccion} onChange={e => setFormData({ ...formData, direccion: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">CP</label>
-                                            <input type="text" placeholder="29001" className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all" value={formData.cp} onChange={e => setFormData({ ...formData, cp: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Ciudad</label>
-                                            <input type="text" placeholder="Málaga" className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all" value={formData.ciudad} onChange={e => setFormData({ ...formData, ciudad: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Provincia</label>
-                                            <input type="text" placeholder="Málaga" className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all" value={formData.provincia} onChange={e => setFormData({ ...formData, provincia: e.target.value })} />
-                                        </div>
-                                    </div>
-                                </div>
-
-                            </form>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-end gap-3 shrink-0 flex-wrap">
-                            <button
-                                type="button"
-                                onClick={() => { setShowForm(false); setFormErrors({}); }}
-                                className="px-6 py-3 text-sm font-bold text-neutral-600 hover:text-neutral-900 hover:bg-neutral-100 rounded-xl transition-all"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                form="proveedor-form"
-                                type="submit"
-                                className="px-8 py-3 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 hover:shadow-md hover:-translate-y-0.5"
-                            >
-                                <Plus className="w-4 h-4" />
-                                {editingId ? 'Guardar Cambios' : 'Crear Proveedor'}
-                            </button>
-                        </div>
+            <FormModal
+                isOpen={crud.showForm}
+                portalReady={crud.portalReady}
+                onClose={crud.closeForm}
+                onSubmit={handleFormSubmit}
+                title={crud.editingId ? 'Editar Proveedor' : 'Nuevo Proveedor'}
+                subtitle={crud.editingId ? 'Modifique los datos del proveedor' : 'Complete los datos para registrar un nuevo proveedor'}
+                editingId={crud.editingId}
+                submitLabel={crud.editingId ? 'Guardar Cambios' : 'Crear Proveedor'}
+                formId="proveedor-form"
+                maxWidth="max-w-4xl"
+            >
+                <FormSection title="Identificación">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FormField label="Nombre / Razón Social" required error={crud.formErrors.nombre} className="lg:col-span-2">
+                            <input required type="text" placeholder="Servicios Integrales S.L." className={inputClass('nombre')} value={crud.formData.nombre} onChange={e => updateField('nombre', e.target.value)} />
+                        </FormField>
+                        <FormField label="CIF">
+                            <input type="text" placeholder="B12345678" pattern="[A-Za-z0-9]{1,9}" maxLength={9} className={`${inputClass()} uppercase`} value={crud.formData.cif} onChange={e => updateField('cif', e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase())} />
+                        </FormField>
                     </div>
-                </div>
-            , document.body)}
+                </FormSection>
+
+                <FormSection title="Contacto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <FormField label="Teléfono" error={crud.formErrors.telefono}>
+                            <input type="tel" placeholder="600 000 000" className={inputClass('telefono')} value={crud.formData.telefono} onChange={e => updateField('telefono', e.target.value)} />
+                        </FormField>
+                        <FormField label="Email" error={crud.formErrors.email}>
+                            <input type="email" placeholder="admin@servicios.com" className={inputClass('email')} value={crud.formData.email} onChange={e => updateField('email', e.target.value)} />
+                        </FormField>
+                    </div>
+                </FormSection>
+
+                <FormSection title="Ubicación">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <FormField label="Dirección" className="lg:col-span-3">
+                            <input type="text" placeholder="Polígono Industrial Nave 4" className={inputClass()} value={crud.formData.direccion} onChange={e => updateField('direccion', e.target.value)} />
+                        </FormField>
+                        <FormField label="CP">
+                            <input type="text" placeholder="29001" className={inputClass()} value={crud.formData.cp} onChange={e => updateField('cp', e.target.value)} />
+                        </FormField>
+                        <FormField label="Ciudad">
+                            <input type="text" placeholder="Málaga" className={inputClass()} value={crud.formData.ciudad} onChange={e => updateField('ciudad', e.target.value)} />
+                        </FormField>
+                        <FormField label="Provincia">
+                            <input type="text" placeholder="Málaga" className={inputClass()} value={crud.formData.provincia} onChange={e => updateField('provincia', e.target.value)} />
+                        </FormField>
+                    </div>
+                </FormSection>
+            </FormModal>
 
             <DataTable
-                data={filteredProveedores}
+                data={crud.filteredData}
                 columns={columns}
                 keyExtractor={(row) => row.id}
                 storageKey="proveedores"
-                loading={loading}
+                loading={crud.loading}
                 emptyMessage="No hay proveedores registrados"
-                onRowClick={(row) => {
-                    setSelectedDetailProveedor(row);
-                    setShowDetailModal(true);
-                }}
+                onRowClick={(row) => crud.openDetail(row)}
                 rowActions={(row) => [
-                    { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: (r) => handleEdit(r) },
+                    { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: (r) => crud.handleEdit(r) },
                     {
                         label: row.activo ? 'Desactivar' : 'Activar',
                         icon: row.activo ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />,
-                        onClick: (r) => toggleActive(r.id, r.activo),
+                        onClick: (r) => crud.toggleActive(r.id, r.activo),
                         variant: row.activo ? 'warning' : 'success',
                     },
                     {
                         label: 'Eliminar',
                         icon: <Trash2 className="w-4 h-4" />,
-                        onClick: (r) => handleDeleteClick(r.id),
+                        onClick: (r) => crud.handleDeleteClick(r.id),
                         variant: 'danger',
                         separator: true,
                     },
@@ -443,117 +214,96 @@ export default function ProveedoresPage() {
             />
 
             {/* Detail Modal */}
-            {portalReady && showDetailModal && selectedDetailProveedor && createPortal(
-                <div
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
-                >
+            {crud.portalReady && crud.showDetailModal && crud.selectedDetail && createPortal(
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6">
                     <div
                         className="bg-white w-full max-w-3xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header */}
                         <div className="px-6 py-4 border-b border-neutral-100 flex items-center justify-between bg-white shrink-0">
                             <div>
-                                <h2 className="text-xl font-black text-neutral-900 tracking-tight">
-                                    {selectedDetailProveedor.nombre}
-                                </h2>
+                                <h2 className="text-xl font-black text-neutral-900 tracking-tight">{crud.selectedDetail.nombre}</h2>
                                 <p className="text-xs text-neutral-500 mt-0.5">
-                                    {selectedDetailProveedor.activo ? 'Proveedor activo' : 'Proveedor inactivo'} · Ref #{selectedDetailProveedor.id}
+                                    {crud.selectedDetail.activo ? 'Proveedor activo' : 'Proveedor inactivo'} · Ref #{crud.selectedDetail.id}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
-                            >
+                            <button onClick={crud.closeDetail} className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        {/* Body */}
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-
-                            {/* Identificación */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Identificación</h3>
+                            <FormSection title="Identificación">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="lg:col-span-2">
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nombre / Razón Social</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.nombre}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.nombre}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">CIF</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.cif || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.cif || '—'}</div>
                                     </div>
                                 </div>
-                            </div>
+                            </FormSection>
 
-                            {/* Contacto */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Contacto</h3>
+                            <FormSection title="Contacto">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Teléfono</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.telefono || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.telefono || '—'}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Email</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.email || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.email || '—'}</div>
                                     </div>
                                 </div>
-                            </div>
+                            </FormSection>
 
-                            {/* Ubicación */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Ubicación</h3>
+                            <FormSection title="Ubicación">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     <div className="lg:col-span-3">
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Dirección</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.direccion || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.direccion || '—'}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">CP</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.cp || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.cp || '—'}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Ciudad</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.ciudad || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.ciudad || '—'}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Provincia</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedDetailProveedor.provincia || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.provincia || '—'}</div>
                                     </div>
                                 </div>
-                            </div>
-
+                            </FormSection>
                         </div>
 
-                        {/* Footer */}
                         <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
                             <ModalActionsMenu actions={[
-                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailProveedor.id); setShowDetailModal(false); }, variant: 'danger' },
-                                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => { handleEdit(selectedDetailProveedor); setShowDetailModal(false); } },
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { crud.handleDeleteClick(crud.selectedDetail!.id); crud.closeDetail(); }, variant: 'danger' },
+                                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => { crud.handleEdit(crud.selectedDetail!); crud.closeDetail(); } },
                             ]} />
                             <button
-                                onClick={() => { toggleActive(selectedDetailProveedor.id, selectedDetailProveedor.activo); setSelectedDetailProveedor({ ...selectedDetailProveedor, activo: !selectedDetailProveedor.activo }); }}
+                                onClick={() => { crud.toggleActive(crud.selectedDetail!.id, crud.selectedDetail!.activo); crud.setSelectedDetail({ ...crud.selectedDetail!, activo: !crud.selectedDetail!.activo }); }}
                                 className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                             >
-                                {selectedDetailProveedor.activo ? <><X className="w-4 h-4" /><span className="hidden sm:inline">Des</span>activar</> : <><Plus className="w-4 h-4" /> Activar</>}
+                                {crud.selectedDetail.activo ? <><X className="w-4 h-4" /><span className="hidden sm:inline">Des</span>activar</> : <><Plus className="w-4 h-4" /> Activar</>}
                             </button>
                         </div>
                     </div>
-                </div>
-            , document.body)}
+                </div>,
+                document.body
+            )}
 
-            {/* Delete Confirmation Modal */}
             <DeleteConfirmationModal
-                isOpen={showDeleteModal}
-                onClose={() => {
-                    setShowDeleteModal(false);
-                    setDeleteId(null);
-                }}
-                onConfirm={handleConfirmDelete}
+                isOpen={crud.showDeleteModal}
+                onClose={() => { crud.setShowDeleteModal(false); }}
+                onConfirm={crud.handleConfirmDelete}
                 itemType="proveedor"
-                isDeleting={isDeleting}
+                isDeleting={crud.isDeleting}
             />
         </div>
     );
