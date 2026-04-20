@@ -196,7 +196,7 @@ export default function SuplidosForm({ onSuccess, onCancel }: { onSuccess?: () =
 
             if (label === "Número de Cartas" || label === "Copias") {
                 next["Imprimir B/N"] = totalCopias;
-                next["Etiqueta manipulación"] = totalCopias;
+                next["Etiqueta manipulación"] = numCartas;
             }
             return { ...next, ...compute(next) };
         });
