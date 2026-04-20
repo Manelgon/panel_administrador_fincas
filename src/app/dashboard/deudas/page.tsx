@@ -952,6 +952,19 @@ export default function MorosidadPage() {
                                                 disabled={isSubmitting}
                                             />
                                         </div>
+                                        <div className="md:col-span-4">
+                                            <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-2 block">
+                                                Observaciones
+                                            </label>
+                                            <textarea
+                                                placeholder="Notas adicionales sobre la deuda..."
+                                                rows={3}
+                                                className="w-full bg-white border border-neutral-200 text-neutral-900 text-sm rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-amber-400/20 focus:border-amber-400 transition-all placeholder:text-neutral-400 resize-none"
+                                                value={formData.observaciones}
+                                                onChange={e => setFormData({ ...formData, observaciones: e.target.value })}
+                                                disabled={isSubmitting}
+                                            />
+                                        </div>
                                     </div>
                                 </FormSection>
 
