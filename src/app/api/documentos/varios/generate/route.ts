@@ -545,13 +545,32 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     const comunidad = safe(payload["nombre_comunidad"] ?? payload["cliente"] ?? "________________");
     const cliente = safe(payload["nombre_apellidos"] ?? payload["cliente"] ?? "________________");
-    const tipoInmueble = safe(payload["tipo_inmueble"] || "inmueble");
+
+    const tiposArr: string[] = Array.isArray(payload["tipos_inmueble"])
+        ? payload["tipos_inmueble"].map((t: any) => safe(t)).filter(Boolean)
+        : safe(payload["tipo_inmueble"]).split(",").map(t => t.trim()).filter(Boolean);
+    const joinTipos = (arr: string[]) => {
+        if (arr.length === 0) return "inmueble";
+        if (arr.length === 1) return arr[0];
+        return arr.slice(0, -1).join(", ") + " y " + arr[arr.length - 1];
+    };
+    const tiposTexto = joinTipos(tiposArr);
+    const tipoPrincipal = tiposArr[0] || "inmueble";
 
     const nif = safe(payload["nif"] ?? "");
     const domicilio = safe(payload["domicilio"] ?? "");
+    const bloque = safe(payload["bloque"] ?? "");
+    const planta = safe(payload["planta"] ?? "");
+    const puerta = safe(payload["puerta"] ?? "");
     const cp = safe(payload["cp"] ?? "");
     const ciudad = safe(payload["ciudad"] ?? payload["Ciudad"] ?? "");
     const fecha = formatDateEU(payload["fecha_emision"]);
+
+    const ubicacionExtra = [
+        bloque ? `bloque ${bloque}` : "",
+        planta ? `planta ${planta}` : "",
+        puerta ? `puerta ${puerta}` : "",
+    ].filter(Boolean).join(", ");
 
     const p1 =
         `${adminName}, Administrador de Fincas colegiado en el Ilustre Colegio Territorial de ` +
@@ -560,9 +579,10 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     const p2 =
         `Que, consultados los libros contables de la mencionada comunidad de propietarios, D./Dª ${cliente}, ` +
-        `con DNI/NIF ${nif}, figura como propietario/a del ${tipoInmueble} situado en ${domicilio}, ` +
-        `código postal ${cp}, en la ciudad de ${ciudad}, certifico, en base al art. 9.1 e) de la Ley 49/1960, ` +
-        `de 21 de Julio, de Propiedad Horizontal, que el ${tipoInmueble} se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
+        `con DNI/NIF ${nif}, figura como propietario/a del ${tiposTexto} situado en ${domicilio}` +
+        `${ubicacionExtra ? `, ${ubicacionExtra}` : ""}, código postal ${cp}, en la ciudad de ${ciudad}, ` +
+        `certifico, en base al art. 9.1 e) de la Ley 49/1960, de 21 de Julio, de Propiedad Horizontal, ` +
+        `que el ${tipoPrincipal} se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
         `o extraordinarios de cuotas de comunidad, salvo devolución bancaria en plazo excepcional.`;
 
     // 4) Render texto con cursor y wrap, respetando footer safe
@@ -842,6 +862,6 @@ export async function POST(req: Request) {
 
     } catch (e: any) {
         console.error("Error generating Varios PDF:", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

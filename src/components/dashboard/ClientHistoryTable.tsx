@@ -213,15 +213,15 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             const res = await fetch(`/api/documentos/${downloadType}/signed-url?id=${doc.id}`);
             const data = await res.json();
 
-            if (!res.ok) {
+            if (!res.ok || !data.url) {
                 throw new Error(data.error || "Error obteniendo URL de descarga");
             }
 
+            const filename = (data.pdfPath || "documento.pdf").split("/").pop() || "documento.pdf";
             const link = document.createElement("a");
             link.href = data.url;
-            link.target = "_blank";
-            link.rel = "noopener noreferrer";
-            link.download = "";
+            link.download = filename;
+            link.rel = "noopener";
             document.body.appendChild(link);
             link.click();
             link.remove();
