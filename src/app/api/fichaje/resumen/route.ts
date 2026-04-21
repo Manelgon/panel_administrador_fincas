@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
     if (entriesError) {
         console.error("Error fetching entries:", entriesError);
-        return NextResponse.json({ error: entriesError.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 
     // 3. Construct Response

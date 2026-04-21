@@ -247,11 +247,10 @@ export async function POST(req: Request) {
             reportId: reportRecord.id
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("PDF generation error:", error);
         return NextResponse.json({
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            error: 'Error interno del servidor'
         }, { status: 500 });
     }
 }

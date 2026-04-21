@@ -80,7 +80,7 @@ export async function POST(request: Request) {
         );
 
         if (authError) {
-            return NextResponse.json({ error: 'Auth Update Failed: ' + authError.message }, { status: 400 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // 4. Update Profile in Database
@@ -99,13 +99,13 @@ export async function POST(request: Request) {
             .eq('user_id', userId);
 
         if (profileError) {
-            return NextResponse.json({ error: 'Profile Update Failed: ' + profileError.message }, { status: 400 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         return NextResponse.json({ success: true });
 
     } catch (error: any) {
         console.error('API Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error: ' + error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

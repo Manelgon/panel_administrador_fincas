@@ -17,12 +17,12 @@ export async function POST(req: Request) {
 
         if (error) {
             console.error("Supabase Storage Error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         return NextResponse.json({ success: true, message: "Archivo movido correctamente" });
     } catch (error: any) {
         console.error("Error moving file:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

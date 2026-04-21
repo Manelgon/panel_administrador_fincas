@@ -38,7 +38,7 @@ export async function POST(req: Request) {
 
         if (error) {
             console.error("Supabase Storage Error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // Return internal proxy URL for secure viewing
@@ -51,6 +51,6 @@ export async function POST(req: Request) {
         });
     } catch (error: any) {
         console.error("Error uploading file:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

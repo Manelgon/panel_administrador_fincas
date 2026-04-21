@@ -23,6 +23,9 @@ export async function POST() {
         });
     }
 
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    if (error) {
+        console.error('[notifications/read-all]', error.message);
+        return NextResponse.json({ ok: false, error: 'No se pudieron marcar como leídas' }, { status: 400 });
+    }
     return NextResponse.json({ ok: true });
 }

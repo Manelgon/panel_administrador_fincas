@@ -14,6 +14,9 @@ export async function POST(req: Request) {
         .eq("id", id)
         .eq("user_id", user.id);
 
-    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    if (error) {
+        console.error('[notifications/read]', error.message);
+        return NextResponse.json({ ok: false, error: 'No se pudo marcar como leída' }, { status: 400 });
+    }
     return NextResponse.json({ ok: true });
 }

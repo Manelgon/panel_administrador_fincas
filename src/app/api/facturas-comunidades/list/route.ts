@@ -20,7 +20,7 @@ export async function GET(req: Request) {
 
         if (error) {
             console.error("Supabase Storage Error:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // For folders, we want to count PDFs recursively for each
@@ -64,6 +64,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ items: itemsWithCounts });
     } catch (error: any) {
         console.error("Error listing bucket contents:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

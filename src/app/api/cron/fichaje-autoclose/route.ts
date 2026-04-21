@@ -15,7 +15,7 @@ export async function GET(request: Request) {
 
         if (error) {
             console.error('Error in auto_close_stale_sessions:', error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         const sessions = closedSessions || [];
@@ -74,6 +74,6 @@ export async function GET(request: Request) {
         });
     } catch (err: any) {
         console.error('Cron error:', err);
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

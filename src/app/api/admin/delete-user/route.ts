@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
         if (deleteError) {
-            return NextResponse.json({ error: deleteError.message }, { status: 400 });
+            return NextResponse.json({ error: "Error en la operación" }, { status: 400 });
         }
 
         return NextResponse.json({ success: true });

@@ -222,7 +222,7 @@ export async function POST(request: Request) {
 
         if (deleteError) {
             console.error('[universal-delete] Delete error:', deleteError);
-            return NextResponse.json({ error: 'Error al eliminar: ' + deleteError.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // 5. Log activity
@@ -245,6 +245,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('[universal-delete] API error:', error);
-        return NextResponse.json({ error: error.message || 'Error interno del servidor' }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

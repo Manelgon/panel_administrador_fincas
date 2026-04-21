@@ -22,7 +22,7 @@ export async function POST(req: Request) {
         .in('id', ids)
         .order('created_at', { ascending: false });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     if (!activities || activities.length === 0) return NextResponse.json({ error: "No data found" }, { status: 404 });
 
     const now = new Date();
@@ -102,6 +102,6 @@ export async function POST(req: Request) {
 
     } catch (e: any) {
         console.error("Export Error", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }
