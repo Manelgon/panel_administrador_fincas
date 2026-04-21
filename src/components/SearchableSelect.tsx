@@ -38,13 +38,19 @@ export default function SearchableSelect({
 
     const selectedOption = options.find((opt) => String(opt.value) === String(value));
 
-    // Position dropdown using wrapper rect
+    // Position dropdown using wrapper rect (opens up if not enough space below)
     const updatePosition = () => {
         if (!wrapperRef.current) return;
         const rect = wrapperRef.current.getBoundingClientRect();
+        const dropdownMaxHeight = 320; // max-h-80 = 20rem = 320px
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const openUpward = spaceBelow < dropdownMaxHeight && rect.top > spaceBelow;
+
         setDropdownStyle({
             position: "fixed",
-            top: rect.bottom + 4,
+            ...(openUpward
+                ? { bottom: window.innerHeight - rect.top + 4 }
+                : { top: rect.bottom + 4 }),
             left: rect.left,
             width: rect.width,
             zIndex: 99999,
