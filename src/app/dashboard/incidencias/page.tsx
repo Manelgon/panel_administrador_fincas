@@ -54,11 +54,14 @@ export default function IncidenciasPage() {
     const [exporting, setExporting] = useState(false);
 
     const [profiles, setProfiles] = useState<Profile[]>([]);
+    const [proveedores, setProveedores] = useState<{ id: number; nombre: string; telefono: string | null; email: string | null }[]>([]);
     const [files, setFiles] = useState<File[]>([]);
     const [uploading, setUploading] = useState(false);
     const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
     const [notifEmail, setNotifEmail] = useState(false);
     const [notifWhatsapp, setNotifWhatsapp] = useState(false);
+    const [notifProveedorWhatsapp, setNotifProveedorWhatsapp] = useState(false);
+    const [notifProveedorEmail, setNotifProveedorEmail] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -72,6 +75,8 @@ export default function IncidenciasPage() {
         setEnviarAviso(null);
         setNotifEmail(false);
         setNotifWhatsapp(false);
+        setNotifProveedorWhatsapp(false);
+        setNotifProveedorEmail(false);
         setFormErrors({});
     };
 
@@ -177,8 +182,13 @@ export default function IncidenciasPage() {
 
     const fetchInitialData = async () => {
         setLoading(true);
-        await Promise.all([fetchComunidades(), fetchIncidencias(), fetchProfiles()]);
+        await Promise.all([fetchComunidades(), fetchIncidencias(), fetchProfiles(), fetchProveedores()]);
         setLoading(false);
+    };
+
+    const fetchProveedores = async () => {
+        const { data } = await supabase.from('proveedores').select('id, nombre, telefono, email').eq('activo', true).order('nombre');
+        if (data) setProveedores(data);
     };
 
     const fetchProfiles = async () => {
@@ -289,7 +299,8 @@ export default function IncidenciasPage() {
                 comunidades (nombre_cdad, codigo),
                 receptor:profiles!quien_lo_recibe (nombre),
                 gestor:profiles!gestor_asignado (nombre),
-                resolver:profiles!resuelto_por (nombre)
+                resolver:profiles!resuelto_por (nombre),
+                proveedor:proveedores!proveedor_id (nombre)
             `)
             .order('created_at', { ascending: false })
             .limit(5000);
@@ -354,7 +365,7 @@ export default function IncidenciasPage() {
             mensaje: incidencia.mensaje || '',
             recibido_por: incidencia.quien_lo_recibe || '',
             gestor_asignado: incidencia.gestor_asignado || '',
-            proveedor: '',
+            proveedor: incidencia.proveedor_id ? String(incidencia.proveedor_id) : '',
             source: incidencia.source || '',
             fecha_registro: incidencia.created_at ? new Date(incidencia.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
         });
@@ -410,6 +421,7 @@ export default function IncidenciasPage() {
                     mensaje: formData.mensaje,
                     quien_lo_recibe: formData.recibido_por || null,
                     gestor_asignado: formData.gestor_asignado || null,
+                    proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
                     source: formData.source || null,
                 };
 
@@ -463,6 +475,8 @@ export default function IncidenciasPage() {
                     // @ts-ignore
                     gestor_asignado: formData.gestor_asignado || null,
                     aviso: (!notifEmail && !notifWhatsapp) ? 0 : (notifWhatsapp && !notifEmail) ? 1 : (!notifWhatsapp && notifEmail) ? 2 : 3,
+                    proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
+                    aviso_proveedor: (!notifProveedorEmail && !notifProveedorWhatsapp) ? 0 : (notifProveedorWhatsapp && !notifProveedorEmail) ? 1 : (!notifProveedorWhatsapp && notifProveedorEmail) ? 2 : 3,
                     source: formData.source || null,
                     ...(formData.fecha_registro ? { created_at: new Date(formData.fecha_registro).toISOString() } : {})
                 }]).select();
@@ -511,6 +525,8 @@ export default function IncidenciasPage() {
             setEnviarAviso(null);
             setNotifEmail(false);
             setNotifWhatsapp(false);
+            setNotifProveedorWhatsapp(false);
+            setNotifProveedorEmail(false);
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
@@ -1240,6 +1256,37 @@ export default function IncidenciasPage() {
             },
         },
         {
+            key: 'proveedor_id',
+            label: 'Proveedor',
+            render: (row) => {
+                const nombre = (row as any).proveedor?.nombre;
+                return nombre || '-';
+            },
+        },
+        {
+            key: 'aviso_proveedor',
+            label: 'Aviso Prov.',
+            render: (row) => {
+                const v = Number(row.aviso_proveedor);
+                const labels: Record<number, { text: string; cls: string }> = {
+                    0: { text: 'Sin aviso', cls: 'bg-neutral-100 text-neutral-500' },
+                    1: { text: 'WhatsApp', cls: 'bg-green-100 text-green-700' },
+                    2: { text: 'Email', cls: 'bg-blue-100 text-blue-700' },
+                    3: { text: 'Ambos', cls: 'bg-indigo-100 text-indigo-700' },
+                };
+                const label = labels[v];
+                if (!row.proveedor_id) return <span className="text-neutral-400">-</span>;
+                return (
+                    <div className="flex justify-center">
+                        {label
+                            ? <span className={`${label.cls} px-2 py-0.5 rounded-full text-[10px] font-bold`}>{label.text}</span>
+                            : <span className="text-neutral-400">-</span>
+                        }
+                    </div>
+                );
+            },
+        },
+        {
             key: 'categoria',
             label: 'Categoría',
         },
@@ -1319,6 +1366,7 @@ export default function IncidenciasPage() {
                     setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10) });
                     setIsManualDate(false);
                     setEnviarAviso(null);
+                    setNotifProveedorWhatsapp(false);
                     setFiles([]);
                     setFormErrors({});
                     setShowForm(!showForm);
@@ -1710,19 +1758,90 @@ export default function IncidenciasPage() {
                                 {/* Section: Proveedor */}
                                 <div>
                                     <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Proveedor</h3>
+                                    <div className="flex flex-col gap-3">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                Seleccionar Proveedor
+                                            </label>
+                                            <SearchableSelect
+                                                value={formData.proveedor ? Number(formData.proveedor) : ''}
+                                                onChange={(val) => {
+                                                    setFormData({ ...formData, proveedor: val ? String(val) : '' });
+                                                    if (!val) { setNotifProveedorWhatsapp(false); setNotifProveedorEmail(false); }
+                                                }}
+                                                options={proveedores.map(p => ({
+                                                    value: p.id,
+                                                    label: p.nombre
+                                                }))}
+                                                placeholder="Buscar proveedor..."
+                                            />
+                                        </div>
 
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
-                                            Enviar email a Proveedor
-                                        </label>
-                                        <select
-                                            disabled
-                                            className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-400 outline-none cursor-not-allowed"
-                                            value={formData.proveedor}
-                                            onChange={e => setFormData({ ...formData, proveedor: e.target.value })}
-                                        >
-                                            <option value="">Próximamente disponible...</option>
-                                        </select>
+                                        {formData.proveedor && (() => {
+                                            const selectedProv = proveedores.find(p => p.id === parseInt(formData.proveedor));
+                                            return (
+                                                <>
+                                                    <div className="bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
+                                                        <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                                            Notificar al proveedor
+                                                        </label>
+                                                        <div className="flex flex-col sm:flex-row gap-3">
+                                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={notifProveedorEmail}
+                                                                    onChange={e => setNotifProveedorEmail(e.target.checked)}
+                                                                    disabled={!selectedProv?.email}
+                                                                    className="w-4 h-4 rounded accent-yellow-400"
+                                                                />
+                                                                <span className={`text-xs font-semibold ${selectedProv?.email ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por Email</span>
+                                                            </label>
+                                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={notifProveedorWhatsapp}
+                                                                    onChange={e => setNotifProveedorWhatsapp(e.target.checked)}
+                                                                    disabled={!selectedProv?.telefono}
+                                                                    className="w-4 h-4 rounded accent-yellow-400"
+                                                                />
+                                                                <span className={`text-xs font-semibold ${selectedProv?.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
+                                                            </label>
+                                                        </div>
+                                                        <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al proveedor.</p>
+                                                    </div>
+                                                    {notifProveedorEmail && (
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                                Email del proveedor
+                                                            </label>
+                                                            {selectedProv?.email ? (
+                                                                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                                    <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{selectedProv.email}</span>
+                                                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del proveedor</span>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[10px] text-amber-500 font-medium">Este proveedor no tiene email registrado. Añádelo en la sección Proveedores.</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {notifProveedorWhatsapp && (
+                                                        <div>
+                                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                                Teléfono del proveedor
+                                                            </label>
+                                                            {selectedProv?.telefono ? (
+                                                                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-200 rounded-xl cursor-not-allowed">
+                                                                    <span className="text-sm text-neutral-500 font-medium flex-1 select-none">{selectedProv.telefono}</span>
+                                                                    <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest shrink-0">Del proveedor</span>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-[10px] text-amber-500 font-medium">Este proveedor no tiene teléfono registrado. Añádelo en la sección Proveedores.</p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
                             </form>
@@ -2076,6 +2195,29 @@ export default function IncidenciasPage() {
                                                 </button>
                                             </div>
                                         )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Proveedor</label>
+                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">
+                                            {(selectedDetailIncidencia as any).proveedor?.nombre || '—'}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Aviso Proveedor</label>
+                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">
+                                            {(() => {
+                                                if (!selectedDetailIncidencia.proveedor_id) return '—';
+                                                const v = Number(selectedDetailIncidencia.aviso_proveedor);
+                                                const labels: Record<number, { label: string; cls: string }> = {
+                                                    0: { label: 'Sin aviso', cls: 'bg-neutral-100 text-neutral-500' },
+                                                    1: { label: 'WhatsApp', cls: 'bg-green-100 text-green-700' },
+                                                    2: { label: 'Email', cls: 'bg-blue-100 text-blue-700' },
+                                                    3: { label: 'Email + WhatsApp', cls: 'bg-indigo-100 text-indigo-700' },
+                                                };
+                                                const entry = labels[v] ?? labels[0];
+                                                return <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${entry.cls}`}>{entry.label}</span>;
+                                            })()}
+                                        </div>
                                     </div>
                                     <div className="sm:col-span-2 lg:col-span-3">
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Motivo del ticket</label>

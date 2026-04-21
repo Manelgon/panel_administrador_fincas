@@ -88,7 +88,9 @@ create table if not exists public.incidencias (
   estado text default 'Pendiente' check (estado in ('Pendiente','Resuelto','Aplazado','Cancelado')),
   fecha_recordatorio timestamptz,
   source text check (source in ('Llamada','Presencial','Email','Whatsapp','App 360','Acuerdo Junta')),
-  motivo_ticket text
+  motivo_ticket text,
+  proveedor_id integer references public.proveedores(id) default null,
+  aviso_proveedor text default null
 );
 
 create index if not exists incidencias_comunidad_idx on public.incidencias(comunidad_id);
