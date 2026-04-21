@@ -85,6 +85,9 @@ export async function POST(req: Request) {
 
             const webhookRes = await fetch(webhookUrl, {
                 method: "POST",
+                headers: {
+                    Envio_documentacion_Panel_serincosol: process.env.N8N_WEBHOOK_SECRET || "",
+                },
                 body: formData,
             });
 
@@ -102,7 +105,7 @@ export async function POST(req: Request) {
 
     } catch (e: any) {
         console.error("Send Error:", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }
 
