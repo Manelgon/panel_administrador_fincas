@@ -8,14 +8,14 @@ import { toast } from 'react-hot-toast';
 import SearchableSelect from '@/components/SearchableSelect';
 import { logActivity } from '@/lib/logActivity';
 import { useGlobalLoading } from '@/lib/globalLoading';
-import { ComunidadOption } from '@/lib/schemas';
+import { ComunidadOption, Reunion } from '@/lib/schemas';
 
 interface Props {
     show: boolean;
     editingId: number | null;
     comunidades: ComunidadOption[];
     onClose: () => void;
-    onSaved: () => void;
+    onSaved: (confirmedReunion?: Reunion) => void;
 }
 
 const DOCS_FIELDS: { key: string; label: string }[] = [
@@ -142,6 +142,39 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                 notas: formData.notas || null,
             };
 
+            const comunidadMeta = comunidades.find(c => String(c.id) === formData.comunidad_id);
+            const comunidadNombre = comunidadMeta
+                ? (comunidadMeta.codigo ? `${comunidadMeta.codigo} - ${comunidadMeta.nombre_cdad}` : comunidadMeta.nombre_cdad)
+                : '';
+
+            const buildReunionResult = (id: number): Reunion => ({
+                id,
+                comunidad_id: payload.comunidad_id,
+                comunidad: comunidadNombre,
+                codigo: comunidadMeta?.codigo,
+                fecha_reunion: payload.fecha_reunion,
+                tipo: payload.tipo as Reunion['tipo'],
+                confirmada: payload.confirmada,
+                estado_cuentas: payload.estado_cuentas,
+                pto_ordinario: payload.pto_ordinario,
+                informe_incidencias: payload.informe_incidencias,
+                morosos: payload.morosos,
+                citacion_email: payload.citacion_email,
+                citacion_carta: payload.citacion_carta,
+                borrador_acta: payload.borrador_acta,
+                redactar_acta: payload.redactar_acta,
+                vb_pendiente: payload.vb_pendiente,
+                imprimir_acta: payload.imprimir_acta,
+                acta_email: payload.acta_email,
+                acta_carta: payload.acta_carta,
+                pasar_acuerdos: payload.pasar_acuerdos,
+                enviado: false,
+                resuelto: false,
+                notas: payload.notas || undefined,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+
             if (editingId) {
                 const { error } = await supabase.from('reuniones').update(payload).eq('id', editingId);
                 if (error) {
@@ -149,19 +182,23 @@ export default function ReunionFormModal({ show, editingId, comunidades, onClose
                 } else {
                     toast.success('Reunión actualizada');
                     await logActivity({ action: 'update', entityType: 'reunion', entityId: editingId, entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
-                    onSaved();
+                    onSaved(payload.confirmada ? buildReunionResult(editingId) : undefined);
                     onClose();
                 }
             } else {
                 const { data: { user } } = await supabase.auth.getUser();
-                const { error } = await supabase.from('reuniones').insert([{ ...payload, created_by: user?.id }]);
-                if (error) {
+                const { data: inserted, error } = await supabase
+                    .from('reuniones')
+                    .insert([{ ...payload, created_by: user?.id }])
+                    .select('id')
+                    .single();
+                if (error || !inserted) {
                     console.error('Error creando reunión:', error);
-                    toast.error(`Error al crear la reunión: ${error.message}`);
+                    toast.error(`Error al crear la reunión: ${error?.message ?? 'desconocido'}`);
                 } else {
                     toast.success('Reunión creada');
-                    await logActivity({ action: 'create', entityType: 'reunion', entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
-                    onSaved();
+                    await logActivity({ action: 'create', entityType: 'reunion', entityId: inserted.id, entityName: `${payload.tipo} - ${payload.fecha_reunion}` });
+                    onSaved(payload.confirmada ? buildReunionResult(inserted.id) : undefined);
                     onClose();
                 }
             }
