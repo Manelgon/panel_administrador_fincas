@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus, Trash2, CheckCircle2, Loader2, Ticket } from 'lucide-react';
+import { X, CheckCircle2, Loader2, Ticket } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { logActivity } from '@/lib/logActivity';
@@ -10,14 +10,15 @@ import { Reunion, Profile } from '@/lib/schemas';
 import SearchableSelect from '@/components/SearchableSelect';
 
 const TICKET_TYPES = [
-    { value: 'Estado de cuentas',               label: '1 · Estado de cuentas' },
-    { value: 'Informe incidencias',              label: '2 · Informe incidencias' },
-    { value: 'Listado asistentes y etiquetas',   label: '3 · Listado asistentes y etiquetas' },
-    { value: 'Portadas convocatoria y acta',     label: '4 · Portadas convocatoria y acta' },
-    { value: 'Listado morosidad',                label: '5 · Listado morosidad' },
+    { value: 'Estado de cuentas',            label: '1 · Estado de cuentas',            kind: 'gestor' as const },
+    { value: 'Informe incidencias',          label: '2 · Informe incidencias',          kind: 'gestor' as const },
+    { value: 'Listado asistentes',           label: '3 · Listado asistentes',           kind: 'gestor' as const },
+    { value: 'Etiquetas',                    label: '4 · Etiquetas',                    kind: 'gestor' as const },
+    { value: 'Listado morosidad',            label: '5 · Listado morosidad',            kind: 'gestor' as const },
+    { value: 'Portadas convocatoria y acta', label: '6 · Portadas convocatoria y acta', kind: 'check'  as const },
 ];
 
-interface TicketRow { id: number; tipo: string; gestor_id: string; }
+interface TicketRow { id: number; tipo: string; gestor_id: string; portada: 'si' | 'no' | null; }
 
 interface Props {
     reunion: Reunion;
@@ -25,10 +26,10 @@ interface Props {
     onConfirmed: () => void;
 }
 
-let nextId = 1;
-
 export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfirmed }: Props) {
-    const [tickets, setTickets] = useState<TicketRow[]>([{ id: nextId++, tipo: '', gestor_id: '' }]);
+    const [tickets, setTickets] = useState<TicketRow[]>(
+        TICKET_TYPES.map((t, idx) => ({ id: idx + 1, tipo: t.value, gestor_id: '', portada: null }))
+    );
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -43,9 +44,7 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
             });
     }, []);
 
-    const addTicket = () => setTickets(prev => [...prev, { id: nextId++, tipo: '', gestor_id: '' }]);
-    const removeTicket = (id: number) => setTickets(prev => prev.filter(t => t.id !== id));
-    const updateTicket = (id: number, field: keyof Omit<TicketRow, 'id'>, value: string) =>
+    const updateTicket = <K extends keyof Omit<TicketRow, 'id'>>(id: number, field: K, value: TicketRow[K]) =>
         setTickets(prev => prev.map(t => t.id === id ? { ...t, [field]: value } : t));
 
     const fechaDisplay = reunion.fecha_reunion
@@ -71,7 +70,12 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
             });
 
             if (crearTickets) {
-                const validTickets = tickets.filter(t => t.tipo);
+                const validTickets = tickets.filter(t => {
+                    const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
+                    if (!meta) return false;
+                    if (meta.kind === 'check') return t.portada === 'si';
+                    return !!t.gestor_id;
+                });
 
                 // Obtener usuario actual (seguro, sin destructuring profundo)
                 const authRes = await supabase.auth.getUser();
@@ -195,51 +199,57 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                         <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#f5a623]">
                             Tickets a crear
                         </h3>
-                        <div className="space-y-2">
-                            {tickets.map((ticket, idx) => (
-                                <div key={ticket.id} className="grid grid-cols-[24px_1fr_140px_32px] items-center gap-2">
-                                    {/* Número */}
-                                    <div className="w-6 h-6 rounded-full bg-[#f5a623]/20 text-[#f5a623] text-[10px] font-black flex items-center justify-center">
-                                        {idx + 1}
+                        <p className="text-[11px] text-neutral-500 mb-3">
+                            Asigna un gestor a cada tipo. Solo se crearán los tickets con gestor asignado. Para la portada marca Sí o No (obligatorio).
+                        </p>
+                        <div className="flex flex-col gap-2">
+                            {tickets.map((ticket) => {
+                                const meta = TICKET_TYPES.find(t => t.value === ticket.tipo);
+                                const typeLabel = meta?.label ?? ticket.tipo;
+                                return (
+                                    <div key={ticket.id} className="flex items-center gap-2 min-w-0">
+                                        <div className="text-xs font-semibold text-neutral-800 truncate flex-1 min-w-0">
+                                            {typeLabel}
+                                        </div>
+                                        <div className="w-[160px] shrink-0 flex justify-end">
+                                            {meta?.kind === 'check' ? (
+                                                <div className="grid grid-cols-2 gap-1.5 w-full">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateTicket(ticket.id, 'portada', 'si')}
+                                                        className={`h-9 rounded-lg border text-xs font-bold transition-colors ${
+                                                            ticket.portada === 'si'
+                                                                ? 'bg-[#f5a623] border-[#f5a623] text-neutral-950'
+                                                                : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
+                                                        }`}
+                                                    >
+                                                        Sí
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => updateTicket(ticket.id, 'portada', 'no')}
+                                                        className={`h-9 rounded-lg border text-xs font-bold transition-colors ${
+                                                            ticket.portada === 'no'
+                                                                ? 'bg-neutral-800 border-neutral-800 text-white'
+                                                                : 'bg-white border-neutral-200 text-neutral-600 hover:border-neutral-300'
+                                                        }`}
+                                                    >
+                                                        No
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <SearchableSelect
+                                                    value={ticket.gestor_id}
+                                                    onChange={val => updateTicket(ticket.id, 'gestor_id', String(val))}
+                                                    options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                                                    placeholder="Gestor..."
+                                                />
+                                            )}
+                                        </div>
                                     </div>
-
-                                    {/* Tipo */}
-                                    <SearchableSelect
-                                        value={ticket.tipo}
-                                        onChange={val => updateTicket(ticket.id, 'tipo', String(val))}
-                                        options={TICKET_TYPES}
-                                        placeholder="Tipo de ticket..."
-                                    />
-
-                                    {/* Gestor */}
-                                    <SearchableSelect
-                                        value={ticket.gestor_id}
-                                        onChange={val => updateTicket(ticket.id, 'gestor_id', String(val))}
-                                        options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
-                                        placeholder="Gestor..."
-                                    />
-
-                                    {/* Borrar */}
-                                    <button
-                                        type="button"
-                                        onClick={() => removeTicket(ticket.id)}
-                                        disabled={tickets.length === 1}
-                                        className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed justify-self-center"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-
-                        <button
-                            type="button"
-                            onClick={addTicket}
-                            className="mt-3 flex items-center gap-1.5 text-xs font-bold text-[#f5a623] hover:text-[#e09510] transition"
-                        >
-                            <Plus className="w-3.5 h-3.5" />
-                            Añadir ticket
-                        </button>
                     </div>
                 </div>
 
@@ -248,7 +258,13 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                     <button
                         type="button"
                         onClick={() => handleConfirmar(false)}
-                        disabled={isSubmitting}
+                        disabled={
+                            isSubmitting
+                            || tickets.some(t => {
+                                const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
+                                return meta?.kind === 'check' && t.portada === null;
+                            })
+                        }
                         className="px-4 py-2 text-xs font-bold text-neutral-500 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors disabled:opacity-50"
                     >
                         Solo confirmar
@@ -256,7 +272,18 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                     <button
                         type="button"
                         onClick={() => handleConfirmar(true)}
-                        disabled={isSubmitting || tickets.every(t => !t.tipo)}
+                        disabled={
+                            isSubmitting
+                            || tickets.some(t => {
+                                const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
+                                return meta?.kind === 'check' && t.portada === null;
+                            })
+                            || tickets.every(t => {
+                                const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
+                                if (meta?.kind === 'check') return t.portada !== 'si';
+                                return !t.gestor_id;
+                            })
+                        }
                         className="px-6 py-2 bg-[#f5a623] hover:bg-[#e09510] text-neutral-950 rounded-lg text-xs font-bold transition disabled:opacity-40 flex items-center gap-2"
                     >
                         {isSubmitting

@@ -364,7 +364,7 @@ export default function ReunionesPage() {
         {
             label: 'Editar',
             icon: <Pencil className="w-3.5 h-3.5" />,
-            disabled: !r.confirmada || r.enviado || r.resuelto,
+            disabled: r.enviado || r.resuelto,
             onClick: (row) => { setEditingId(row.id); setShowForm(true); },
         },
         {
