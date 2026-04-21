@@ -16,6 +16,7 @@ import { useGlobalLoading } from '@/lib/globalLoading';
 import ReunionFormModal from './ReunionFormModal';
 import ImportReunionesModal from '@/components/ImportReunionesModal';
 import ConfirmarReunionTicketsModal from './ConfirmarReunionTicketsModal';
+import PortadasDownloadModal from './PortadasDownloadModal';
 
 const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
     JGO: { label: 'JGO', cls: 'bg-blue-100 text-blue-700' },
@@ -59,6 +60,7 @@ export default function ReunionesPage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [showImportModal, setShowImportModal] = useState(false);
     const [confirmarReunion, setConfirmarReunion] = useState<Reunion | null>(null);
+    const [portadasReunion, setPortadasReunion] = useState<Reunion | null>(null);
     const [envioConfirm, setEnvioConfirm] = useState<{ reunion: Reunion; noAplica: string[]; realizadas: string[] } | null>(null);
     const [isEnviando, setIsEnviando] = useState(false);
 
@@ -136,10 +138,14 @@ export default function ReunionesPage() {
         setConfirmarReunion(reunion);
     };
 
-    const onReunionConfirmada = () => {
+    const onReunionConfirmada = (opts?: { portada: boolean }) => {
         if (!confirmarReunion) return;
-        setReuniones(prev => prev.map(r => r.id === confirmarReunion.id ? { ...r, confirmada: true } : r));
+        const target = confirmarReunion;
+        setReuniones(prev => prev.map(r => r.id === target.id ? { ...r, confirmada: true } : r));
         setConfirmarReunion(null);
+        if (opts?.portada) {
+            setPortadasReunion({ ...target, confirmada: true });
+        }
     };
 
     const handleDelete = async () => {
@@ -475,6 +481,14 @@ export default function ReunionesPage() {
                 />
             )}
 
+            {/* Modal Descargar / Enviar portadas */}
+            {portadasReunion && (
+                <PortadasDownloadModal
+                    reunion={portadasReunion}
+                    onClose={() => setPortadasReunion(null)}
+                />
+            )}
+
             {/* Modal Formulario */}
             {showForm && (
                 <ReunionFormModal
@@ -482,7 +496,10 @@ export default function ReunionesPage() {
                     editingId={editingId}
                     comunidades={comunidades}
                     onClose={() => { setShowForm(false); setEditingId(null); }}
-                    onSaved={fetchReuniones}
+                    onSaved={(confirmedReunion) => {
+                        fetchReuniones();
+                        if (confirmedReunion) setConfirmarReunion(confirmedReunion);
+                    }}
                 />
             )}
 

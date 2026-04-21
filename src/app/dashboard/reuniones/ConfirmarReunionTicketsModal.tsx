@@ -23,7 +23,7 @@ interface TicketRow { id: number; tipo: string; gestor_id: string; portada: 'si'
 interface Props {
     reunion: Reunion;
     onClose: () => void;
-    onConfirmed: () => void;
+    onConfirmed: (opts?: { portada: boolean }) => void;
 }
 
 export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfirmed }: Props) {
@@ -151,7 +151,11 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                 toast.success('Reunión confirmada');
             }
 
-            onConfirmed();
+            const portadaElegida = tickets.some(t => {
+                const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
+                return meta?.kind === 'check' && t.portada === 'si';
+            });
+            onConfirmed({ portada: portadaElegida });
         } catch {
             toast.error('Error al confirmar la reunión');
         } finally {
