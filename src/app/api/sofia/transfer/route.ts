@@ -98,6 +98,6 @@ export async function POST(request: Request) {
 
     } catch (error: any) {
         console.error('Transfer API error:', error);
-        return NextResponse.json({ error: error.message || 'Error interno en la transferencia' }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

@@ -19,7 +19,7 @@ export async function GET(req: Request) {
 
         if (error) {
             console.error("Error fetching settings:", error);
-            return NextResponse.json({ error: error.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // Devolver valores tal cual (son text en BD). El frontend se encarga de parsear si necesita number.
@@ -31,6 +31,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ ok: true, settings });
 
     } catch (err: any) {
-        return NextResponse.json({ error: "Error interno: " + err.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

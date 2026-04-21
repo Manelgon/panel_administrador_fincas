@@ -37,7 +37,7 @@ export async function GET(req: Request) {
         .lt('start_at', `${nextMonth}T00:00:00`)
         .order('start_at', { ascending: true });
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
 
     try {
         // --- PDF GENERATION (Shared Lib) ---
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
 
     } catch (err: any) {
         console.error("PDF Gen Error:", err);
-        return NextResponse.json({ error: "Error generando PDF: " + err.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }
 

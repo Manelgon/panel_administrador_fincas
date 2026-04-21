@@ -354,6 +354,6 @@ export async function POST(req: Request) {
 
     } catch (e: any) {
         console.error("Endpoint error:", e);
-        return NextResponse.json({ error: e.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

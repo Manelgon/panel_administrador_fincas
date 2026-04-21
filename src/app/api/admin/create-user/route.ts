@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         });
 
         if (createError) {
-            return NextResponse.json({ error: createError.message }, { status: 400 });
+            return NextResponse.json({ error: "Error en la operación" }, { status: 400 });
         }
 
         if (!userData.user) {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
         if (profileError) {
             // Optional: Delete the user if profile creation fails to prevent orphan users
             // await supabaseAdmin.auth.admin.deleteUser(userData.user.id);
-            return NextResponse.json({ error: 'Profile creation failed: ' + profileError.message }, { status: 400 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         return NextResponse.json({ success: true, userId: userData.user.id });

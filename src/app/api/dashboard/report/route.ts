@@ -881,6 +881,6 @@ export async function POST(req: Request) {
 
     } catch (err: any) {
         console.error("[Report] Final error:", err);
-        return NextResponse.json({ error: "Error interno: " + err.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

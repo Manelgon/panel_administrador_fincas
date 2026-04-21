@@ -45,7 +45,7 @@ export async function POST(request: Request) {
             .eq('id', id);
 
         if (deleteError) {
-            return NextResponse.json({ error: deleteError.message }, { status: 500 });
+            return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
         }
 
         // 4. Log activity
@@ -66,6 +66,6 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true });
 
     } catch (error: any) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }
