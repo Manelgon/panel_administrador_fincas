@@ -32,6 +32,7 @@ export default function Navbar() {
     const [dashActiveFichaje, setDashActiveFichaje] = useState<ActiveFichaje | null>(null);
     const [fichajeElapsed, setFichajeElapsed] = useState(0);
     const [fichajeLoading, setFichajeLoading] = useState(false);
+    const [showClockOutConfirm, setShowClockOutConfirm] = useState(false);
 
     const fetchActiveTask = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser();
@@ -220,6 +221,38 @@ export default function Navbar() {
                 />
             )}
 
+            {/* Modal confirmación fichaje salida */}
+            {showClockOutConfirm && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowClockOutConfirm(false)}>
+                    <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+                        <h3 className="text-lg font-bold text-neutral-900 mb-2">Cerrar fichaje</h3>
+                        <p className="text-sm text-neutral-600 mb-1">
+                            ¿Estás seguro de que quieres cerrar el fichaje?
+                        </p>
+                        {dashActiveFichaje && (
+                            <p className="text-sm text-neutral-500 mb-4">
+                                Tiempo registrado: <span className="font-mono font-bold text-neutral-700">{formatDashElapsed(fichajeElapsed)}</span>
+                            </p>
+                        )}
+                        <div className="flex justify-end gap-2">
+                            <button
+                                onClick={() => setShowClockOutConfirm(false)}
+                                className="px-4 py-2 text-sm font-medium text-neutral-700 bg-neutral-100 hover:bg-neutral-200 rounded-lg transition"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={async () => { setShowClockOutConfirm(false); await handleClockOut(); }}
+                                disabled={fichajeLoading}
+                                className="px-4 py-2 text-sm font-bold text-white bg-red-600 hover:bg-red-700 rounded-lg transition disabled:opacity-50"
+                            >
+                                {fichajeLoading ? 'Cerrando...' : 'Sí, cerrar fichaje'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Botones fichaje + tarea — siempre en fila */}
             <div className="flex items-center gap-2">
                 {/* Quick-Start Fichaje */}
@@ -229,7 +262,7 @@ export default function Navbar() {
                         <span className="hidden sm:inline font-mono font-bold text-yellow-700 tabular-nums text-xs">{formatDashElapsed(fichajeElapsed)}</span>
                         <div className="flex items-center border-l border-yellow-200 pl-1 ml-1">
                             <a href="/dashboard/fichaje" className="px-1.5 py-1 text-[10px] text-yellow-700 hover:bg-yellow-100 rounded transition whitespace-nowrap" aria-label="Ver fichaje">Ver →</a>
-                            <button onClick={handleClockOut} disabled={fichajeLoading} aria-label="Fichar salida"
+                            <button onClick={() => setShowClockOutConfirm(true)} disabled={fichajeLoading} aria-label="Fichar salida"
                                 className="flex items-center p-1 ml-0.5 bg-neutral-900 text-white hover:bg-neutral-800 rounded transition disabled:opacity-50">
                                 {fichajeLoading ? <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin" /> : <Square className="w-3 h-3" />}
                             </button>
