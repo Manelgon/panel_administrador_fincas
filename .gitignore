@@ -13,6 +13,7 @@ pnpm-lock.yaml
 /.next/
 /out/
 *.rsc
+tsconfig.tsbuildinfo
 
 # Production
 /build
