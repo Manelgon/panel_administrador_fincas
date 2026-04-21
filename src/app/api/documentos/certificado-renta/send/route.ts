@@ -69,6 +69,9 @@ export async function POST(req: Request) {
 
         await fetch(webhookUrl, {
           method: "POST",
+          headers: {
+            Envio_documentacion_Panel_serincosol: process.env.N8N_WEBHOOK_SECRET || "",
+          },
           body: formData,
         }).catch(err => console.error("Webhook trigger failed:", err));
       } catch (webhookError) {
@@ -82,6 +85,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Error processing request:", error);
-    return NextResponse.json({ error: error.message || "Error procesando solicitud" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
