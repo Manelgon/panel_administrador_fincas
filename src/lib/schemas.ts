@@ -97,6 +97,9 @@ export interface Incidencia {
   aviso?: string | boolean;
   id_email_gestion?: string;
   source?: string;
+  proveedor_id?: number;
+  aviso_proveedor?: string | boolean;
+  proveedor?: { nombre: string };
 }
 
 // ============================================
