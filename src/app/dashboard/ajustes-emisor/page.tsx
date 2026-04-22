@@ -13,6 +13,7 @@ type Settings = {
     emisor_city: string;
     emisor_cp: string;
     emisor_cif: string;
+    emisor_phone: string;
     colegiado_nombre: string;
     colegio_ciudad: string;
     emisor_iban: string;
@@ -39,6 +40,7 @@ export default function AjustesEmisorPage() {
         emisor_city: "",
         emisor_cp: "",
         emisor_cif: "",
+        emisor_phone: "",
         colegiado_nombre: "",
         colegio_ciudad: "",
         emisor_iban: "",
@@ -81,6 +83,7 @@ export default function AjustesEmisorPage() {
                 emisor_city: json.settings.emisor_city || "",
                 emisor_cp: json.settings.emisor_cp || "",
                 emisor_cif: json.settings.emisor_cif || "",
+                emisor_phone: json.settings.emisor_phone || "",
                 colegiado_nombre: json.settings.colegiado_nombre || "",
                 colegio_ciudad: json.settings.colegio_ciudad || "",
                 emisor_iban: json.settings.emisor_iban || "",
@@ -235,6 +238,18 @@ export default function AjustesEmisorPage() {
                             />
                         </label>
                     </div>
+
+                    <label className="block">
+                        <span className="text-sm font-medium text-neutral-700">Teléfono</span>
+                        <input
+                            type="tel"
+                            value={settings.emisor_phone}
+                            onChange={e => setSettings(p => ({ ...p, emisor_phone: e.target.value }))}
+                            placeholder="+34 952 00 00 00"
+                            className="mt-1 w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:ring-2 focus:ring-yellow-400 focus:outline-none"
+                        />
+                        <p className="text-xs text-neutral-400 mt-1">Teléfono de contacto de la empresa. Puede aparecer en documentos y comunicaciones.</p>
+                    </label>
 
                     <label className="block">
                         <span className="text-sm font-medium text-neutral-700">Nombre del Administrador Colegiado</span>
