@@ -8,6 +8,7 @@ import { toast } from 'react-hot-toast';
 import { logActivity } from '@/lib/logActivity';
 import { Reunion, Profile } from '@/lib/schemas';
 import SearchableSelect from '@/components/SearchableSelect';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 const TICKET_TYPES = [
     { value: 'Estado de cuentas',            label: '1 · Estado de cuentas',            kind: 'gestor' as const },
@@ -32,6 +33,7 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
     );
     const [profiles, setProfiles] = useState<Profile[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const { withLoading } = useGlobalLoading();
 
     useEffect(() => {
         supabase
@@ -54,6 +56,7 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
     const handleConfirmar = async (crearTickets: boolean) => {
         setIsSubmitting(true);
         try {
+            await withLoading(async () => {
             const { error: errReunion } = await supabase
                 .from('reuniones')
                 .update({ confirmada: true })
@@ -156,6 +159,7 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                 return meta?.kind === 'check' && t.portada === 'si';
             });
             onConfirmed({ portada: portadaElegida });
+            }, crearTickets ? 'Creando tickets...' : 'Confirmando reunión...');
         } catch {
             toast.error('Error al confirmar la reunión');
         } finally {
