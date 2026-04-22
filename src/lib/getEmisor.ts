@@ -6,6 +6,7 @@ export interface EmisorData {
     ciudad: string;
     cp: string;
     cif: string;
+    telefono: string;
     colegiado: string;
     colegioCiudad: string;
     iban: string;
@@ -31,6 +32,7 @@ export async function getEmisor(): Promise<EmisorData> {
             ciudad: process.env.EMISOR_CITY || "",
             cp: "",
             cif: process.env.EMISOR_CIF || "",
+            telefono: "",
             colegiado: "",
             colegioCiudad: "",
             iban: "",
@@ -51,6 +53,7 @@ export async function getEmisor(): Promise<EmisorData> {
         ciudad: map["emisor_city"] || process.env.EMISOR_CITY || "",
         cp: map["emisor_cp"] || "",
         cif: map["emisor_cif"] || process.env.EMISOR_CIF || "",
+        telefono: map["emisor_phone"] || "",
         colegiado: map["colegiado_nombre"] || "",
         colegioCiudad: map["colegio_ciudad"] || "",
         iban: map["emisor_iban"] || "",
