@@ -846,6 +846,84 @@ export async function POST(req: Request) {
 
         if (dbErr2) throw new Error("DB Error Certificado: " + dbErr2.message);
 
+        // 5.1 Auto-crear ticket de seguimiento del certificado de corriente de pago (solo si el usuario lo confirmó)
+        if (payload.createTicket === true) try {
+            const { data: comunidadRow } = await supabase
+                .from("comunidades")
+                .select("id, nombre_cdad")
+                .eq("codigo", payload.codigo)
+                .maybeSingle();
+
+            if (comunidadRow?.id) {
+                const nombreCompleto = [payload.nombre, payload.apellidos].filter(Boolean).join(" ").trim() || payload.nombre_apellidos || "Propietario";
+                const dirParts = [payload.domicilio, payload.bloque && `Bloque ${payload.bloque}`, payload.planta && `Planta ${payload.planta}`, payload.puerta && `Puerta ${payload.puerta}`].filter(Boolean).join(", ");
+                const ubicacion = [payload.cp, payload.ciudad, payload.provincia].filter(Boolean).join(" ");
+                const tipos = Array.isArray(payload.tipos_inmueble) ? payload.tipos_inmueble.join(", ") : (payload.tipo_inmueble || "");
+                const totalStr = importeTotal ? `${String(importeTotal).replace(".", ",")} €` : null;
+
+                const mensajeTicket = [
+                    `Seguimiento documento corriente de pago.`,
+                    `Documento ID: ${recCert.id}`,
+                    `Comunidad: ${comunidadRow.nombre_cdad}`,
+                    `Propietario: ${nombreCompleto}`,
+                    payload.nif && `NIF: ${payload.nif}`,
+                    tipos && `Tipo inmueble: ${tipos}`,
+                    dirParts && `Dirección: ${dirParts}`,
+                    ubicacion && `Localidad: ${ubicacion}`,
+                    totalStr && `Total factura: ${totalStr}`,
+                    payload.fecha_emision && `Fecha emisión: ${formatDateEU(payload.fecha_emision)}`,
+                ].filter(Boolean).join("\n");
+
+                const { data: newTicket, error: ticketErr } = await supabase
+                    .from("incidencias")
+                    .insert({
+                        comunidad_id: comunidadRow.id,
+                        nombre_cliente: nombreCompleto,
+                        telefono: payload.telefono || null,
+                        email: payload.email || null,
+                        motivo_ticket: "Seguimiento documento corriente de pago",
+                        mensaje: mensajeTicket,
+                        quien_lo_recibe: user.id,
+                        gestor_asignado: user.id,
+                        source: "Gestión Interna",
+                        aviso: 0,
+                        aviso_proveedor: 0,
+                    })
+                    .select("id")
+                    .single();
+
+                if (ticketErr) {
+                    console.error("Error creando ticket seguimiento certificado:", ticketErr);
+                } else if (newTicket?.id) {
+                    const { data: profile } = await supabase
+                        .from("profiles")
+                        .select("nombre")
+                        .eq("user_id", user.id)
+                        .single();
+
+                    await supabase.from("activity_logs").insert({
+                        user_id: user.id,
+                        user_name: profile?.nombre || user.email || "Usuario",
+                        action: "create",
+                        entity_type: "incidencia",
+                        entity_id: newTicket.id,
+                        entity_name: `Incidencia - ${nombreCompleto}`,
+                        details: JSON.stringify({
+                            comunidad: comunidadRow.nombre_cdad,
+                            motivo: "Seguimiento documento corriente de pago",
+                            documento_id: recCert.id,
+                            total: totalStr,
+                            origen: "auto_certificado_corriente_pago",
+                            entrada: "Gestión Interna",
+                        }),
+                    });
+                }
+            } else {
+                console.warn("No se encontró comunidad con código:", payload.codigo);
+            }
+        } catch (ticketException) {
+            console.error("Excepción creando ticket seguimiento:", ticketException);
+        }
 
         // 6. Return Signed URLs for both
         const signed2 = await supabaseAdmin.storage
