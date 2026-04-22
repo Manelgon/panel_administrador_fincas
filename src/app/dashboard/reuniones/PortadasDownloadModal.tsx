@@ -15,6 +15,7 @@ interface Props {
 
 export default function PortadasDownloadModal({ reunion, onClose }: Props) {
     const [direccion, setDireccion] = useState<string>('');
+    const [nombreCdad, setNombreCdad] = useState<string>('');
     const [emisor, setEmisor] = useState<EmisorFooter>({});
     const [toEmail, setToEmail] = useState<string>('');
     const [emailError, setEmailError] = useState<string>('');
@@ -25,11 +26,12 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
         if (!reunion.comunidad_id) return;
         supabase
             .from('comunidades')
-            .select('direccion')
+            .select('direccion, nombre_cdad')
             .eq('id', reunion.comunidad_id)
             .maybeSingle()
             .then(({ data }) => {
                 if (data?.direccion) setDireccion(data.direccion);
+                if (data?.nombre_cdad) setNombreCdad(data.nombre_cdad);
             });
     }, [reunion.comunidad_id]);
 
@@ -37,18 +39,15 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
         supabase
             .from('company_settings')
             .select('setting_key, setting_value')
+            .in('setting_key', ['emisor_address', 'emisor_phone', 'emisor_cif'])
             .then(({ data }) => {
                 if (!data) return;
                 const map: Record<string, string> = {};
                 data.forEach(row => { map[row.setting_key] = row.setting_value; });
                 setEmisor({
-                    nombre:    map.emisor_name,
                     direccion: map.emisor_address,
-                    cp:        map.emisor_cp,
-                    ciudad:    map.emisor_city,
-                    cif:       map.emisor_cif,
                     telefono:  map.emisor_phone,
-                    email:     map.emisor_email,
+                    cif:       map.emisor_cif,
                 });
             });
     }, []);
@@ -65,7 +64,7 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
             kind,
             tipoReunion: reunion.tipo,
             fecha: fechaDisplay,
-            comunidad: reunion.comunidad || '',
+            comunidad: nombreCdad || reunion.comunidad || '',
             direccion,
             emisor,
         });

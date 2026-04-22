@@ -3,13 +3,9 @@ import type jsPDFType from 'jspdf';
 export type PortadaKind = 'convocatoria' | 'acta';
 
 export interface EmisorFooter {
-    nombre?: string;
     direccion?: string;
-    cp?: string;
-    ciudad?: string;
-    cif?: string;
     telefono?: string;
-    email?: string;
+    cif?: string;
 }
 
 export interface PortadaData {
@@ -56,7 +52,7 @@ export const generarPortadaPdf = async (data: PortadaData): Promise<Blob> => {
 
     // Imagen al ancho completo manteniendo proporción.
     // Si es más alta de lo permitido (3/4 de la página), se recorta el exceso inferior.
-    const maxH = pageH * 0.75;
+    const maxH = pageH * 0.82;
     let imgH = maxH;
     try {
         const fondo = await loadFondo();
@@ -88,7 +84,7 @@ export const generarPortadaPdf = async (data: PortadaData): Promise<Blob> => {
 
     // Bloque de texto centrado horizontalmente debajo de la imagen
     const centerX = pageW / 2;
-    let y = imgH + 15;
+    let y = imgH + 5.5;
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(20);
@@ -105,7 +101,7 @@ export const generarPortadaPdf = async (data: PortadaData): Promise<Blob> => {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
     doc.setTextColor(20, 20, 20);
-    doc.text(`Cdad. Prop. ${data.comunidad}`, centerX, y, { align: 'center' });
+    doc.text(`CDAD. PROP. ${data.comunidad}`, centerX, y, { align: 'center' });
 
     if (data.direccion) {
         y += 7;
@@ -115,31 +111,24 @@ export const generarPortadaPdf = async (data: PortadaData): Promise<Blob> => {
         doc.text(data.direccion, centerX, y, { align: 'center' });
     }
 
-    // Pie de página con datos del emisor
     if (data.emisor) {
         const e = data.emisor;
-        const line1 = [e.nombre, e.cif && `CIF ${e.cif}`].filter(Boolean).join(' · ');
-        const line2 = [e.direccion, [e.cp, e.ciudad].filter(Boolean).join(' ')]
-            .filter(Boolean)
-            .join(', ');
-        const line3 = [e.telefono && `Tel. ${e.telefono}`, e.email]
-            .filter(Boolean)
-            .join(' · ');
+        const marginX = 15;
+        const footerY = pageH - 4;
+        const usableW = pageW - marginX * 2;
+        const colW = usableW / 3;
 
         doc.setDrawColor(200, 200, 200);
         doc.setLineWidth(0.2);
-        doc.line(20, pageH - 22, pageW - 20, pageH - 22);
-
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor(80, 80, 80);
-        if (line1) doc.text(line1, centerX, pageH - 17, { align: 'center' });
+        doc.line(marginX, footerY - 6, pageW - marginX, footerY - 6);
 
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(110, 110, 110);
-        if (line2) doc.text(line2, centerX, pageH - 12, { align: 'center' });
-        if (line3) doc.text(line3, centerX, pageH - 7,  { align: 'center' });
+        doc.setFontSize(9);
+        doc.setTextColor(90, 90, 90);
+
+        if (e.direccion) doc.text(e.direccion, marginX + colW / 2, footerY, { align: 'center' });
+        if (e.telefono)  doc.text(`Tel. ${e.telefono}`, marginX + colW + colW / 2, footerY, { align: 'center' });
+        if (e.cif)       doc.text(`CIF ${e.cif}`, marginX + colW * 2 + colW / 2, footerY, { align: 'center' });
     }
 
     return doc.output('blob');
