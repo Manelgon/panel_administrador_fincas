@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import { Download, Loader2, FileText, Plus, AlertCircle, Trash2 } from "lucide-react";
+import { Download, Loader2, FileText, Plus, AlertCircle, Trash2, X } from "lucide-react";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 import { useGlobalLoading } from '@/lib/globalLoading';
@@ -35,6 +35,8 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [communities, setCommunities] = useState<Comunidad[]>([]);
     const [showSelloConfirm, setShowSelloConfirm] = useState(false);
+    const [showTicketConfirm, setShowTicketConfirm] = useState(false);
+    const [pendingCreateTicket, setPendingCreateTicket] = useState(false);
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -127,7 +129,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         return vals;
     };
 
-    const generate = async (skipSello = false) => {
+    const validateConcepts = () => {
         const conceptErrors: Record<string, string> = {};
 
         for (const i of conceptRows) {
@@ -147,8 +149,18 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         if (Object.keys(conceptErrors).length > 0) {
             setFormErrors(prev => ({ ...prev, ...conceptErrors }));
             toast.error("Revisa los conceptos de factura obligatorios");
-            return;
+            return false;
         }
+        return true;
+    };
+
+    const requestGenerate = () => {
+        if (!validateConcepts()) return;
+        setShowTicketConfirm(true);
+    };
+
+    const generate = async (skipSello = false, createTicket = false) => {
+        if (!validateConcepts()) return;
 
         await withLoading(async () => {
             setStatus("generating");
@@ -156,9 +168,8 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
             setPdfUrls(null);
 
             try {
-                const body = skipSello
-                    ? { ...values, skipSello: true, conceptCount: conceptRows.length }
-                    : { ...values, conceptCount: conceptRows.length };
+                const body: Record<string, any> = { ...values, conceptCount: conceptRows.length, createTicket };
+                if (skipSello) body.skipSello = true;
                 const res = await fetch("/api/documentos/varios/generate", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -674,7 +685,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                 </button>
                 <button
                     type="button"
-                    onClick={() => generate()}
+                    onClick={() => requestGenerate()}
                     disabled={status === "generating" || !canGenerate}
                     className="w-full sm:w-auto h-12 px-8 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-bold transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-sm hover:shadow-md active:scale-[0.98]"
                 >
@@ -691,6 +702,53 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                     )}
                 </button>
             </div>
+
+            {/* Modal confirmación: crear ticket de seguimiento */}
+            {showTicketConfirm && (
+                <div className="fixed inset-0 bg-black/50 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-md p-6 relative max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200 border border-neutral-100">
+                        <button
+                            onClick={() => setShowTicketConfirm(false)}
+                            aria-label="Cerrar modal"
+                            className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto w-16 h-16 bg-yellow-50 rounded-full flex items-center justify-center mb-4 ring-8 ring-yellow-50/50">
+                                <FileText className="w-8 h-8 text-yellow-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-neutral-900 uppercase tracking-tight">
+                                Crear ticket de seguimiento
+                            </h3>
+                            <p className="text-sm text-neutral-500 mt-2 font-medium">
+                                ¿Desea crear automáticamente un <strong className="text-neutral-900">ticket de seguimiento</strong> asociado al certificado de corriente de pago?
+                            </p>
+                            <p className="text-xs text-neutral-400 mt-3 font-medium">
+                                El ticket incluirá los datos de la comunidad, propietario e importe del documento y quedará asignado a usted.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                            <button
+                                type="button"
+                                onClick={() => { setShowTicketConfirm(false); setPendingCreateTicket(false); generate(false, false); }}
+                                className="flex-1 h-12 px-6 border border-neutral-200 text-neutral-600 rounded-xl hover:bg-neutral-50 font-bold text-xs uppercase tracking-widest transition-all"
+                            >
+                                No, solo documento
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setShowTicketConfirm(false); setPendingCreateTicket(true); generate(false, true); }}
+                                className="flex-1 h-12 px-6 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl font-black text-xs uppercase tracking-[0.15em] transition-all shadow-lg shadow-yellow-100"
+                            >
+                                Sí, crear ticket
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Modal confirmación: sello no encontrado */}
             {showSelloConfirm && (
@@ -718,7 +776,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                 Cancelar
                             </button>
                             <button
-                                onClick={() => { setShowSelloConfirm(false); generate(true); }}
+                                onClick={() => { setShowSelloConfirm(false); generate(true, pendingCreateTicket); }}
                                 className="px-4 py-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg text-sm font-bold transition"
                             >
                                 Crear sin sello
