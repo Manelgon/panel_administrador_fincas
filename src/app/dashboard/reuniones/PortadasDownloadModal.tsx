@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { Reunion } from '@/lib/schemas';
 import { generarPortadaPdf, nombreArchivo, PortadaKind, EmisorFooter } from './lib/generarPortadasPdf';
+import { useGlobalLoading } from '@/lib/globalLoading';
 
 interface Props {
     reunion: Reunion;
@@ -21,6 +22,7 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
     const [emailError, setEmailError] = useState<string>('');
     const [isDownloading, setIsDownloading] = useState<PortadaKind | 'both' | null>(null);
     const [isSending, setIsSending] = useState(false);
+    const { withLoading } = useGlobalLoading();
 
     useEffect(() => {
         if (!reunion.comunidad_id) return;
@@ -83,8 +85,10 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
     const downloadOne = async (kind: PortadaKind) => {
         setIsDownloading(kind);
         try {
-            const blob = await buildPdf(kind);
-            triggerDownload(blob, nombreArchivo(kind, reunion.tipo, reunion.fecha_reunion));
+            await withLoading(async () => {
+                const blob = await buildPdf(kind);
+                triggerDownload(blob, nombreArchivo(kind, reunion.tipo, reunion.fecha_reunion));
+            }, 'Generando PDF...');
         } catch (err) {
             console.error('[PortadasDownloadModal] download error:', err);
             toast.error('Error al generar el PDF');
@@ -96,9 +100,11 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
     const downloadBoth = async () => {
         setIsDownloading('both');
         try {
-            const [conv, acta] = await Promise.all([buildPdf('convocatoria'), buildPdf('acta')]);
-            triggerDownload(conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
-            triggerDownload(acta, nombreArchivo('acta',        reunion.tipo, reunion.fecha_reunion));
+            await withLoading(async () => {
+                const [conv, acta] = await Promise.all([buildPdf('convocatoria'), buildPdf('acta')]);
+                triggerDownload(conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
+                triggerDownload(acta, nombreArchivo('acta',        reunion.tipo, reunion.fecha_reunion));
+            }, 'Generando PDFs...');
         } catch (err) {
             console.error('[PortadasDownloadModal] download both error:', err);
             toast.error('Error al generar los PDFs');
@@ -116,20 +122,22 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
         setEmailError('');
         setIsSending(true);
         try {
-            const [conv, acta] = await Promise.all([buildPdf('convocatoria'), buildPdf('acta')]);
-            const form = new FormData();
-            form.append('to_email', toEmail);
-            form.append('reunion_id', String(reunion.id));
-            form.append('tipo_reunion', reunion.tipo);
-            form.append('fecha', fechaDisplay);
-            form.append('comunidad', reunion.comunidad || '');
-            form.append('convocatoria', conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
-            form.append('acta',         acta, nombreArchivo('acta',         reunion.tipo, reunion.fecha_reunion));
+            await withLoading(async () => {
+                const [conv, acta] = await Promise.all([buildPdf('convocatoria'), buildPdf('acta')]);
+                const form = new FormData();
+                form.append('to_email', toEmail);
+                form.append('reunion_id', String(reunion.id));
+                form.append('tipo_reunion', reunion.tipo);
+                form.append('fecha', fechaDisplay);
+                form.append('comunidad', reunion.comunidad || '');
+                form.append('convocatoria', conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
+                form.append('acta',         acta, nombreArchivo('acta',         reunion.tipo, reunion.fecha_reunion));
 
-            const res = await fetch('/api/reuniones/enviar-portadas', { method: 'POST', body: form });
-            if (!res.ok) throw new Error('send failed');
-            toast.success('Portadas enviadas por email');
-            onClose();
+                const res = await fetch('/api/reuniones/enviar-portadas', { method: 'POST', body: form });
+                if (!res.ok) throw new Error('send failed');
+                toast.success('Portadas enviadas por email');
+                onClose();
+            }, 'Enviando portadas por email...');
         } catch (err) {
             console.error('[PortadasDownloadModal] send error:', err);
             toast.error('Error al enviar el email');
