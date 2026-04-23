@@ -582,7 +582,7 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
         `con DNI/NIF ${nif}, figura como propietario/a del ${tiposTexto} situado en ${domicilio}` +
         `${ubicacionExtra ? `, ${ubicacionExtra}` : ""}, código postal ${cp}, en la ciudad de ${ciudad}, ` +
         `certifico, en base al art. 9.1 e) de la Ley 49/1960, de 21 de Julio, de Propiedad Horizontal, ` +
-        `que el ${tipoPrincipal} se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
+        `que la propiedad/propiedades se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
         `o extraordinarios de cuotas de comunidad, salvo devolución bancaria en plazo excepcional.`;
 
     // 4) Render texto con cursor y wrap, respetando footer safe
