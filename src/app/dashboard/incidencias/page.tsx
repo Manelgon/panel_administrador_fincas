@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play } from 'lucide-react';
+import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
@@ -134,6 +135,10 @@ export default function IncidenciasPage() {
     const [showAplazarModal, setShowAplazarModal] = useState(false);
     const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
     const [aplazarDate, setAplazarDate] = useState('');
+
+    // Start Task (Cronometraje) Modal State
+    const [showStartTaskModal, setShowStartTaskModal] = useState(false);
+    const [startTaskIncidencia, setStartTaskIncidencia] = useState<Incidencia | null>(null);
 
     const { withLoading } = useGlobalLoading();
 
@@ -1149,6 +1154,7 @@ export default function IncidenciasPage() {
                     'Whatsapp': '💬',
                     'App 360': '📱',
                     'Acuerdo Junta': '📋',
+                    'Tratar Junta': '🗣️',
                     'Gestión Interna': '🏢',
                 };
                 return (
@@ -1540,6 +1546,7 @@ export default function IncidenciasPage() {
                                                     { value: 'Whatsapp', label: '💬 Whatsapp' },
                                                     { value: 'App 360', label: '📱 App 360' },
                                                     { value: 'Acuerdo Junta', label: '📋 Acuerdo Junta' },
+                                                    { value: 'Tratar Junta', label: '🗣️ Tratar Junta' },
                                                     { value: 'Gestión Interna', label: '🏢 Gestión Interna' },
                                                 ]}
                                                 placeholder="Seleccionar entrada..."
@@ -1995,13 +2002,12 @@ export default function IncidenciasPage() {
                 rowActions={(row) => {
                     const estado = row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente');
                     return [
-                        { label: 'Editar', icon: <Pencil className="w-4 h-4" />, onClick: (r) => handleEdit(r) },
                         {
-                            label: estado === 'Resuelto' ? 'Reabrir' : (estado === 'Aplazado' ? 'Volver a Pendiente' : 'Resolver'),
-                            icon: estado === 'Resuelto' ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />,
-                            onClick: (r) => estado === 'Aplazado' ? reactivarDesdeAplazado(r.id) : toggleResuelto(r.id, r.resuelto),
-                            disabled: isUpdatingStatus === row.id,
-                            variant: estado === 'Resuelto' ? 'default' : 'success',
+                            label: 'Empezar tarea',
+                            icon: <Play className="w-4 h-4" />,
+                            onClick: (r) => { setStartTaskIncidencia(r); setShowStartTaskModal(true); },
+                            hidden: estado !== 'Pendiente',
+                            variant: 'info',
                         },
                         {
                             label: 'Aplazar',
@@ -2010,6 +2016,14 @@ export default function IncidenciasPage() {
                             hidden: estado === 'Resuelto' || estado === 'Aplazado',
                             variant: 'warning',
                         },
+                        {
+                            label: estado === 'Resuelto' ? 'Reabrir' : (estado === 'Aplazado' ? 'Volver a Pendiente' : 'Resolver'),
+                            icon: estado === 'Resuelto' ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />,
+                            onClick: (r) => estado === 'Aplazado' ? reactivarDesdeAplazado(r.id) : toggleResuelto(r.id, r.resuelto),
+                            disabled: isUpdatingStatus === row.id,
+                            variant: estado === 'Resuelto' ? 'default' : 'success',
+                        },
+                        { label: 'Editar', icon: <Pencil className="w-4 h-4" />, onClick: (r) => handleEdit(r) },
                         {
                             label: 'Eliminar',
                             icon: <Trash2 className="w-4 h-4" />,
@@ -2284,7 +2298,10 @@ export default function IncidenciasPage() {
                                 { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
                                 { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailIncidencia.id]), disabled: exporting },
-                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [{ label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const }] : []),
+                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [
+                                    { label: 'Empezar tarea', icon: <Play className="w-4 h-4" />, onClick: () => { setStartTaskIncidencia(selectedDetailIncidencia); setShowStartTaskModal(true); }, variant: 'info' as const },
+                                    { label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const },
+                                ] : []),
                             ]} />
                             <div className="flex items-center gap-2">
                                 {selectedDetailIncidencia.estado === 'Aplazado' && (
@@ -2315,6 +2332,22 @@ export default function IncidenciasPage() {
                     </div>
                 </div>
             , document.body)}
+
+            {/* Start Task From Ticket Modal */}
+            {showStartTaskModal && startTaskIncidencia && (
+                <StartTaskFromTicketModal
+                    incidenciaId={startTaskIncidencia.id}
+                    comunidadId={startTaskIncidencia.comunidad_id ?? null}
+                    comunidadLabel={
+                        startTaskIncidencia.comunidades
+                            ? `${startTaskIncidencia.comunidades.codigo ? startTaskIncidencia.comunidades.codigo + ' - ' : ''}${startTaskIncidencia.comunidades.nombre_cdad}`
+                            : (startTaskIncidencia.comunidad || undefined)
+                    }
+                    ticketLabel={`${startTaskIncidencia.nombre_cliente || 'Sin nombre'} · Ticket #${startTaskIncidencia.id}`}
+                    onClose={() => { setShowStartTaskModal(false); setStartTaskIncidencia(null); }}
+                />
+            )}
+
             {/* Reassign Success Modal */}
             {portalReady && showReassignSuccessModal && createPortal(
                 <div

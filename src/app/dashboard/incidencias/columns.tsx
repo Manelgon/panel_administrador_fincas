@@ -26,7 +26,7 @@ export function buildColumns(profiles: Profile[]): Column<Incidencia>[] {
             label: 'Entrada',
             render: (row) => {
                 if (!row.source) return <span className="text-neutral-400">-</span>;
-                const icons: Record<string, string> = { 'Llamada': '📞', 'Presencial': '🤝', 'Email': '📧', 'Whatsapp': '💬', 'App 360': '📱', 'Acuerdo Junta': '📋' };
+                const icons: Record<string, string> = { 'Llamada': '📞', 'Presencial': '🤝', 'Email': '📧', 'Whatsapp': '💬', 'App 360': '📱', 'Acuerdo Junta': '📋', 'Tratar Junta': '🗣️', 'Gestión Interna': '🏢' };
                 return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px] font-medium capitalize">{icons[row.source] || ''} {row.source}</span>;
             },
         },

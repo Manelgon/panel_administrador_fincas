@@ -8,7 +8,7 @@ export interface ModalAction {
     icon?: React.ReactNode;
     onClick: () => void;
     disabled?: boolean;
-    variant?: 'default' | 'danger' | 'warning' | 'success';
+    variant?: 'default' | 'danger' | 'warning' | 'success' | 'info';
     /** Si true, siempre se muestra como botón independiente (no entra en el menú) */
     primary?: boolean;
 }
@@ -24,6 +24,7 @@ const variantClass: Record<string, string> = {
     danger: 'text-red-600 hover:bg-red-50',
     warning: 'text-orange-600 hover:bg-orange-50',
     success: 'text-green-700 hover:bg-green-50',
+    info: 'text-blue-600 hover:bg-blue-50',
 };
 
 const variantBtnClass: Record<string, string> = {
@@ -31,6 +32,7 @@ const variantBtnClass: Record<string, string> = {
     danger: 'px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2',
     warning: 'px-4 py-2 text-sm font-bold text-orange-600 hover:bg-orange-50 rounded-xl border border-orange-200 transition-all flex items-center gap-2',
     success: 'px-4 py-2 text-sm font-bold text-green-700 hover:bg-green-50 rounded-xl transition-all flex items-center gap-2',
+    info: 'px-4 py-2 text-sm font-bold text-blue-600 hover:bg-blue-50 rounded-xl transition-all flex items-center gap-2',
 };
 
 export default function ModalActionsMenu({ actions, visibleOnMobile = 1 }: Props) {

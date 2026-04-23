@@ -57,13 +57,10 @@ export default function StartTaskModal({ onClose, onStarted }: StartTaskModalPro
             const { data, error } = await supabase.rpc('start_task_timer', {
                 _comunidad_id: isTodas ? null : Number(selectedCommunity),
                 _nota: nota || null,
+                _tipo_tarea: finalTipo,
+                _incidencia_id: null,
             });
             if (error) throw error;
-
-            // Update tipo_tarea since the RPC doesn't accept it
-            if (data?.id) {
-                await supabase.from('task_timers').update({ tipo_tarea: finalTipo }).eq('id', data.id);
-            }
 
             const comm = communities.find(c => String(c.id) === selectedCommunity);
             await logActivity({

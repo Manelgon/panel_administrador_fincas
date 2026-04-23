@@ -10,7 +10,7 @@ export interface RowAction<T> {
     label: string;
     icon?: React.ReactNode;
     onClick: (row: T) => void;
-    variant?: 'default' | 'danger' | 'warning' | 'success';
+    variant?: 'default' | 'danger' | 'warning' | 'success' | 'info';
     disabled?: boolean;
     hidden?: boolean;
     separator?: boolean;
@@ -290,6 +290,7 @@ export default function DataTable<T extends Record<string, any>>({
                                 ${action.variant === 'danger' ? 'text-red-600 hover:bg-red-50' :
                                   action.variant === 'warning' ? 'text-amber-600 hover:bg-amber-50' :
                                   action.variant === 'success' ? 'text-green-600 hover:bg-green-50' :
+                                  action.variant === 'info' ? 'text-blue-600 hover:bg-blue-50' :
                                   'text-neutral-700 hover:bg-neutral-50'}`}
                         >
                             {action.icon && (
