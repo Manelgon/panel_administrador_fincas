@@ -184,6 +184,7 @@ export default function IncidenciaFormModal({
                                             { value: 'Whatsapp', label: '💬 Whatsapp' },
                                             { value: 'App 360', label: '📱 App 360' },
                                             { value: 'Acuerdo Junta', label: '📋 Acuerdo Junta' },
+                                            { value: 'Tratar Junta', label: '🗣️ Tratar Junta' },
                                             { value: 'Gestión Interna', label: '🏢 Gestión Interna' },
                                         ]}
                                         placeholder="Seleccionar entrada..."

@@ -381,12 +381,15 @@ create table if not exists public.task_timers (
   end_at timestamptz,
   duration_seconds int,
   is_manual boolean not null default false,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  tipo_tarea text,
+  incidencia_id bigint references public.incidencias(id) on delete set null
 );
 
 create index if not exists task_timers_user_idx on public.task_timers(user_id);
 create index if not exists task_timers_comunidad_idx on public.task_timers(comunidad_id);
 create index if not exists task_timers_start_idx on public.task_timers(start_at desc);
+create index if not exists task_timers_incidencia_idx on public.task_timers(incidencia_id);
 
 alter table public.task_timers enable row level security;
 
@@ -418,7 +421,9 @@ using (public.is_admin());
 -- RPC: start_task_timer
 create or replace function public.start_task_timer(
   _comunidad_id bigint,
-  _nota text default null
+  _nota text default null,
+  _tipo_tarea text default null,
+  _incidencia_id bigint default null
 )
 returns public.task_timers
 language plpgsql
@@ -439,8 +444,12 @@ begin
     raise exception 'Ya tienes una tarea en curso. Párala antes de iniciar una nueva.';
   end if;
 
-  insert into public.task_timers (user_id, comunidad_id, nota, start_at, is_manual)
-  values (auth.uid(), _comunidad_id, _nota, now(), false)
+  insert into public.task_timers (
+    user_id, comunidad_id, nota, start_at, is_manual, tipo_tarea, incidencia_id
+  )
+  values (
+    auth.uid(), _comunidad_id, _nota, now(), false, _tipo_tarea, _incidencia_id
+  )
   returning * into _new_task;
 
   return _new_task;
