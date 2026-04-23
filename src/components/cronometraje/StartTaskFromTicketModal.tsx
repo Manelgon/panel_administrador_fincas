@@ -69,17 +69,6 @@ export default function StartTaskFromTicketModal({
                     },
                 });
 
-                // Mensaje automático en el timeline del ticket
-                const { data: { user } } = await supabase.auth.getUser();
-                if (user) {
-                    await supabase.from('record_messages').insert([{
-                        entity_type: 'incidencia',
-                        entity_id: incidenciaId,
-                        user_id: user.id,
-                        content: `⏱️ Tarea iniciada · ${finalTipo}${nota.trim() ? ` · ${nota.trim()}` : ''}`,
-                    }]);
-                }
-
                 toast.success('Tarea iniciada');
                 window.dispatchEvent(new Event('taskTimerChanged'));
                 onStarted?.();
