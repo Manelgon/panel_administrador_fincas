@@ -2,6 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { deleteUserApiSchema } from '@/lib/schemas';
 
 export async function POST(request: Request) {
     // 1. Verify Authentication & Admin Role
@@ -47,13 +49,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
+    const validation = await validateRequest(request, deleteUserApiSchema);
+    if (!validation.success) return validation.response;
+    const { userId } = validation.data;
+
     try {
-        const { userId } = await request.json();
-
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-        }
-
         // Prevent admin from deleting themselves
         if (userId === user.id) {
             return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });

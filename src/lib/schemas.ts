@@ -11,7 +11,6 @@ const phoneSchema = z
   .or(z.literal(''));
 
 const emailSchema = z
-  .string()
   .email('El formato del email no es válido')
   .or(z.literal(''));
 
@@ -238,6 +237,118 @@ export interface DeleteCredentials {
   email: string;
   password: string;
 }
+
+// ============================================
+// ADMIN: USERS
+// ============================================
+
+export const createUserApiSchema = z.object({
+  email: z.email('Email no válido'),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  nombre: z.string().min(1, 'El nombre es obligatorio'),
+  apellido: z.string().optional().nullable(),
+  telefono: z.string().optional().nullable(),
+  rol: z.enum(['admin', 'empleado', 'gestor']),
+});
+
+export const updateUserApiSchema = z.object({
+  userId: z.string().min(1, 'userId es obligatorio'),
+  email: z.email('Email no válido').optional(),
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres').optional().or(z.literal('')),
+  nombre: z.string().optional(),
+  apellido: z.string().optional().nullable(),
+  telefono: z.string().optional().nullable(),
+  rol: z.enum(['admin', 'empleado', 'gestor']).optional(),
+  activo: z.boolean().optional(),
+});
+
+export const deleteUserApiSchema = z.object({
+  userId: z.string().min(1, 'userId es obligatorio'),
+});
+
+export const deleteIncidentApiSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  email: z.email('Email no válido'),
+  password: z.string().min(1, 'Contraseña obligatoria'),
+});
+
+// ============================================
+// API: VACATIONS
+// ============================================
+
+export const vacationRequestActionSchema = z.object({
+  adminId: z.string().min(1, 'adminId obligatorio'),
+  requestId: z.union([z.string(), z.number()]),
+  status: z.enum(['PENDIENTE', 'APROBADA', 'RECHAZADA', 'CANCELADA', 'MODIFICADA']),
+  commentAdmin: z.string().optional().nullable(),
+});
+
+export const vacationBalancePatchSchema = z.object({
+  adminId: z.string().min(1, 'adminId obligatorio'),
+  userId: z.string().min(1, 'userId obligatorio'),
+  year: z.coerce.number().int().min(2020).max(2100),
+  balances: z.object({
+    vacaciones_total: z.coerce.number().int().min(0).optional(),
+    vacaciones_usados: z.coerce.number().int().min(0).optional(),
+    retribuidos_total: z.coerce.number().int().min(0).optional(),
+    retribuidos_usados: z.coerce.number().int().min(0).optional(),
+    no_retribuidos_total: z.coerce.number().int().min(0).optional(),
+    no_retribuidos_usados: z.coerce.number().int().min(0).optional(),
+  }),
+});
+
+export const vacationSettingsActionSchema = z.object({
+  adminId: z.string().min(1, 'adminId obligatorio'),
+  action: z.enum(['update_policy', 'add_blocked_date', 'delete_blocked_date']),
+  data: z.record(z.string(), z.any()),
+});
+
+export const universalDeleteApiSchema = z.object({
+  id: z.union([z.string(), z.number()]),
+  type: z.enum([
+    'incidencia',
+    'sofia_incidencia',
+    'morosidad',
+    'comunidad',
+    'perfil',
+    'document',
+    'proveedor',
+    'task_timer',
+  ]),
+  email: z.email('Email no válido').optional(),
+  password: z.string().optional(),
+});
+
+// ============================================
+// API: INCIDENCIA / MOROSIDAD (server-side body)
+// ============================================
+
+export const incidenciaApiSchema = z.object({
+  comunidad_id: z.coerce.number().int().positive('comunidad_id inválido'),
+  nombre_cliente: z.string().optional().nullable(),
+  telefono: z.string().optional().nullable(),
+  email: z.email('Email no válido').optional().nullable().or(z.literal('')),
+  motivo_ticket: z.string().optional().nullable(),
+  mensaje: z.string().min(1, 'El mensaje es obligatorio'),
+  urgencia: z.enum(['Baja', 'Media', 'Alta']).optional().nullable(),
+  source: z.string().optional().nullable(),
+  gestor_asignado: z.string().optional().nullable(),
+  proveedor_id: z.coerce.number().int().positive().optional().nullable(),
+});
+
+export const morosidadApiSchema = z.object({
+  comunidad_id: z.coerce.number().int().positive('comunidad_id inválido'),
+  nombre_deudor: z.string().min(1, 'El nombre del deudor es obligatorio'),
+  apellidos: z.string().optional().nullable(),
+  telefono_deudor: z.string().optional().nullable(),
+  email_deudor: z.email('Email no válido').optional().nullable().or(z.literal('')),
+  titulo_documento: z.string().min(1, 'titulo_documento obligatorio'),
+  fecha_notificacion: z.string().optional().nullable(),
+  importe: z.coerce.number().nonnegative('Importe no válido'),
+  observaciones: z.string().optional().nullable(),
+  gestor: z.string().optional().nullable(),
+  documento: z.string().optional().nullable(),
+});
 
 // ============================================
 // HELPER: validate & extract errors

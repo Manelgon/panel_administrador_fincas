@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { vacationSettingsActionSchema } from '@/lib/schemas';
 
 async function isAdmin(userId: string) {
     const { data } = await supabaseAdmin.from('profiles').select('rol').eq('user_id', userId).maybeSingle();
@@ -30,11 +32,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-    try {
-        const body = await request.json();
-        const { adminId, action, data } = body;
+    const validation = await validateRequest(request, vacationSettingsActionSchema);
+    if (!validation.success) return validation.response;
+    const { adminId, action, data } = validation.data;
 
-        if (!adminId || !(await isAdmin(adminId))) {
+    try {
+        if (!(await isAdmin(adminId))) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 
