@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { vacationRequestActionSchema } from '@/lib/schemas';
 
 // Helper to check admin role
 async function isAdmin(userId: string) {
@@ -62,14 +64,11 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    const validation = await validateRequest(request, vacationRequestActionSchema);
+    if (!validation.success) return validation.response;
+    const { adminId, requestId, status, commentAdmin } = validation.data;
+
     try {
-        const body = await request.json();
-        const { adminId, requestId, status, commentAdmin } = body;
-
-        if (!adminId || !requestId || !status) {
-            return NextResponse.json({ error: 'Faltan campos' }, { status: 400 });
-        }
-
         if (!(await isAdmin(adminId))) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }

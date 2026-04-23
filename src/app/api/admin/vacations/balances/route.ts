@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { vacationBalancePatchSchema } from '@/lib/schemas';
 
 async function isAdmin(userId: string) {
     const { data, error } = await supabaseAdmin
@@ -63,11 +65,12 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-    try {
-        const body = await request.json();
-        const { adminId, userId, year, balances } = body;
+    const validation = await validateRequest(request, vacationBalancePatchSchema);
+    if (!validation.success) return validation.response;
+    const { adminId, userId, year, balances } = validation.data;
 
-        if (!adminId || !(await isAdmin(adminId))) {
+    try {
+        if (!(await isAdmin(adminId))) {
             return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 

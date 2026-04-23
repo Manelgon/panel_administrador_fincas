@@ -2,6 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { updateUserApiSchema } from '@/lib/schemas';
 
 export async function POST(request: Request) {
     // 1. Verify Authentication & Admin Role
@@ -47,13 +49,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
     }
 
+    const validation = await validateRequest(request, updateUserApiSchema);
+    if (!validation.success) return validation.response;
+    const { userId, email, password, nombre, apellido, telefono, rol, activo } = validation.data;
+
     try {
-        const { userId, email, password, nombre, apellido, telefono, rol, activo } = await request.json();
-
-        if (!userId) {
-            return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
-        }
-
         // 3. Update Auth User (Email, Password, Ban Status)
         const authUpdates: any = {
             email: email,

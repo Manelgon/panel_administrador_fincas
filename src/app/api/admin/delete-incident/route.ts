@@ -1,15 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { deleteIncidentApiSchema } from '@/lib/schemas';
 
 // Server-side admin client (bypasses RLS)
 export async function POST(request: Request) {
-    try {
-        const { id, email, password } = await request.json();
+    const validation = await validateRequest(request, deleteIncidentApiSchema);
+    if (!validation.success) return validation.response;
+    const { id, email, password } = validation.data;
 
-        if (!id || !email || !password) {
-            return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
-        }
+    try {
 
         // 1. Verify credentials by attempting to sign in (without creating a session)
         // We use a temporary client so we don't mess with global state if any

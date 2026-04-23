@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { NextResponse } from 'next/server';
+import { validateRequest } from '@/lib/api/validateRequest';
+import { universalDeleteApiSchema } from '@/lib/schemas';
 
 // Server-side admin client (bypasses RLS)
 /**
@@ -60,13 +62,11 @@ async function deleteAdjuntosFromStorage(adjuntos: string[]): Promise<void> {
 }
 
 export async function POST(request: Request) {
+    const validation = await validateRequest(request, universalDeleteApiSchema);
+    if (!validation.success) return validation.response;
+    const { id, email, password, type } = validation.data;
+
     try {
-        const { id, email, password, type } = await request.json();
-
-        if (!id || !type) {
-            return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
-        }
-
         // 0. Session-based authentication
         const { supabaseRouteClient } = await import('@/lib/supabase/route');
         const supabase = await supabaseRouteClient();
@@ -205,7 +205,7 @@ export async function POST(request: Request) {
             if (id === verifiedUser.id) {
                 return NextResponse.json({ error: 'No puedes eliminar tu propia cuenta mientras estás logueado' }, { status: 400 });
             }
-            const { error } = await supabaseAdmin.auth.admin.deleteUser(id);
+            const { error } = await supabaseAdmin.auth.admin.deleteUser(String(id));
             deleteError = error;
         } else if (type === 'document') {
             const { error } = await supabaseAdmin.from('doc_submissions').delete().eq('id', id);
