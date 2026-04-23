@@ -185,7 +185,7 @@ export default function CronometrajePage() {
                             entity_type: 'incidencia',
                             entity_id: activeTask.incidencia_id,
                             user_id: user.id,
-                            content: `✅ Tarea finalizada · ${tipo} · Duración ${dur}`,
+                            content: `✅ Tarea realizada · ${tipo} · Tiempo total ${dur}${activeTask.nota ? ` · ${activeTask.nota}` : ''}`,
                         }]);
                     }
                 }
