@@ -115,6 +115,7 @@ export default function IncidenciasPage() {
     // Notificación al reasignar proveedor
     const [quickNotifProveedorEmail, setQuickNotifProveedorEmail] = useState(false);
     const [quickNotifProveedorWhatsapp, setQuickNotifProveedorWhatsapp] = useState(false);
+    const [quickNotifProveedorNone, setQuickNotifProveedorNone] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Detail Modal State
@@ -1193,6 +1194,7 @@ export default function IncidenciasPage() {
             setQuickReassignNewProveedorId('');
             setQuickNotifProveedorEmail(false);
             setQuickNotifProveedorWhatsapp(false);
+            setQuickNotifProveedorNone(false);
             setShowProveedorReassignSuccessModal(true);
 
         } catch (error: any) {
@@ -2165,9 +2167,9 @@ export default function IncidenciasPage() {
                             onClick: (r) => {
                                 setQuickReassignProveedorIncidencia(r);
                                 setQuickReassignNewProveedorId(r.proveedor_id ? String(r.proveedor_id) : '');
-                                const v = Number((r as any).aviso_proveedor) || 0;
-                                setQuickNotifProveedorEmail(v === 2 || v === 3);
-                                setQuickNotifProveedorWhatsapp(v === 1 || v === 3);
+                                setQuickNotifProveedorEmail(false);
+                                setQuickNotifProveedorWhatsapp(false);
+                                setQuickNotifProveedorNone(false);
                                 setShowQuickReassignProveedorModal(true);
                             },
                         },
@@ -2612,18 +2614,17 @@ export default function IncidenciasPage() {
                                         <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                             <input
                                                 type="checkbox"
-                                                checked={!quickNotifProveedorEmail && !quickNotifProveedorWhatsapp}
-                                                disabled={quickNotifProveedorEmail || quickNotifProveedorWhatsapp}
-                                                onChange={e => { if (e.target.checked) { setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } }}
+                                                checked={quickNotifProveedorNone}
+                                                onChange={e => { if (e.target.checked) { setQuickNotifProveedorNone(true); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } else { setQuickNotifProveedorNone(false); } }}
                                                 className="w-4 h-4 rounded accent-yellow-400"
                                             />
-                                            <span className={`text-xs font-semibold ${(quickNotifProveedorEmail || quickNotifProveedorWhatsapp) ? 'text-neutral-400' : 'text-neutral-700'}`}>No notificar</span>
+                                            <span className="text-xs font-semibold text-neutral-700">No notificar</span>
                                         </label>
                                         <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                             <input
                                                 type="checkbox"
                                                 checked={quickNotifProveedorEmail}
-                                                onChange={e => setQuickNotifProveedorEmail(e.target.checked)}
+                                                onChange={e => { setQuickNotifProveedorEmail(e.target.checked); if (e.target.checked) setQuickNotifProveedorNone(false); }}
                                                 disabled={!selectedProvQuick.email}
                                                 className="w-4 h-4 rounded accent-yellow-400"
                                             />
@@ -2633,7 +2634,7 @@ export default function IncidenciasPage() {
                                             <input
                                                 type="checkbox"
                                                 checked={quickNotifProveedorWhatsapp}
-                                                onChange={e => setQuickNotifProveedorWhatsapp(e.target.checked)}
+                                                onChange={e => { setQuickNotifProveedorWhatsapp(e.target.checked); if (e.target.checked) setQuickNotifProveedorNone(false); }}
                                                 disabled={!selectedProvQuick.telefono}
                                                 className="w-4 h-4 rounded accent-yellow-400"
                                             />
@@ -2652,7 +2653,7 @@ export default function IncidenciasPage() {
 
                         <div className="flex gap-3">
                             <button
-                                onClick={() => { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); }}
+                                onClick={() => { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); setQuickNotifProveedorNone(false); }}
                                 disabled={isUpdatingProveedor}
                                 className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all disabled:opacity-50"
                             >
@@ -2660,7 +2661,7 @@ export default function IncidenciasPage() {
                             </button>
                             <button
                                 onClick={handleQuickReassignProveedorSubmit}
-                                disabled={isUpdatingProveedor}
+                                disabled={isUpdatingProveedor || (!!quickReassignNewProveedorId && !quickNotifProveedorNone && !quickNotifProveedorEmail && !quickNotifProveedorWhatsapp)}
                                 className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
                                 {isUpdatingProveedor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
