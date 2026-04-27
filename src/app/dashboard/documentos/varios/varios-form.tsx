@@ -65,7 +65,8 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
     const handleChange = (field: string, val: string | number) => {
         setValues(prev => {
             const next = { ...prev, [field]: val };
-            if (field === "nombre" || field === "apellidos") {
+            if (field === "nombre" || field === "apellido1" || field === "apellido2") {
+                next.apellidos = [next.apellido1, next.apellido2].filter(Boolean).join(" ").trim();
                 next.nombre_apellidos = [next.nombre, next.apellidos].filter(Boolean).join(" ").trim();
             }
             return calculate(next);
@@ -92,6 +93,7 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                 });
             }
 
+            next.apellidos = [next.apellido1, next.apellido2].filter(Boolean).join(" ").trim();
             next.nombre_apellidos = [next.nombre, next.apellidos].filter(Boolean).join(" ").trim();
             return calculate(next);
         });
@@ -333,15 +335,34 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
         return Boolean(descripcion && und && importe && iva);
     });
     const tiposInmuebleSelected: string[] = Array.isArray(values.tipos_inmueble) ? values.tipos_inmueble : [];
-    const canGenerate = values.codigo && values.cliente && values.nombre && values.apellidos && values.nif && values.fecha_emision && tiposInmuebleSelected.length > 0 && allConceptsComplete;
+    const tipoInmuebleFieldKey: Record<string, string> = {
+        Vivienda: "tipo_vivienda_texto",
+        Trastero: "tipo_trastero_texto",
+        Aparcamiento: "tipo_aparcamiento_texto",
+    };
+    const tipoInmueblePlaceholder: Record<string, string> = {
+        Vivienda: "Ej: 3º A",
+        Trastero: "Ej: T-12",
+        Aparcamiento: "Ej: Plaza 45",
+    };
+    const allTiposInmuebleTextosCompletos = tiposInmuebleSelected.every(tipo => {
+        const key = tipoInmuebleFieldKey[tipo];
+        return Boolean(String(values[key] || "").trim());
+    });
+    const canGenerate = values.codigo && values.cliente && values.nombre && values.apellido1 && values.nif && values.fecha_emision && tiposInmuebleSelected.length > 0 && allTiposInmuebleTextosCompletos && allConceptsComplete;
 
     const toggleTipoInmueble = (tipo: string) => {
         setValues(prev => {
             const current: string[] = Array.isArray(prev.tipos_inmueble) ? prev.tipos_inmueble : [];
-            const next = current.includes(tipo)
+            const isRemoving = current.includes(tipo);
+            const next = isRemoving
                 ? current.filter(t => t !== tipo)
                 : [...current, tipo];
-            return { ...prev, tipos_inmueble: next, tipo_inmueble: next.join(", ") };
+            const updated: Record<string, any> = { ...prev, tipos_inmueble: next, tipo_inmueble: next.join(", ") };
+            if (isRemoving) {
+                delete updated[tipoInmuebleFieldKey[tipo]];
+            }
+            return updated;
         });
     };
     const addConceptRow = () => {
@@ -375,8 +396,18 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                     <div className="space-y-4">
                         <h3 className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">Información del Cliente</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-                            {/* Fila 1: Nombre · Apellidos */}
-                            <div className="sm:col-span-1 lg:col-span-2">
+                            {/* Fila 1: Fecha Emisión · Nombre · Apellido 1 · Apellido 2 */}
+                            <div className="sm:col-span-1 lg:col-span-1">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Fecha Emisión<RequiredAsterisk /></label>
+                                <input
+                                    disabled={isDisabled}
+                                    type="date"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                    value={values.fecha_emision || ""}
+                                    onChange={e => handleChange("fecha_emision", e.target.value)}
+                                />
+                            </div>
+                            <div className="sm:col-span-1 lg:col-span-1">
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Nombre<RequiredAsterisk /></label>
                                 <input
                                     disabled={isDisabled}
@@ -387,19 +418,30 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                     onChange={e => handleChange("nombre", e.target.value)}
                                 />
                             </div>
-                            <div className="sm:col-span-1 lg:col-span-2">
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Apellidos<RequiredAsterisk /></label>
+                            <div className="sm:col-span-1 lg:col-span-1">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Apellido 1<RequiredAsterisk /></label>
                                 <input
                                     disabled={isDisabled}
                                     type="text"
                                     placeholder="Ej: Pérez"
                                     className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.apellidos || ""}
-                                    onChange={e => handleChange("apellidos", e.target.value)}
+                                    value={values.apellido1 || ""}
+                                    onChange={e => handleChange("apellido1", e.target.value)}
+                                />
+                            </div>
+                            <div className="sm:col-span-1 lg:col-span-1">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Apellido 2</label>
+                                <input
+                                    disabled={isDisabled}
+                                    type="text"
+                                    placeholder="Ej: García"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                    value={values.apellido2 || ""}
+                                    onChange={e => handleChange("apellido2", e.target.value)}
                                 />
                             </div>
 
-                            {/* Fila 2: NIF · Tipo Inmueble */}
+                            {/* Fila 2: NIF · Comunidad */}
                             <div className="sm:col-span-1 lg:col-span-2">
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">NIF<RequiredAsterisk /></label>
                                 <input
@@ -412,27 +454,6 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                 />
                             </div>
                             <div className="sm:col-span-1 lg:col-span-2">
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Tipo Inmueble<RequiredAsterisk /></label>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {['Vivienda', 'Trastero', 'Aparcamiento'].map(tipo => {
-                                        const active = tiposInmuebleSelected.includes(tipo);
-                                        return (
-                                            <button
-                                                key={tipo}
-                                                type="button"
-                                                disabled={isDisabled}
-                                                onClick={() => toggleTipoInmueble(tipo)}
-                                                className={`w-full px-4 py-2 rounded-lg border text-sm font-semibold transition disabled:opacity-50 ${active ? 'bg-yellow-400 border-yellow-500 text-neutral-950' : 'bg-white border-neutral-200 text-neutral-700 hover:bg-neutral-50'}`}
-                                            >
-                                                {tipo}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Fila 3: Comunidad · Provincia · Ciudad */}
-                            <div className="sm:col-span-2 lg:col-span-2">
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Comunidad<RequiredAsterisk /></label>
                                 <SearchableSelect
                                     value={values.codigo || ""}
@@ -444,7 +465,22 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                     placeholder="Selecciona comunidad..."
                                 />
                             </div>
-                            <div>
+
+                            {/* Fila 3: Domicilio (completo) */}
+                            <div className="sm:col-span-2 lg:col-span-4">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Domicilio</label>
+                                <input
+                                    disabled={isDisabled}
+                                    type="text"
+                                    placeholder="Ej: C/ Mayor 123"
+                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                    value={values.domicilio || ""}
+                                    onChange={e => handleChange("domicilio", e.target.value)}
+                                />
+                            </div>
+
+                            {/* Fila 4: Provincia · Ciudad · C.P. */}
+                            <div className="sm:col-span-2 lg:col-span-2">
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Provincia</label>
                                 <input
                                     disabled={isDisabled}
@@ -466,8 +502,6 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                     onChange={e => handleChange("ciudad", e.target.value)}
                                 />
                             </div>
-
-                            {/* Fila 4: C.P. · Domicilio */}
                             <div>
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">C.P</label>
                                 <input
@@ -479,62 +513,45 @@ export default function VariosForm({ onSuccess, onCancel }: { onSuccess?: () => 
                                     onChange={e => handleChange("cp", e.target.value)}
                                 />
                             </div>
-                            <div className="sm:col-span-1 lg:col-span-3">
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Domicilio</label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Ej: C/ Mayor 123"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.domicilio || ""}
-                                    onChange={e => handleChange("domicilio", e.target.value)}
-                                />
+
+                            {/* Fila 5: Tipo Inmueble (al final) */}
+                            <div className="sm:col-span-2 lg:col-span-4">
+                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Tipo Inmueble<RequiredAsterisk /></label>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {['Vivienda', 'Trastero', 'Aparcamiento'].map(tipo => {
+                                        const active = tiposInmuebleSelected.includes(tipo);
+                                        return (
+                                            <button
+                                                key={tipo}
+                                                type="button"
+                                                disabled={isDisabled}
+                                                onClick={() => toggleTipoInmueble(tipo)}
+                                                className={`w-full px-4 py-2 rounded-lg border text-sm font-semibold transition disabled:opacity-50 ${active ? 'bg-yellow-400 border-yellow-500 text-neutral-950' : 'bg-white border-yellow-300 text-neutral-700 hover:bg-yellow-50'}`}
+                                            >
+                                                {tipo}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                                <div className="grid grid-cols-3 gap-2 mt-2">
+                                    {['Vivienda', 'Trastero', 'Aparcamiento'].map(tipo => {
+                                        const active = tiposInmuebleSelected.includes(tipo);
+                                        const key = tipoInmuebleFieldKey[tipo];
+                                        return (
+                                            <input
+                                                key={tipo}
+                                                disabled={isDisabled || !active}
+                                                type="text"
+                                                placeholder={tipoInmueblePlaceholder[tipo]}
+                                                className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
+                                                value={values[key] || ""}
+                                                onChange={e => handleChange(key, e.target.value)}
+                                            />
+                                        );
+                                    })}
+                                </div>
                             </div>
 
-                            {/* Fila 5: Bloque · Planta · Puerta · Fecha Emisión */}
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Bloque</label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Ej: B"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.bloque || ""}
-                                    onChange={e => handleChange("bloque", e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Planta</label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Ej: 3º"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.planta || ""}
-                                    onChange={e => handleChange("planta", e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Puerta</label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="text"
-                                    placeholder="Ej: A"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.puerta || ""}
-                                    onChange={e => handleChange("puerta", e.target.value)}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">Fecha Emisión<RequiredAsterisk /></label>
-                                <input
-                                    disabled={isDisabled}
-                                    type="date"
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white disabled:bg-neutral-100 disabled:text-neutral-400 transition"
-                                    value={values.fecha_emision || ""}
-                                    onChange={e => handleChange("fecha_emision", e.target.value)}
-                                />
-                            </div>
                         </div>
                     </div>
 
