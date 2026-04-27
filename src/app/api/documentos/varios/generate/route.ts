@@ -549,28 +549,48 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
     const tiposArr: string[] = Array.isArray(payload["tipos_inmueble"])
         ? payload["tipos_inmueble"].map((t: any) => safe(t)).filter(Boolean)
         : safe(payload["tipo_inmueble"]).split(",").map(t => t.trim()).filter(Boolean);
-    const joinTipos = (arr: string[]) => {
-        if (arr.length === 0) return "inmueble";
-        if (arr.length === 1) return arr[0];
-        return arr.slice(0, -1).join(", ") + " y " + arr[arr.length - 1];
+
+    const tipoMeta: Record<string, { genero: "f" | "m"; deArt: string; situado: string }> = {
+        Vivienda: { genero: "f", deArt: "de la", situado: "situada" },
+        Aparcamiento: { genero: "m", deArt: "del", situado: "situado" },
+        Trastero: { genero: "m", deArt: "del", situado: "situado" },
     };
-    const tiposTexto = joinTipos(tiposArr);
-    const tipoPrincipal = tiposArr[0] || "inmueble";
+
+    const tipoTextoInput: Record<string, string> = {
+        Vivienda: safe(payload["tipo_vivienda_texto"] ?? ""),
+        Aparcamiento: safe(payload["tipo_aparcamiento_texto"] ?? ""),
+        Trastero: safe(payload["tipo_trastero_texto"] ?? ""),
+    };
+
+    const buildTipoFrase = (arr: string[]) => {
+        if (arr.length === 0) return { frase: "del inmueble", concordancia: "situado" };
+        const partes = arr.map((t, idx) => {
+            const meta = tipoMeta[t];
+            const txt = tipoTextoInput[t];
+            const nombre = txt ? `${t} ${txt}` : t;
+            if (!meta) return idx === 0 ? `del ${nombre}` : `y ${nombre}`;
+            return idx === 0 ? `${meta.deArt} ${nombre}` : `${meta.deArt} ${nombre}`;
+        });
+        let frase: string;
+        if (partes.length === 1) {
+            frase = partes[0];
+        } else {
+            frase = partes.slice(0, -1).join(", ") + " y " + partes[partes.length - 1];
+        }
+        const ultimo = arr[arr.length - 1];
+        const concordancia = arr.length === 1
+            ? (tipoMeta[ultimo]?.situado || "situado")
+            : (arr.every(t => tipoMeta[t]?.genero === "f") ? "situadas" : "situados");
+        return { frase, concordancia };
+    };
+
+    const { frase: tiposFrase, concordancia: situadoTexto } = buildTipoFrase(tiposArr);
 
     const nif = safe(payload["nif"] ?? "");
     const domicilio = safe(payload["domicilio"] ?? "");
-    const bloque = safe(payload["bloque"] ?? "");
-    const planta = safe(payload["planta"] ?? "");
-    const puerta = safe(payload["puerta"] ?? "");
     const cp = safe(payload["cp"] ?? "");
     const ciudad = safe(payload["ciudad"] ?? payload["Ciudad"] ?? "");
     const fecha = formatDateEU(payload["fecha_emision"]);
-
-    const ubicacionExtra = [
-        bloque ? `bloque ${bloque}` : "",
-        planta ? `planta ${planta}` : "",
-        puerta ? `puerta ${puerta}` : "",
-    ].filter(Boolean).join(", ");
 
     const p1 =
         `${adminName}, Administrador de Fincas colegiado en el Ilustre Colegio Territorial de ` +
@@ -579,8 +599,8 @@ export async function buildPagosAlDiaPdf(payload: any, assets: { logoBytes: Uint
 
     const p2 =
         `Que, consultados los libros contables de la mencionada comunidad de propietarios, D./Dª ${cliente}, ` +
-        `con DNI/NIF ${nif}, figura como propietario/a del ${tiposTexto} situado en ${domicilio}` +
-        `${ubicacionExtra ? `, ${ubicacionExtra}` : ""}, código postal ${cp}, en la ciudad de ${ciudad}, ` +
+        `con DNI/NIF ${nif}, figura como propietario/a ${tiposFrase} ${situadoTexto} en ${domicilio}, ` +
+        `código postal ${cp}, en la ciudad de ${ciudad}, ` +
         `certifico, en base al art. 9.1 e) de la Ley 49/1960, de 21 de Julio, de Propiedad Horizontal, ` +
         `que la propiedad/propiedades se encuentra, a día de hoy, al corriente de pago de todos los recibos ordinarios ` +
         `o extraordinarios de cuotas de comunidad, salvo devolución bancaria en plazo excepcional.`;
@@ -856,7 +876,7 @@ export async function POST(req: Request) {
 
             if (comunidadRow?.id) {
                 const nombreCompleto = [payload.nombre, payload.apellidos].filter(Boolean).join(" ").trim() || payload.nombre_apellidos || "Propietario";
-                const dirParts = [payload.domicilio, payload.bloque && `Bloque ${payload.bloque}`, payload.planta && `Planta ${payload.planta}`, payload.puerta && `Puerta ${payload.puerta}`].filter(Boolean).join(", ");
+                const dirParts = payload.domicilio || "";
                 const ubicacion = [payload.cp, payload.ciudad, payload.provincia].filter(Boolean).join(" ");
                 const tipos = Array.isArray(payload.tipos_inmueble) ? payload.tipos_inmueble.join(", ") : (payload.tipo_inmueble || "");
                 const totalStr = importeTotal ? `${String(importeTotal).replace(".", ",")} €` : null;
