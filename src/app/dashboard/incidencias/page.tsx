@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Wrench } from 'lucide-react';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -101,10 +101,20 @@ export default function IncidenciasPage() {
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleteEmail, setDeleteEmail] = useState('');
     const [deletePassword, setDeletePassword] = useState('');
-    const [isReassigning, setIsReassigning] = useState(false);
-    const [newGestorId, setNewGestorId] = useState('');
     const [isUpdatingGestor, setIsUpdatingGestor] = useState(false);
     const [showReassignSuccessModal, setShowReassignSuccessModal] = useState(false);
+    const [showQuickReassignModal, setShowQuickReassignModal] = useState(false);
+    const [quickReassignIncidencia, setQuickReassignIncidencia] = useState<Incidencia | null>(null);
+    const [quickReassignNewGestorId, setQuickReassignNewGestorId] = useState('');
+    // Proveedor reassign (detail + quick action)
+    const [isUpdatingProveedor, setIsUpdatingProveedor] = useState(false);
+    const [showProveedorReassignSuccessModal, setShowProveedorReassignSuccessModal] = useState(false);
+    const [showQuickReassignProveedorModal, setShowQuickReassignProveedorModal] = useState(false);
+    const [quickReassignProveedorIncidencia, setQuickReassignProveedorIncidencia] = useState<Incidencia | null>(null);
+    const [quickReassignNewProveedorId, setQuickReassignNewProveedorId] = useState('');
+    // Notificación al reasignar proveedor
+    const [quickNotifProveedorEmail, setQuickNotifProveedorEmail] = useState(false);
+    const [quickNotifProveedorWhatsapp, setQuickNotifProveedorWhatsapp] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
     // Detail Modal State
@@ -1003,9 +1013,7 @@ export default function IncidenciasPage() {
         }, 'Eliminando incidencia...');
     };
 
-    const handleUpdateGestor = async () => {
-        if (!selectedDetailIncidencia || !newGestorId) return;
-
+    const reassignGestor = async (targetIncidencia: Incidencia, gestorId: string) => {
         await withLoading(async () => {
         setIsUpdatingGestor(true);
         try {
@@ -1015,28 +1023,29 @@ export default function IncidenciasPage() {
 
             const { error } = await supabase
                 .from('incidencias')
-                .update({ gestor_asignado: newGestorId })
-                .eq('id', selectedDetailIncidencia.id);
+                .update({ gestor_asignado: gestorId })
+                .eq('id', targetIncidencia.id);
 
             if (error) throw error;
 
-            // toast.success('Gestor reasignado correctamente'); // Replaced by modal
-
             // Actualizar estado local
-            const newGestorProfile = profiles.find(p => p.user_id === newGestorId);
-            const oldGestorName = selectedDetailIncidencia.gestor?.nombre || 'Sin asignar';
+            const newGestorProfile = profiles.find(p => p.user_id === gestorId);
+            const oldGestorName = targetIncidencia.gestor?.nombre || 'Sin asignar';
             const newGestorName = newGestorProfile?.nombre || 'Desconocido';
 
-            setSelectedDetailIncidencia({
-                ...selectedDetailIncidencia,
-                gestor_asignado: newGestorId,
-                gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : selectedDetailIncidencia.gestor
-            });
+            // Si la incidencia reasignada es la abierta en el detalle, sincronizar
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === targetIncidencia.id) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    gestor_asignado: gestorId,
+                    gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : selectedDetailIncidencia.gestor
+                });
+            }
 
             // Actualizar lista principal
             setIncidencias(prev => prev.map(inc =>
-                inc.id === selectedDetailIncidencia.id
-                    ? { ...inc, gestor_asignado: newGestorId, gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : inc.gestor }
+                inc.id === targetIncidencia.id
+                    ? { ...inc, gestor_asignado: gestorId, gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : inc.gestor }
                     : inc
             ));
 
@@ -1045,23 +1054,23 @@ export default function IncidenciasPage() {
                 .from('record_messages')
                 .insert({
                     entity_type: 'incidencia',
-                    entity_id: selectedDetailIncidencia.id,
+                    entity_id: targetIncidencia.id,
                     user_id: user.id,
                     content: `🔄 TICKET REASIGNADO\nDe: ${oldGestorName}\nA: ${newGestorName}`
                 });
 
             // 2. Crear Notificación para el nuevo gestor
-            if (newGestorId !== user.id) { // No notificarse a sí mismo si se autoasigna
+            if (gestorId !== user.id) { // No notificarse a sí mismo si se autoasigna
                 await supabase
                     .from('notifications')
                     .insert({
-                        user_id: newGestorId,
+                        user_id: gestorId,
                         type: 'assignment',
                         title: 'Nueva Asignación de Ticket',
-                        content: `Se te ha asignado la incidencia #${selectedDetailIncidencia.id} (Reasignado por reasignación)`,
-                        entity_id: selectedDetailIncidencia.id,
+                        content: `Se te ha asignado la incidencia #${targetIncidencia.id} (Reasignado por reasignación)`,
+                        entity_id: targetIncidencia.id,
                         entity_type: 'incidencia',
-                        link: `/dashboard/incidencias?id=${selectedDetailIncidencia.id}`,
+                        link: `/dashboard/incidencias?id=${targetIncidencia.id}`,
                         is_read: false
                     });
             }
@@ -1072,8 +1081,8 @@ export default function IncidenciasPage() {
             await logActivity({
                 action: 'update',
                 entityType: 'incidencia',
-                entityId: selectedDetailIncidencia.id,
-                entityName: `Incidencia #${selectedDetailIncidencia.id}`,
+                entityId: targetIncidencia.id,
+                entityName: `Incidencia #${targetIncidencia.id}`,
                 details: {
                     change: 'reasignacion',
                     old_gestor: oldGestorName,
@@ -1082,8 +1091,9 @@ export default function IncidenciasPage() {
                 }
             });
 
-            setIsReassigning(false);
-            setNewGestorId('');
+            setShowQuickReassignModal(false);
+            setQuickReassignIncidencia(null);
+            setQuickReassignNewGestorId('');
             setShowReassignSuccessModal(true);
 
         } catch (error: any) {
@@ -1093,6 +1103,113 @@ export default function IncidenciasPage() {
             setIsUpdatingGestor(false);
         }
         }, 'Reasignando gestor...');
+    };
+
+    const handleQuickReassignSubmit = async () => {
+        if (!quickReassignIncidencia || !quickReassignNewGestorId) return;
+        await reassignGestor(quickReassignIncidencia, quickReassignNewGestorId);
+    };
+
+    const reassignProveedor = async (
+        targetIncidencia: Incidencia,
+        proveedorId: string,
+        opts: { notifEmail: boolean; notifWhatsapp: boolean }
+    ) => {
+        await withLoading(async () => {
+        setIsUpdatingProveedor(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const proveedorIdNum = proveedorId ? parseInt(proveedorId) : null;
+            const avisoProveedor = !proveedorIdNum
+                ? 0
+                : (!opts.notifEmail && !opts.notifWhatsapp)
+                    ? 0
+                    : (opts.notifWhatsapp && !opts.notifEmail)
+                        ? 1
+                        : (!opts.notifWhatsapp && opts.notifEmail)
+                            ? 2
+                            : 3;
+
+            const { error } = await supabase
+                .from('incidencias')
+                .update({ proveedor_id: proveedorIdNum, aviso_proveedor: avisoProveedor })
+                .eq('id', targetIncidencia.id);
+
+            if (error) throw error;
+
+            const newProveedor = proveedorIdNum ? proveedores.find(p => p.id === proveedorIdNum) : null;
+            const oldProveedorName = (targetIncidencia as any).proveedor?.nombre || 'Sin asignar';
+            const newProveedorName = newProveedor?.nombre || 'Sin asignar';
+            const avisoLabel = avisoProveedor === 0 ? 'Sin aviso' : avisoProveedor === 1 ? 'WhatsApp' : avisoProveedor === 2 ? 'Email' : 'Email + WhatsApp';
+
+            // Si la incidencia reasignada es la abierta en el detalle, sincronizar
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === targetIncidencia.id) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    proveedor_id: proveedorIdNum,
+                    aviso_proveedor: avisoProveedor,
+                    proveedor: newProveedor ? { nombre: newProveedor.nombre } : null,
+                } as unknown as Incidencia);
+            }
+
+            // Actualizar lista principal
+            setIncidencias(prev => prev.map(inc =>
+                inc.id === targetIncidencia.id
+                    ? ({ ...inc, proveedor_id: proveedorIdNum, aviso_proveedor: avisoProveedor, proveedor: newProveedor ? { nombre: newProveedor.nombre } : null } as unknown as Incidencia)
+                    : inc
+            ));
+
+            // 1. Insertar mensaje en el Timeline (Chat)
+            await supabase
+                .from('record_messages')
+                .insert({
+                    entity_type: 'incidencia',
+                    entity_id: targetIncidencia.id,
+                    user_id: user.id,
+                    content: `🔧 PROVEEDOR REASIGNADO\nDe: ${oldProveedorName}\nA: ${newProveedorName}\nAviso: ${avisoLabel}`
+                });
+
+            // 2. Log de Actividad del Sistema
+            const currentUserProfile = profiles.find(p => p.user_id === user.id);
+            const currentUserName = currentUserProfile?.nombre || user.email || 'Desconocido';
+            await logActivity({
+                action: 'update',
+                entityType: 'incidencia',
+                entityId: targetIncidencia.id,
+                entityName: `Incidencia #${targetIncidencia.id}`,
+                details: {
+                    change: 'reasignacion_proveedor',
+                    old_proveedor: oldProveedorName,
+                    new_proveedor: newProveedorName,
+                    aviso_proveedor: avisoLabel,
+                    by: currentUserName
+                }
+            });
+
+            setShowQuickReassignProveedorModal(false);
+            setQuickReassignProveedorIncidencia(null);
+            setQuickReassignNewProveedorId('');
+            setQuickNotifProveedorEmail(false);
+            setQuickNotifProveedorWhatsapp(false);
+            setShowProveedorReassignSuccessModal(true);
+
+        } catch (error: any) {
+            console.error('Error updating proveedor:', error);
+            toast.error('Error al reasignar proveedor');
+        } finally {
+            setIsUpdatingProveedor(false);
+        }
+        }, 'Reasignando proveedor...');
+    };
+
+    const handleQuickReassignProveedorSubmit = async () => {
+        if (!quickReassignProveedorIncidencia) return;
+        await reassignProveedor(quickReassignProveedorIncidencia, quickReassignNewProveedorId, {
+            notifEmail: quickNotifProveedorEmail,
+            notifWhatsapp: quickNotifProveedorWhatsapp,
+        });
     };
 
     const filteredIncidencias = incidencias.filter(inc => {
@@ -1796,6 +1913,16 @@ export default function IncidenciasPage() {
                                                             <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                                 <input
                                                                     type="checkbox"
+                                                                    checked={!notifProveedorEmail && !notifProveedorWhatsapp}
+                                                                    disabled={notifProveedorEmail || notifProveedorWhatsapp}
+                                                                    onChange={e => { if (e.target.checked) { setNotifProveedorEmail(false); setNotifProveedorWhatsapp(false); } }}
+                                                                    className="w-4 h-4 rounded accent-yellow-400"
+                                                                />
+                                                                <span className={`text-xs font-semibold ${(notifProveedorEmail || notifProveedorWhatsapp) ? 'text-neutral-400' : 'text-neutral-700'}`}>No notificar</span>
+                                                            </label>
+                                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
                                                                     checked={notifProveedorEmail}
                                                                     onChange={e => setNotifProveedorEmail(e.target.checked)}
                                                                     disabled={!selectedProv?.email}
@@ -1814,7 +1941,6 @@ export default function IncidenciasPage() {
                                                                 <span className={`text-xs font-semibold ${selectedProv?.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
                                                             </label>
                                                         </div>
-                                                        <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al proveedor.</p>
                                                     </div>
                                                     {notifProveedorEmail && (
                                                         <div>
@@ -2025,6 +2151,27 @@ export default function IncidenciasPage() {
                         },
                         { label: 'Editar', icon: <Pencil className="w-4 h-4" />, onClick: (r) => handleEdit(r) },
                         {
+                            label: 'Reasignar gestor',
+                            icon: <UserCog className="w-4 h-4" />,
+                            onClick: (r) => {
+                                setQuickReassignIncidencia(r);
+                                setQuickReassignNewGestorId(r.gestor_asignado || '');
+                                setShowQuickReassignModal(true);
+                            },
+                        },
+                        {
+                            label: 'Reasignar proveedor',
+                            icon: <Wrench className="w-4 h-4" />,
+                            onClick: (r) => {
+                                setQuickReassignProveedorIncidencia(r);
+                                setQuickReassignNewProveedorId(r.proveedor_id ? String(r.proveedor_id) : '');
+                                const v = Number((r as any).aviso_proveedor) || 0;
+                                setQuickNotifProveedorEmail(v === 2 || v === 3);
+                                setQuickNotifProveedorWhatsapp(v === 1 || v === 3);
+                                setShowQuickReassignProveedorModal(true);
+                            },
+                        },
+                        {
                             label: 'Eliminar',
                             icon: <Trash2 className="w-4 h-4" />,
                             onClick: (r) => handleDeleteClick(r.id),
@@ -2172,48 +2319,37 @@ export default function IncidenciasPage() {
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Responsable asignado</label>
                                         <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between gap-2">
                                             <span>{(selectedDetailIncidencia as any).gestor?.nombre || selectedDetailIncidencia.gestor_asignado || 'Pendiente'}</span>
-                                            {!isReassigning && (
-                                                <button
-                                                    onClick={() => { setNewGestorId(selectedDetailIncidencia.gestor_asignado || ''); setIsReassigning(true); }}
-                                                    className="p-1 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded border border-yellow-500 transition-all shrink-0"
-                                                    title="Reasignar gestor"
-                                                >
-                                                    <UserCog className="w-3.5 h-3.5" />
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setQuickReassignIncidencia(selectedDetailIncidencia);
+                                                    setQuickReassignNewGestorId(selectedDetailIncidencia.gestor_asignado || '');
+                                                    setShowQuickReassignModal(true);
+                                                }}
+                                                className="p-1 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded border border-yellow-500 transition-all shrink-0"
+                                                title="Reasignar gestor"
+                                            >
+                                                <UserCog className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
-                                        {isReassigning && (
-                                            <div className="flex items-center gap-2 mt-2 animate-in fade-in slide-in-from-top-1">
-                                                <div className="flex-1">
-                                                    <SearchableSelect
-                                                        value={newGestorId}
-                                                        onChange={(val) => setNewGestorId(String(val))}
-                                                        options={profiles.map(p => ({ value: p.user_id, label: `${p.nombre} (${p.rol})` }))}
-                                                        placeholder="Nuevo gestor..."
-                                                        className="text-xs"
-                                                    />
-                                                </div>
-                                                <button
-                                                    onClick={handleUpdateGestor}
-                                                    disabled={!newGestorId || isUpdatingGestor}
-                                                    className="p-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200 transition-colors disabled:opacity-50"
-                                                >
-                                                    {isUpdatingGestor ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                                </button>
-                                                <button
-                                                    onClick={() => { setIsReassigning(false); setNewGestorId(''); }}
-                                                    disabled={isUpdatingGestor}
-                                                    className="p-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors disabled:opacity-50"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Proveedor</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">
-                                            {(selectedDetailIncidencia as any).proveedor?.nombre || '—'}
+                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between gap-2">
+                                            <span>{(selectedDetailIncidencia as any).proveedor?.nombre || '—'}</span>
+                                            <button
+                                                onClick={() => {
+                                                    setQuickReassignProveedorIncidencia(selectedDetailIncidencia);
+                                                    setQuickReassignNewProveedorId(selectedDetailIncidencia.proveedor_id ? String(selectedDetailIncidencia.proveedor_id) : '');
+                                                    const v = Number(selectedDetailIncidencia.aviso_proveedor) || 0;
+                                                    setQuickNotifProveedorEmail(v === 2 || v === 3);
+                                                    setQuickNotifProveedorWhatsapp(v === 1 || v === 3);
+                                                    setShowQuickReassignProveedorModal(true);
+                                                }}
+                                                className="p-1 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded border border-yellow-500 transition-all shrink-0"
+                                                title="Reasignar proveedor"
+                                            >
+                                                <Wrench className="w-3.5 h-3.5" />
+                                            </button>
                                         </div>
                                     </div>
                                     <div>
@@ -2348,6 +2484,59 @@ export default function IncidenciasPage() {
                 />
             )}
 
+            {/* Quick Reassign Gestor Modal */}
+            {portalReady && showQuickReassignModal && quickReassignIncidencia && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => { if (!isUpdatingGestor) { setShowQuickReassignModal(false); setQuickReassignIncidencia(null); setQuickReassignNewGestorId(''); } }}
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 relative max-h-[92dvh] overflow-visible animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center shrink-0">
+                                <UserCog className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Reasignar gestor</h3>
+                                <p className="text-xs text-neutral-500">
+                                    Ticket #{quickReassignIncidencia.id} · Actual: {quickReassignIncidencia.gestor?.nombre || 'Sin asignar'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nuevo gestor</label>
+                            <SearchableSelect
+                                value={quickReassignNewGestorId}
+                                onChange={(val) => setQuickReassignNewGestorId(String(val))}
+                                options={profiles.map(p => ({ value: p.user_id, label: `${p.nombre} (${p.rol})` }))}
+                                placeholder="Selecciona un gestor..."
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowQuickReassignModal(false); setQuickReassignIncidencia(null); setQuickReassignNewGestorId(''); }}
+                                disabled={isUpdatingGestor}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleQuickReassignSubmit}
+                                disabled={!quickReassignNewGestorId || quickReassignNewGestorId === quickReassignIncidencia.gestor_asignado || isUpdatingGestor}
+                                className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isUpdatingGestor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Reasignar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            , document.body)}
+
             {/* Reassign Success Modal */}
             {portalReady && showReassignSuccessModal && createPortal(
                 <div
@@ -2374,6 +2563,141 @@ export default function IncidenciasPage() {
                     </div>
                 </div>
             , document.body)}
+
+            {/* Quick Reassign Proveedor Modal */}
+            {portalReady && showQuickReassignProveedorModal && quickReassignProveedorIncidencia && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => { if (!isUpdatingProveedor) { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } }}
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg p-6 relative max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center shrink-0">
+                                <Wrench className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Reasignar proveedor</h3>
+                                <p className="text-xs text-neutral-500">
+                                    Ticket #{quickReassignProveedorIncidencia.id} · Actual: {(quickReassignProveedorIncidencia as any).proveedor?.nombre || 'Sin asignar'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nuevo proveedor</label>
+                            <SearchableSelect
+                                value={quickReassignNewProveedorId ? Number(quickReassignNewProveedorId) : ''}
+                                onChange={(val) => {
+                                    setQuickReassignNewProveedorId(val ? String(val) : '');
+                                    if (!val) { setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); }
+                                }}
+                                options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                                placeholder="Selecciona un proveedor..."
+                            />
+                            <p className="text-[10px] text-neutral-400 mt-2">Deja vacío para quitar el proveedor asignado.</p>
+                        </div>
+
+                        {quickReassignNewProveedorId && (() => {
+                            const selectedProvQuick = proveedores.find(p => p.id === parseInt(quickReassignNewProveedorId));
+                            if (!selectedProvQuick) return null;
+                            return (
+                                <div className="mb-6 bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
+                                    <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                        Notificar al proveedor
+                                    </label>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={!quickNotifProveedorEmail && !quickNotifProveedorWhatsapp}
+                                                disabled={quickNotifProveedorEmail || quickNotifProveedorWhatsapp}
+                                                onChange={e => { if (e.target.checked) { setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } }}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className={`text-xs font-semibold ${(quickNotifProveedorEmail || quickNotifProveedorWhatsapp) ? 'text-neutral-400' : 'text-neutral-700'}`}>No notificar</span>
+                                        </label>
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={quickNotifProveedorEmail}
+                                                onChange={e => setQuickNotifProveedorEmail(e.target.checked)}
+                                                disabled={!selectedProvQuick.email}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className={`text-xs font-semibold ${selectedProvQuick.email ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por Email</span>
+                                        </label>
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={quickNotifProveedorWhatsapp}
+                                                onChange={e => setQuickNotifProveedorWhatsapp(e.target.checked)}
+                                                disabled={!selectedProvQuick.telefono}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className={`text-xs font-semibold ${selectedProvQuick.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
+                                        </label>
+                                    </div>
+                                    {quickNotifProveedorEmail && !selectedProvQuick.email && (
+                                        <p className="text-[10px] text-amber-500 font-medium mt-1.5">Este proveedor no tiene email registrado.</p>
+                                    )}
+                                    {quickNotifProveedorWhatsapp && !selectedProvQuick.telefono && (
+                                        <p className="text-[10px] text-amber-500 font-medium mt-1.5">Este proveedor no tiene teléfono registrado.</p>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); }}
+                                disabled={isUpdatingProveedor}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleQuickReassignProveedorSubmit}
+                                disabled={isUpdatingProveedor}
+                                className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isUpdatingProveedor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Reasignar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            , document.body)}
+
+            {/* Proveedor Reassign Success Modal */}
+            {portalReady && showProveedorReassignSuccessModal && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                    >
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                            <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            Proveedor Reasignado
+                        </h3>
+                        <p className="text-neutral-500 mb-6">
+                            La incidencia ha sido reasignada al nuevo proveedor correctamente.
+                        </p>
+                        <button
+                            onClick={() => setShowProveedorReassignSuccessModal(false)}
+                            className="w-full py-3 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold transition-transform active:scale-[0.98]"
+                        >
+                            Aceptar
+                        </button>
+                    </div>
+                </div>
+            , document.body)}
+
             {/* Document Delete Confirmation Modal */}
             {portalReady && showDeleteDocConfirm && createPortal(
                 <div
