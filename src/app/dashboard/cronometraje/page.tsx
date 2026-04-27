@@ -116,7 +116,7 @@ export default function CronometrajePage() {
                 .select('*, tipo_tarea, comunidades(nombre_cdad, codigo), profiles(nombre)')
                 .not('end_at', 'is', null)
                 .order('start_at', { ascending: false })
-                .limit(500),
+                .limit(5000),
 
             supabase
                 .from('comunidades')
