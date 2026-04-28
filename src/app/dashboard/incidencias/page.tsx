@@ -2172,6 +2172,7 @@ export default function IncidenciasPage() {
                                 setQuickNotifProveedorNone(false);
                                 setShowQuickReassignProveedorModal(true);
                             },
+                            hidden: estado === 'Resuelto' || estado === 'Aplazado',
                         },
                         {
                             label: 'Eliminar',
@@ -2338,20 +2339,22 @@ export default function IncidenciasPage() {
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Proveedor</label>
                                         <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between gap-2">
                                             <span>{(selectedDetailIncidencia as any).proveedor?.nombre || '—'}</span>
-                                            <button
-                                                onClick={() => {
-                                                    setQuickReassignProveedorIncidencia(selectedDetailIncidencia);
-                                                    setQuickReassignNewProveedorId(selectedDetailIncidencia.proveedor_id ? String(selectedDetailIncidencia.proveedor_id) : '');
-                                                    const v = Number(selectedDetailIncidencia.aviso_proveedor) || 0;
-                                                    setQuickNotifProveedorEmail(v === 2 || v === 3);
-                                                    setQuickNotifProveedorWhatsapp(v === 1 || v === 3);
-                                                    setShowQuickReassignProveedorModal(true);
-                                                }}
-                                                className="p-1 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded border border-yellow-500 transition-all shrink-0"
-                                                title="Reasignar proveedor"
-                                            >
-                                                <Wrench className="w-3.5 h-3.5" />
-                                            </button>
+                                            {!selectedDetailIncidencia.resuelto && selectedDetailIncidencia.estado !== 'Aplazado' && (
+                                                <button
+                                                    onClick={() => {
+                                                        setQuickReassignProveedorIncidencia(selectedDetailIncidencia);
+                                                        setQuickReassignNewProveedorId(selectedDetailIncidencia.proveedor_id ? String(selectedDetailIncidencia.proveedor_id) : '');
+                                                        const v = Number(selectedDetailIncidencia.aviso_proveedor) || 0;
+                                                        setQuickNotifProveedorEmail(v === 2 || v === 3);
+                                                        setQuickNotifProveedorWhatsapp(v === 1 || v === 3);
+                                                        setShowQuickReassignProveedorModal(true);
+                                                    }}
+                                                    className="p-1 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded border border-yellow-500 transition-all shrink-0"
+                                                    title="Reasignar proveedor"
+                                                >
+                                                    <Wrench className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
                                     <div>
