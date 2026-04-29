@@ -53,9 +53,9 @@ export default function ProveedoresPage() {
         await crud.handleSubmit(crud.formData, () => {
             const errors: Record<string, string> = {};
             if (!crud.formData.nombre?.trim()) errors.nombre = 'El nombre del proveedor es obligatorio';
-            const phoneRegex = /^\d{9,}$/;
+            const phoneRegex = /^(\d{9,}|[0-9]+@g\.us)$/;
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (crud.formData.telefono && !phoneRegex.test(crud.formData.telefono)) errors.telefono = 'El teléfono debe tener al menos 9 dígitos';
+            if (crud.formData.telefono && !phoneRegex.test(crud.formData.telefono)) errors.telefono = 'El teléfono debe tener al menos 9 dígitos o ser un grupo WhatsApp';
             if (crud.formData.email && !emailRegex.test(crud.formData.email)) errors.email = 'El formato del email no es válido';
             return errors;
         });
