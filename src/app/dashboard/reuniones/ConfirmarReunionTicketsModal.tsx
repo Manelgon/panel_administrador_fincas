@@ -11,12 +11,13 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useGlobalLoading } from '@/lib/globalLoading';
 
 const TICKET_TYPES = [
-    { value: 'Estado de cuentas',            label: '1 · Estado de cuentas',            kind: 'gestor' as const },
-    { value: 'Informe incidencias',          label: '2 · Informe incidencias',          kind: 'gestor' as const },
-    { value: 'Listado asistentes',           label: '3 · Listado asistentes',           kind: 'gestor' as const },
-    { value: 'Etiquetas',                    label: '4 · Etiquetas',                    kind: 'gestor' as const },
-    { value: 'Listado morosidad',            label: '5 · Listado morosidad',            kind: 'gestor' as const },
-    { value: 'Portadas convocatoria y acta', label: '6 · Portadas convocatoria y acta', kind: 'check'  as const },
+    { value: 'Crear convocatoria',           label: '1 · Crear convocatoria',           kind: 'gestor' as const },
+    { value: 'Estado de cuentas',            label: '2 · Estado de cuentas',            kind: 'gestor' as const },
+    { value: 'Informe incidencias',          label: '3 · Informe incidencias',          kind: 'gestor' as const },
+    { value: 'Listado asistentes',           label: '4 · Listado asistentes',           kind: 'gestor' as const },
+    { value: 'Etiquetas',                    label: '5 · Etiquetas',                    kind: 'gestor' as const },
+    { value: 'Listado morosidad',            label: '6 · Listado morosidad',            kind: 'gestor' as const },
+    { value: 'Portadas convocatoria y acta', label: '7 · Portadas convocatoria y acta', kind: 'check'  as const },
 ];
 
 interface TicketRow { id: number; tipo: string; gestor_id: string; portada: 'si' | 'no' | null; }
