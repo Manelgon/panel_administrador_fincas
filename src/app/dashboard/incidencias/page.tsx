@@ -63,6 +63,7 @@ export default function IncidenciasPage() {
     const [notifWhatsapp, setNotifWhatsapp] = useState(false);
     const [notifProveedorWhatsapp, setNotifProveedorWhatsapp] = useState(false);
     const [notifProveedorEmail, setNotifProveedorEmail] = useState(false);
+    const [notifProveedorNone, setNotifProveedorNone] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -78,6 +79,7 @@ export default function IncidenciasPage() {
         setNotifWhatsapp(false);
         setNotifProveedorWhatsapp(false);
         setNotifProveedorEmail(false);
+        setNotifProveedorNone(false);
         setFormErrors({});
     };
 
@@ -403,7 +405,7 @@ export default function IncidenciasPage() {
         if (!formData.source) errors.source = 'Debes indicar la entrada del ticket';
         if (!formData.motivo_ticket?.trim()) errors.motivo_ticket = 'El motivo del ticket es obligatorio';
         if (!formData.mensaje?.trim()) errors.mensaje = 'El mensaje de la incidencia es obligatorio';
-        if (formData.proveedor && !notifProveedorEmail && !notifProveedorWhatsapp) errors.notificacion_proveedor = 'Debes seleccionar al menos un canal de notificación para el proveedor';
+        if (formData.proveedor && !notifProveedorEmail && !notifProveedorWhatsapp && !notifProveedorNone) errors.notificacion_proveedor = 'Debes seleccionar una opción de notificación para el proveedor';
 
         const phoneRegex = /^\d{9}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -544,6 +546,7 @@ export default function IncidenciasPage() {
             setNotifWhatsapp(false);
             setNotifProveedorWhatsapp(false);
             setNotifProveedorEmail(false);
+            setNotifProveedorNone(false);
             fetchIncidencias();
         } catch (error: any) {
             toast.error('Error: ' + error.message);
@@ -1496,6 +1499,7 @@ export default function IncidenciasPage() {
                     setNotifWhatsapp(false);
                     setNotifProveedorEmail(false);
                     setNotifProveedorWhatsapp(false);
+                    setNotifProveedorNone(false);
                     setFiles([]);
                     setFormErrors({});
                     setShowForm(!showForm);
@@ -1897,7 +1901,7 @@ export default function IncidenciasPage() {
                                                 value={formData.proveedor ? Number(formData.proveedor) : ''}
                                                 onChange={(val) => {
                                                     setFormData({ ...formData, proveedor: val ? String(val) : '' });
-                                                    if (!val) { setNotifProveedorWhatsapp(false); setNotifProveedorEmail(false); }
+                                                    if (!val) { setNotifProveedorWhatsapp(false); setNotifProveedorEmail(false); setNotifProveedorNone(false); }
                                                 }}
                                                 options={proveedores.map(p => ({
                                                     value: p.id,
@@ -1919,8 +1923,23 @@ export default function IncidenciasPage() {
                                                             <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                                 <input
                                                                     type="checkbox"
+                                                                    checked={notifProveedorNone}
+                                                                    onChange={e => {
+                                                                        setNotifProveedorNone(e.target.checked);
+                                                                        if (e.target.checked) { setNotifProveedorEmail(false); setNotifProveedorWhatsapp(false); }
+                                                                    }}
+                                                                    className="w-4 h-4 rounded accent-yellow-400"
+                                                                />
+                                                                <span className="text-xs font-semibold text-neutral-700">No notificar</span>
+                                                            </label>
+                                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                                <input
+                                                                    type="checkbox"
                                                                     checked={notifProveedorEmail}
-                                                                    onChange={e => setNotifProveedorEmail(e.target.checked)}
+                                                                    onChange={e => {
+                                                                        setNotifProveedorEmail(e.target.checked);
+                                                                        if (e.target.checked) setNotifProveedorNone(false);
+                                                                    }}
                                                                     disabled={!selectedProv?.email}
                                                                     className="w-4 h-4 rounded accent-yellow-400"
                                                                 />
@@ -1930,14 +1949,17 @@ export default function IncidenciasPage() {
                                                                 <input
                                                                     type="checkbox"
                                                                     checked={notifProveedorWhatsapp}
-                                                                    onChange={e => setNotifProveedorWhatsapp(e.target.checked)}
+                                                                    onChange={e => {
+                                                                        setNotifProveedorWhatsapp(e.target.checked);
+                                                                        if (e.target.checked) setNotifProveedorNone(false);
+                                                                    }}
                                                                     disabled={!selectedProv?.telefono}
                                                                     className="w-4 h-4 rounded accent-yellow-400"
                                                                 />
                                                                 <span className={`text-xs font-semibold ${selectedProv?.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
                                                             </label>
                                                         </div>
-                                                        <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al proveedor.</p>
+                                                        {formErrors.notificacion_proveedor && <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.notificacion_proveedor}</p>}
                                                     </div>
                                                     {notifProveedorEmail && (
                                                         <div>
