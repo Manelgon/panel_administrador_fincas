@@ -403,6 +403,7 @@ export default function IncidenciasPage() {
         if (!formData.source) errors.source = 'Debes indicar la entrada del ticket';
         if (!formData.motivo_ticket?.trim()) errors.motivo_ticket = 'El motivo del ticket es obligatorio';
         if (!formData.mensaje?.trim()) errors.mensaje = 'El mensaje de la incidencia es obligatorio';
+        if (formData.proveedor && !notifProveedorEmail && !notifProveedorWhatsapp) errors.notificacion_proveedor = 'Debes seleccionar al menos un canal de notificación para el proveedor';
 
         const phoneRegex = /^\d{9}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -1491,6 +1492,9 @@ export default function IncidenciasPage() {
                     setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10) });
                     setIsManualDate(false);
                     setEnviarAviso(null);
+                    setNotifEmail(false);
+                    setNotifWhatsapp(false);
+                    setNotifProveedorEmail(false);
                     setNotifProveedorWhatsapp(false);
                     setFiles([]);
                     setFormErrors({});

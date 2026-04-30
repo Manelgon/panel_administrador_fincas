@@ -31,8 +31,11 @@ interface Props {
     enviarAviso: boolean | null;
     notifEmail: boolean;
     notifWhatsapp: boolean;
+    notifProveedorEmail: boolean;
+    notifProveedorWhatsapp: boolean;
     comunidades: ComunidadOption[];
     profiles: Profile[];
+    proveedores: { id: number; nombre: string; telefono: string | null; email: string | null }[];
     onChange: (field: string, value: string) => void;
     onFilesChange: (files: File[]) => void;
     onSubmit: (e: React.FormEvent) => void;
@@ -40,6 +43,8 @@ interface Props {
     setEnviarAviso: (v: boolean | null) => void;
     setNotifEmail: (v: boolean) => void;
     setNotifWhatsapp: (v: boolean) => void;
+    setNotifProveedorEmail: (v: boolean) => void;
+    setNotifProveedorWhatsapp: (v: boolean) => void;
     setIsManualDate: (v: boolean) => void;
     setFormErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
 }
@@ -56,8 +61,11 @@ export default function IncidenciaFormModal({
     enviarAviso,
     notifEmail,
     notifWhatsapp,
+    notifProveedorEmail,
+    notifProveedorWhatsapp,
     comunidades,
     profiles,
+    proveedores,
     onChange,
     onFilesChange,
     onSubmit,
@@ -65,6 +73,8 @@ export default function IncidenciaFormModal({
     setEnviarAviso,
     setNotifEmail,
     setNotifWhatsapp,
+    setNotifProveedorEmail,
+    setNotifProveedorWhatsapp,
     setIsManualDate,
     setFormErrors,
 }: Props) {
@@ -404,18 +414,58 @@ export default function IncidenciaFormModal({
                         <div>
                             <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Proveedor</h3>
 
-                            <div>
-                                <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
-                                    Enviar email a Proveedor
-                                </label>
-                                <select
-                                    disabled
-                                    className="w-full rounded-lg border border-neutral-200 bg-neutral-100 px-3 py-2 text-sm text-neutral-400 outline-none cursor-not-allowed"
-                                    value={formData.proveedor}
-                                    onChange={e => onChange('proveedor', e.target.value)}
-                                >
-                                    <option value="">Próximamente disponible...</option>
-                                </select>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                        Proveedor <span className="text-red-500">*</span>
+                                    </label>
+                                    <SearchableSelect
+                                        value={formData.proveedor}
+                                        onChange={(val) => { onChange('proveedor', String(val)); setFormErrors(prev => ({ ...prev, proveedor: '' })); }}
+                                        options={proveedores.map(p => ({
+                                            value: String(p.id),
+                                            label: p.nombre
+                                        }))}
+                                        placeholder="Buscar proveedor..."
+                                    />
+                                    {formErrors.proveedor && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.proveedor}</p>}
+                                </div>
+
+                                {formData.proveedor && (
+                                    <div className="bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
+                                        <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                            Notificar al Proveedor
+                                        </label>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notifProveedorEmail}
+                                                    onChange={e => {
+                                                        setNotifProveedorEmail(e.target.checked);
+                                                        setFormErrors(prev => ({ ...prev, notificacion_proveedor: '' }));
+                                                    }}
+                                                    className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                />
+                                                <span className="text-xs font-semibold text-neutral-700">Notificar por Email</span>
+                                            </label>
+                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notifProveedorWhatsapp}
+                                                    onChange={e => {
+                                                        setNotifProveedorWhatsapp(e.target.checked);
+                                                        setFormErrors(prev => ({ ...prev, notificacion_proveedor: '' }));
+                                                    }}
+                                                    className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                />
+                                                <span className="text-xs font-semibold text-neutral-700">Notificar por WhatsApp</span>
+                                            </label>
+                                        </div>
+                                        <p className="text-[10px] text-neutral-400 mt-2">Selecciona al menos un canal de notificación.</p>
+                                        {formErrors.notificacion_proveedor && <p className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.notificacion_proveedor}</p>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </form>
