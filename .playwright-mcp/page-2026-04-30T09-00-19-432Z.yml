@@ -1,0 +1,196 @@
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - navigation [ref=e3]:
+      - link "Henkoaching" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - img "Henkoaching" [ref=e6]
+      - list [ref=e7]:
+        - listitem [ref=e8]:
+          - link "Inicio" [ref=e9] [cursor=pointer]:
+            - /url: /
+        - listitem [ref=e10]:
+          - link "Servicios" [ref=e11] [cursor=pointer]:
+            - /url: /servicios
+        - listitem [ref=e12]:
+          - link "Trabaja conmigo" [ref=e13] [cursor=pointer]:
+            - /url: /trabaja-conmigo
+        - listitem [ref=e14]:
+          - link "Empleo" [ref=e15] [cursor=pointer]:
+            - /url: /empleo
+        - listitem [ref=e16]:
+          - link "Sobre mí" [ref=e17] [cursor=pointer]:
+            - /url: /sobre-mi
+        - listitem [ref=e18]:
+          - link "Contacto" [ref=e19] [cursor=pointer]:
+            - /url: /contacto
+      - link "Acceder" [ref=e20] [cursor=pointer]:
+        - /url: /candidato/login
+        - img [ref=e21]
+  - main [ref=e23]:
+    - generic [ref=e25]:
+      - generic [ref=e26]:
+        - img "Henkoaching" [ref=e27]
+        - generic:
+          - img
+      - paragraph [ref=e28]:
+        - text: Cuando una empresa crece o cambia,
+        - text: el orden deja de ser opcional.
+      - paragraph [ref=e29]: coaching & mindfulness empresarial
+      - generic [ref=e30]:
+        - link "Trabaja conmigo" [ref=e31] [cursor=pointer]:
+          - /url: /trabaja-conmigo
+        - link "Ver servicios" [ref=e32] [cursor=pointer]:
+          - /url: /servicios
+    - generic [ref=e34]:
+      - paragraph [ref=e35]: ¿Te suena familiar?
+      - heading "Las señales de que algo debe cambiar" [level=2] [ref=e36]:
+        - text: Las señales de que
+        - emphasis [ref=e37]: algo debe cambiar
+      - generic [ref=e38]:
+        - generic [ref=e39]:
+          - generic [ref=e40]:
+            - heading "Avance con esfuerzo" [level=3] [ref=e41]
+            - paragraph [ref=e42]: La empresa sigue adelante… pero cada vez cuesta más. La inercia sustituye al impulso y todo se siente cuesta arriba.
+          - img [ref=e44]
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - heading "Roles sin definir" [level=3] [ref=e53]
+            - paragraph [ref=e54]: Todo el mundo hace de todo, pero nadie tiene claro qué le corresponde. Las decisiones se acumulan.
+          - img [ref=e56]
+        - generic [ref=e66]:
+          - img [ref=e68]
+          - generic [ref=e75]:
+            - heading "Cambios que se posponen" [level=3] [ref=e76]
+            - paragraph [ref=e77]: Se evitan los mismos cambios. Se sigue haciendo lo mismo porque siempre se ha hecho así.
+        - generic [ref=e78]:
+          - img [ref=e80]
+          - generic [ref=e87]:
+            - heading "Modo reactivo permanente" [level=3] [ref=e88]
+            - paragraph [ref=e89]: El día a día manda. Y sin darte cuenta, la empresa ocupa todo tu tiempo, energía y cabeza apagando fuegos.
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - paragraph [ref=e92]: No falta talento. No falta trabajo.
+          - paragraph [ref=e93]: Falta orden, claridad y coherencia.
+        - link "Hablemos →" [ref=e94] [cursor=pointer]:
+          - /url: /contacto
+    - generic [ref=e96]:
+      - generic [ref=e97]:
+        - generic [ref=e98]:
+          - paragraph [ref=e99]: Servicios
+          - heading "Tres formas de acompañar tu organización" [level=2] [ref=e100]:
+            - text: Tres formas de
+            - emphasis [ref=e101]: acompañar tu organización
+        - link "Ver todos →" [ref=e102] [cursor=pointer]:
+          - /url: /servicios
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - paragraph [ref=e105]: "01"
+          - generic [ref=e106]:
+            - heading "Orden y estructura" [level=3] [ref=e107]
+            - paragraph [ref=e108]: Procesos claros, roles definidos y una operativa que funciona de manera autónoma sin depender exclusivamente de ti.
+        - generic [ref=e109]:
+          - paragraph [ref=e110]: "02"
+          - generic [ref=e111]:
+            - heading "Reclutamiento consciente" [level=3] [ref=e112]
+            - paragraph [ref=e113]: Atracción de talento y personas que encajan verdaderamente, aportan valor continuo y sostienen la cultura de tu empresa.
+        - generic [ref=e114]:
+          - paragraph [ref=e115]: "03"
+          - generic [ref=e116]:
+            - heading "Liderazgo y desarrollo" [level=3] [ref=e117]
+            - paragraph [ref=e118]: Equipos más conscientes, comunicación efectiva interdepartamental y un liderazgo humano que realmente sostiene.
+      - paragraph [ref=e119]: Puedes trabajar de forma específica en una sola área o integrar las tres disciplinas de manera transversal según la fase en la que se encuentre tu empresa.
+    - generic [ref=e121]:
+      - paragraph [ref=e122]: Para quién
+      - heading "Acompaño a empresas que están en momentos clave" [level=2] [ref=e123]:
+        - text: Acompaño a empresas que
+        - emphasis [ref=e124]: están en momentos clave
+      - generic [ref=e125]:
+        - generic [ref=e126]:
+          - heading "Empresas en crecimiento" [level=3] [ref=e127]
+          - paragraph [ref=e128]: Que necesitan estructura firme para escalar sin caer en el caos organizativo.
+        - generic [ref=e129]:
+          - heading "Cambio generacional" [level=3] [ref=e130]
+          - paragraph [ref=e131]: Transiciones familiares o de liderazgo que requieren orden y claridad de roles desde el primer día.
+        - generic [ref=e132]:
+          - heading "Transformación digital" [level=3] [ref=e133]
+          - paragraph [ref=e134]: Procesos operativos que deben evolucionar hacia lo digital sin que el equipo se quede atrás.
+        - generic [ref=e135]:
+          - heading "Cambio cultural" [level=3] [ref=e136]
+          - paragraph [ref=e137]: Organizaciones que quieren renovar su forma de trabajar y comunicarse internamente.
+        - generic [ref=e138]:
+          - heading "Equipos que crecieron rápido" [level=3] [ref=e139]
+          - paragraph [ref=e140]: Equipos que escalaron muy rápido sin una base clara desde la que sostenerse.
+        - generic [ref=e141]:
+          - heading "CEOs que quieren soltar" [level=3] [ref=e142]
+          - paragraph [ref=e143]: Líderes y fundadores que ya no quieren ni deben participar en la microgestión diaria.
+      - link "Descubrir cómo puedo ayudarte →" [ref=e145] [cursor=pointer]:
+        - /url: /trabaja-conmigo
+    - generic [ref=e147]:
+      - generic [ref=e148]:
+        - paragraph [ref=e149]: Mi enfoque
+        - heading "El cambio no se impone. Se construye desde dentro." [level=2] [ref=e150]:
+          - text: El cambio no se impone.
+          - emphasis [ref=e151]: Se construye desde dentro.
+        - paragraph [ref=e152]: Entro en la empresa para entender cómo funciona realmente en su base, no solo lo que parece que pasa en la superficie.
+        - paragraph [ref=e153]: Ordenamos la estructura, mejoramos los canales de comunicación y trabajamos el liderazgo desde las raíces, para que la transformación se sostenga orgánicamente en tu equipo.
+        - link "Descubrir mi metodología →" [ref=e154] [cursor=pointer]:
+          - /url: /sobre-mi
+      - generic [ref=e155]:
+        - paragraph [ref=e157]: Diagnóstico real
+        - paragraph [ref=e159]: Sin dependencias externas
+        - paragraph [ref=e161]: Cambio sostenible
+        - paragraph [ref=e163]: Desde las raíces
+    - generic [ref=e165]:
+      - paragraph [ref=e166]:
+        - text: “Cuando la mariposa toma alas,
+        - text: no queda nada de la oruga”
+      - paragraph [ref=e168]: JENNIFER CERVERA · HENKOACHING
+    - generic [ref=e170]:
+      - paragraph [ref=e171]: ¿Listo para el siguiente paso?
+      - heading "Si sientes que tu empresa podría funcionar mejor..." [level=2] [ref=e172]:
+        - text: Si sientes que tu empresa podría
+        - text: funcionar mejor...
+      - paragraph [ref=e173]: probablemente tengas razón.
+      - generic [ref=e174]:
+        - link "Trabajar conmigo" [ref=e175] [cursor=pointer]:
+          - /url: /trabaja-conmigo
+        - link "Descubrir cómo puedo ayudarte" [ref=e176] [cursor=pointer]:
+          - /url: /servicios
+  - contentinfo [ref=e178]:
+    - generic [ref=e179]:
+      - generic [ref=e180]:
+        - paragraph [ref=e181]: HENKOACHING
+        - paragraph [ref=e182]: coaching & mindfullness
+        - paragraph [ref=e183]: Orden para tu empresa, tu liderazgo y tu mente.
+      - generic [ref=e184]:
+        - paragraph [ref=e185]: Explorar
+        - list [ref=e186]:
+          - listitem [ref=e187]:
+            - link "Inicio" [ref=e188] [cursor=pointer]:
+              - /url: /
+          - listitem [ref=e189]:
+            - link "Servicios" [ref=e190] [cursor=pointer]:
+              - /url: /servicios
+          - listitem [ref=e191]:
+            - link "Trabaja conmigo" [ref=e192] [cursor=pointer]:
+              - /url: /trabaja-conmigo
+          - listitem [ref=e193]:
+            - link "Empleo" [ref=e194] [cursor=pointer]:
+              - /url: /empleo
+          - listitem [ref=e195]:
+            - link "Sobre mí" [ref=e196] [cursor=pointer]:
+              - /url: /sobre-mi
+          - listitem [ref=e197]:
+            - link "Contacto" [ref=e198] [cursor=pointer]:
+              - /url: /contacto
+      - generic [ref=e199]:
+        - paragraph [ref=e200]: Contacto
+        - paragraph [ref=e201]: Basado en Mallorca, operando en todo el mundo.
+        - link "Escribir ahora" [ref=e202] [cursor=pointer]:
+          - /url: /contacto
+    - generic [ref=e203]:
+      - paragraph [ref=e204]: © 2026 Henkoaching. Todos los derechos reservados.
+      - link "Legal" [ref=e206] [cursor=pointer]:
+        - /url: /legal
+  - button "Open Next.js Dev Tools" [ref=e212] [cursor=pointer]:
+    - img [ref=e213]

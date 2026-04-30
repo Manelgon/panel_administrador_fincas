@@ -1919,16 +1919,6 @@ export default function IncidenciasPage() {
                                                             <label className="flex items-center gap-2.5 cursor-pointer select-none">
                                                                 <input
                                                                     type="checkbox"
-                                                                    checked={!notifProveedorEmail && !notifProveedorWhatsapp}
-                                                                    disabled={notifProveedorEmail || notifProveedorWhatsapp}
-                                                                    onChange={e => { if (e.target.checked) { setNotifProveedorEmail(false); setNotifProveedorWhatsapp(false); } }}
-                                                                    className="w-4 h-4 rounded accent-yellow-400"
-                                                                />
-                                                                <span className={`text-xs font-semibold ${(notifProveedorEmail || notifProveedorWhatsapp) ? 'text-neutral-400' : 'text-neutral-700'}`}>No notificar</span>
-                                                            </label>
-                                                            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                                                                <input
-                                                                    type="checkbox"
                                                                     checked={notifProveedorEmail}
                                                                     onChange={e => setNotifProveedorEmail(e.target.checked)}
                                                                     disabled={!selectedProv?.email}
@@ -1947,6 +1937,7 @@ export default function IncidenciasPage() {
                                                                 <span className={`text-xs font-semibold ${selectedProv?.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
                                                             </label>
                                                         </div>
+                                                        <p className="text-[10px] text-neutral-400 mt-2">Deja ambos sin marcar si no deseas notificar al proveedor.</p>
                                                     </div>
                                                     {notifProveedorEmail && (
                                                         <div>
