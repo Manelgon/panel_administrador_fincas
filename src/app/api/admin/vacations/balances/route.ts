@@ -80,7 +80,7 @@ export async function PATCH(request: Request) {
                 user_id: userId,
                 year: year,
                 ...balances
-            });
+            }, { onConflict: 'user_id,year' });
 
         if (error) throw error;
 

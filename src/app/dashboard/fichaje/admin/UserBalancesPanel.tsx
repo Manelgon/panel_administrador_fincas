@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Users, Search, Edit3, Save, X, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useGlobalLoading } from "@/lib/globalLoading";
 import DataTable, { Column } from "@/components/DataTable";
 import ModalPortal from '@/components/ModalPortal';
 
@@ -27,6 +28,7 @@ interface UserBalancesPanelProps {
 }
 
 export default function UserBalancesPanel({ adminId }: UserBalancesPanelProps) {
+    const { withLoading } = useGlobalLoading();
     const [users, setUsers] = useState<UserBalance[]>([]);
     const [loading, setLoading] = useState(true);
     const [year, setYear] = useState(new Date().getFullYear());
@@ -55,27 +57,32 @@ export default function UserBalancesPanel({ adminId }: UserBalancesPanelProps) {
 
     const handleSave = async () => {
         setSaving(true);
-        try {
-            const res = await fetch("/api/admin/vacations/balances", {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    adminId,
-                    userId: editingUser.user_id,
-                    year,
-                    balances: editingUser.balance
-                })
-            });
-            if (res.ok) {
-                toast.success("Saldos actualizados");
-                setEditingUser(null);
-                fetchBalances();
+        await withLoading(async () => {
+            try {
+                const res = await fetch("/api/admin/vacations/balances", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        adminId,
+                        userId: editingUser.user_id,
+                        year,
+                        balances: editingUser.balance
+                    })
+                });
+                if (res.ok) {
+                    toast.success("Saldos actualizados");
+                    setEditingUser(null);
+                    fetchBalances();
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    toast.error(err.error || "Error al actualizar saldos");
+                }
+            } catch (error) {
+                toast.error("Error al guardar");
+            } finally {
+                setSaving(false);
             }
-        } catch (error) {
-            toast.error("Error al guardar");
-        } finally {
-            setSaving(false);
-        }
+        }, 'Actualizando saldos...');
     };
 
     const filteredUsers = users.filter(u =>
