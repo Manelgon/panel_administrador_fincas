@@ -158,7 +158,7 @@ export const nombreArchivo = (
 ) => {
     const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fechaIso || '');
     const fecha = m ? `${m[3]}-${m[2]}-${m[1]}` : (fechaIso || '').replace(/[^0-9]/g, '');
-    const tag = kind === 'convocatoria' ? 'Convocatoria' : 'Acta';
+    const tag = kind === 'convocatoria' ? 'Portada_Convocatoria' : 'Portada_Acta';
     const tipo = safeFileSegment(tipoReunion, 'TIPO');
     const codigo = safeFileSegment(codigoComunidad, '');
     const nombre = safeFileSegment(nombreComunidad, '');
