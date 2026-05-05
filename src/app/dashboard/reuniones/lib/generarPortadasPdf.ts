@@ -134,7 +134,34 @@ export const generarPortadaPdf = async (data: PortadaData): Promise<Blob> => {
     return doc.output('blob');
 };
 
-export const nombreArchivo = (kind: PortadaKind, tipoReunion: string, fechaIso: string) => {
-    const fecha = fechaIso.replace(/[^0-9]/g, '');
-    return `${kind === 'convocatoria' ? 'Convocatoria' : 'Acta'}_${tipoReunion}_${fecha}.pdf`;
+/** Segmento seguro para nombres de archivo (sin espacios ni caracteres raros). */
+const safeFileSegment = (s: string | undefined, fallback: string) => {
+    const t = String(s || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9\-_.]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+    return t || fallback;
+};
+
+/**
+ * Acta_TIPO_codigo_NombreComunidad_DDMMYYYY.pdf · Convocatoria_TIPO_codigo_NombreComunidad_DDMMYYYY.pdf
+ * Si no hay código, se usa solo el nombre de la comunidad.
+ */
+export const nombreArchivo = (
+    kind: PortadaKind,
+    tipoReunion: string,
+    codigoComunidad: string | undefined,
+    fechaIso: string,
+    nombreComunidad?: string
+) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(fechaIso || '');
+    const fecha = m ? `${m[3]}-${m[2]}-${m[1]}` : (fechaIso || '').replace(/[^0-9]/g, '');
+    const tag = kind === 'convocatoria' ? 'Convocatoria' : 'Acta';
+    const tipo = safeFileSegment(tipoReunion, 'TIPO');
+    const codigo = safeFileSegment(codigoComunidad, '');
+    const nombre = safeFileSegment(nombreComunidad, '');
+    const comunidad = [codigo, nombre].filter(Boolean).join('_') || 'SIN_COMUNIDAD';
+    return `${tag}_${tipo}_${comunidad}_${fecha}.pdf`;
 };

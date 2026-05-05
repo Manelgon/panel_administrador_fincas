@@ -87,7 +87,7 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
         try {
             await withLoading(async () => {
                 const blob = await buildPdf(kind);
-                triggerDownload(blob, nombreArchivo(kind, reunion.tipo, reunion.fecha_reunion));
+                triggerDownload(blob, nombreArchivo(kind, reunion.tipo, reunion.codigo, reunion.fecha_reunion, nombreCdad || reunion.comunidad));
             }, 'Generando PDF...');
         } catch (err) {
             console.error('[PortadasDownloadModal] download error:', err);
@@ -102,8 +102,8 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
         try {
             await withLoading(async () => {
                 const [conv, acta] = await Promise.all([buildPdf('convocatoria'), buildPdf('acta')]);
-                triggerDownload(conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
-                triggerDownload(acta, nombreArchivo('acta',        reunion.tipo, reunion.fecha_reunion));
+                triggerDownload(conv, nombreArchivo('convocatoria', reunion.tipo, reunion.codigo, reunion.fecha_reunion, nombreCdad || reunion.comunidad));
+                triggerDownload(acta, nombreArchivo('acta',         reunion.tipo, reunion.codigo, reunion.fecha_reunion, nombreCdad || reunion.comunidad));
             }, 'Generando PDFs...');
         } catch (err) {
             console.error('[PortadasDownloadModal] download both error:', err);
@@ -130,8 +130,8 @@ export default function PortadasDownloadModal({ reunion, onClose }: Props) {
                 form.append('tipo_reunion', reunion.tipo);
                 form.append('fecha', fechaDisplay);
                 form.append('comunidad', reunion.comunidad || '');
-                form.append('convocatoria', conv, nombreArchivo('convocatoria', reunion.tipo, reunion.fecha_reunion));
-                form.append('acta',         acta, nombreArchivo('acta',         reunion.tipo, reunion.fecha_reunion));
+                form.append('convocatoria', conv, nombreArchivo('convocatoria', reunion.tipo, reunion.codigo, reunion.fecha_reunion, nombreCdad || reunion.comunidad));
+                form.append('acta',         acta, nombreArchivo('acta',         reunion.tipo, reunion.codigo, reunion.fecha_reunion, nombreCdad || reunion.comunidad));
 
                 const res = await fetch('/api/reuniones/enviar-portadas', { method: 'POST', body: form });
                 if (!res.ok) throw new Error('send failed');
