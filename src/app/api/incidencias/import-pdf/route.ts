@@ -245,6 +245,9 @@ export async function POST(req: NextRequest) {
     const comunidadesOverride: Record<number, number> = comunidadesOverrideRaw
       ? JSON.parse(comunidadesOverrideRaw)
       : {}
+    const isSecondary = formData.get('isSecondary') === 'true'
+    const tableName = isSecondary ? 'incidencias_serincobot' : 'incidencias'
+    const timelineEntityType = isSecondary ? 'sofia_incidencia' : 'incidencia'
 
     if (!file) {
       return NextResponse.json({ error: 'No se recibió archivo PDF' }, { status: 400 })
@@ -327,7 +330,7 @@ export async function POST(req: NextRequest) {
       okIndex++
 
       const { data, error } = await supabaseAdmin
-        .from('incidencias')
+        .from(tableName)
         .insert({
           comunidad_id: comunidadId,
           motivo_ticket: incident.motivo_ticket,
@@ -366,7 +369,7 @@ export async function POST(req: NextRequest) {
         if (!incident.has_preamble) {
           timelineRows.push({
             user_id: receptorId,
-            entity_type: 'incidencia',
+            entity_type: timelineEntityType,
             entity_id: data.id,
             content: incident.motivo_ticket,
             created_at: incident.created_at,
@@ -375,7 +378,7 @@ export async function POST(req: NextRequest) {
           // Preamble is free text before the WA chat — add it as first timeline entry
           timelineRows.push({
             user_id: receptorId,
-            entity_type: 'incidencia',
+            entity_type: timelineEntityType,
             entity_id: data.id,
             content: incident.preamble_text,
             created_at: incident.created_at,
@@ -385,7 +388,7 @@ export async function POST(req: NextRequest) {
         for (const msg of incident.chat_messages) {
           timelineRows.push({
             user_id: receptorId,
-            entity_type: 'incidencia',
+            entity_type: timelineEntityType,
             entity_id: data.id,
             content: `[${msg.author}] ${msg.content}`,
             created_at: msg.created_at,

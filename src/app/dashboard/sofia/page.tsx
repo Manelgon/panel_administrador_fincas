@@ -1,62 +1,35 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Check, RotateCcw, Paperclip, Trash2, X, FileText, Download, Loader2, Building, Users, Clock, UserCog, Save, Pause, CalendarClock } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Wrench } from 'lucide-react';
+import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
+import Badge from '@/components/ui/Badge';
 import SearchableSelect from '@/components/SearchableSelect';
+import PageHeader from '@/components/PageHeader';
+import FilterBar from '@/components/FilterBar';
+import FormSection from '@/components/FormSection';
 import { logActivity } from '@/lib/logActivity';
 import TimelineChat from '@/components/TimelineChat';
 import { getSecureUrl } from '@/lib/storage';
-import { useGlobalLoading } from '@/lib/globalLoading';
-
-interface Incidencia {
-    id: number;
-    comunidad_id: number;
-    nombre_cliente: string;
-    telefono: string;
-    email: string;
-    mensaje: string;
-    urgencia?: string;
-    resuelto: boolean;
-    created_at: string;
-    timestamp?: string;
-    comunidades?: { nombre_cdad: string; codigo?: string };
-
-    // New fields
-    quien_lo_recibe?: string;
-    comunidad?: string;
-    codigo?: string;
-    gestor_asignado?: string;
-    gestor?: { nombre: string };
-    receptor?: { nombre: string };
-    sentimiento?: string;
-    categoria?: string;
-    nota_gestor?: string;
-    nota_propietario?: string;
-    todas_notas_propietario?: string;
-    dia_resuelto?: string;
-    resuelto_por?: string;
-    resolver?: { nombre: string };
-    adjuntos?: string[];
-    aviso?: string | boolean;
-    id_email_gestion?: string;
-    estado?: string;
-    fecha_recordatorio?: string;
-    source?: string;
-    motivo_ticket?: string;
-}
+import { Incidencia, incidenciaFormSchema, validateForm, Profile, ComunidadOption, DeleteCredentials } from '@/lib/schemas';
+import AplazarModal from '../incidencias/AplazarModal';
+import DeleteDocConfirmModal from '../incidencias/DeleteDocConfirmModal';
+import DetailModal from '../incidencias/DetailModal';
+import ExportModal from '../incidencias/ExportModal';
+import ImportPreviewModal from '../incidencias/ImportPreviewModal';
+import IncidenciaFormModal from '../incidencias/IncidenciaFormModal';
+import { buildColumns } from '../incidencias/columns';
+import type { ImportPreviewData } from '../incidencias/types';
 
 export default function SofiaPage() {
-    const { withLoading } = useGlobalLoading();
-    const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
-    const [comunidades, setComunidades] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isLocal, setIsLocal] = useState(true);
-
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const local = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -67,6 +40,11 @@ export default function SofiaPage() {
         }
     }, []);
 
+    const [incidencias, setIncidencias] = useState<Incidencia[]>([]);
+    const [comunidades, setComunidades] = useState<ComunidadOption[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [filterEstado, setFilterEstado] = useState('pendiente');
     const [filterGestor, setFilterGestor] = useState('all');
     const [filterComunidad, setFilterComunidad] = useState('all');
@@ -75,62 +53,132 @@ export default function SofiaPage() {
     const [selectedIds, setSelectedIds] = useState<Set<string | number>>(new Set());
     const [exporting, setExporting] = useState(false);
 
-    const [profiles, setProfiles] = useState<any[]>([]);
-    const [allProfilesForFilter, setAllProfilesForFilter] = useState<any[]>([]);
+    const [profiles, setProfiles] = useState<Profile[]>([]);
+    // En Sofia, los tickets vienen del bot Sofia-Bot. Mantenemos una lista completa
+    // para resolver nombres en columnas (gestor/receptor), aunque excluimos al bot
+    // de "profiles" (que se usa en selects de asignacion).
+    const [allProfilesForLookup, setAllProfilesForLookup] = useState<Profile[]>([]);
+    const [proveedores, setProveedores] = useState<{ id: number; nombre: string; telefono: string | null; email: string | null }[]>([]);
+    const [files, setFiles] = useState<File[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const [enviarAviso, setEnviarAviso] = useState<boolean | null>(null);
+    const [notifEmail, setNotifEmail] = useState(false);
+    const [notifWhatsapp, setNotifWhatsapp] = useState(false);
+    const [notifProveedorWhatsapp, setNotifProveedorWhatsapp] = useState(false);
+    const [notifProveedorEmail, setNotifProveedorEmail] = useState(false);
+    const [notifProveedorNone, setNotifProveedorNone] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
+    const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [isManualDate, setIsManualDate] = useState(false);
+
+    const resetForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: '', nota_gestor: '' });
+        setFiles([]);
+        setEnviarAviso(null);
+        setNotifEmail(false);
+        setNotifWhatsapp(false);
+        setNotifProveedorWhatsapp(false);
+        setNotifProveedorEmail(false);
+        setNotifProveedorNone(false);
+        setFormErrors({});
+    };
+
+    const [formData, setFormData] = useState({
+        comunidad_id: '',
+        nombre_cliente: '',
+        telefono: '',
+        email: '',
+        motivo_ticket: '',
+        mensaje: '',
+        // urgencia removed from creation
+        recibido_por: '',
+        gestor_asignado: '',
+        proveedor: '', // Placeholder
+        source: '',
+        fecha_registro: new Date().toISOString().slice(0, 10),
+        nota_gestor: '',
+    });
 
     // Delete state
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [itemToDelete, setItemToDelete] = useState<number | null>(null);
     const [deleteEmail, setDeleteEmail] = useState('');
     const [deletePassword, setDeletePassword] = useState('');
-    const [isReassigning, setIsReassigning] = useState(false);
-    const [newGestorId, setNewGestorId] = useState('');
-    const [newComunidadId, setNewComunidadId] = useState<number | ''>('');
     const [isUpdatingGestor, setIsUpdatingGestor] = useState(false);
     const [showReassignSuccessModal, setShowReassignSuccessModal] = useState(false);
+    const [showQuickReassignModal, setShowQuickReassignModal] = useState(false);
+    const [quickReassignIncidencia, setQuickReassignIncidencia] = useState<Incidencia | null>(null);
+    const [quickReassignNewGestorId, setQuickReassignNewGestorId] = useState('');
+    // Reassign state used by DetailModal inline reassign
+    const [isReassigning, setIsReassigning] = useState(false);
+    const [newGestorId, setNewGestorId] = useState('');
+    // Proveedor reassign (detail + quick action)
+    const [isUpdatingProveedor, setIsUpdatingProveedor] = useState(false);
+    const [showProveedorReassignSuccessModal, setShowProveedorReassignSuccessModal] = useState(false);
+    const [showQuickReassignProveedorModal, setShowQuickReassignProveedorModal] = useState(false);
+    const [quickReassignProveedorIncidencia, setQuickReassignProveedorIncidencia] = useState<Incidencia | null>(null);
+    const [quickReassignNewProveedorId, setQuickReassignNewProveedorId] = useState('');
+    // Notificación al reasignar proveedor
+    const [quickNotifProveedorEmail, setQuickNotifProveedorEmail] = useState(false);
+    const [quickNotifProveedorWhatsapp, setQuickNotifProveedorWhatsapp] = useState(false);
+    const [quickNotifProveedorNone, setQuickNotifProveedorNone] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    // Aplazar state
-    const [showAplazarModal, setShowAplazarModal] = useState(false);
-    const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
-    const [aplazarDate, setAplazarDate] = useState('');
 
     // Detail Modal State
     const [selectedDetailIncidencia, setSelectedDetailIncidencia] = useState<Incidencia | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
     const detailFileInputRef = useRef<HTMLInputElement>(null);
+    const [importingPdf, setImportingPdf] = useState(false);
+    const pdfImportInputRef = useRef<HTMLInputElement>(null);
 
     // PDF Notes Modal State
     const [showExportModal, setShowExportModal] = useState(false);
     const [pendingExportParams, setPendingExportParams] = useState<{ type: 'csv' | 'pdf', ids?: number[], includeNotes?: boolean } | null>(null);
 
+    // PDF Import Preview Modal State
+    const [showImportPreviewModal, setShowImportPreviewModal] = useState(false);
+    const [importPreviewData, setImportPreviewData] = useState<ImportPreviewData | null>(null);
+    const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
+    const [importRecordEstados, setImportRecordEstados] = useState<Record<number, 'Pendiente' | 'Resuelto'>>({});
+    const [importRecordComunidades, setImportRecordComunidades] = useState<Record<number, number>>({});
+    const [importReceptorName, setImportReceptorName] = useState<string>('');
+
+    // Document Delete Confirmation
+    const [showDeleteDocConfirm, setShowDeleteDocConfirm] = useState(false);
+    const [urlToConfirmDelete, setUrlToConfirmDelete] = useState<string | null>(null);
+
+    // Aplazar (Postpone) Modal State
+    const [showAplazarModal, setShowAplazarModal] = useState(false);
+    const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
+    const [aplazarDate, setAplazarDate] = useState('');
+
+    // Start Task (Cronometraje) Modal State
+    const [showStartTaskModal, setShowStartTaskModal] = useState(false);
+    const [startTaskIncidencia, setStartTaskIncidencia] = useState<Incidencia | null>(null);
+
+    const { withLoading } = useGlobalLoading();
+
     const handleRowClick = (incidencia: Incidencia) => {
         setSelectedDetailIncidencia(incidencia);
-
-        // Check if the IDs or Codes coming from Sofia DB exist in our Panel DB lists
-        const communityMatch = comunidades.find(c =>
-            (c.id === incidencia.comunidad_id) ||
-            (incidencia.codigo && c.codigo === incidencia.codigo)
-        );
-        const gestorMatch = profiles.find(p => p.user_id === incidencia.gestor_asignado);
-
-        setNewComunidadId(communityMatch ? communityMatch.id : '');
-        setNewGestorId(gestorMatch ? (incidencia.gestor_asignado || '') : '');
         setShowDetailModal(true);
     };
 
     useEffect(() => {
         fetchInitialData();
 
-        // Subscribe to real-time changes in secondary Supabase
+        // Subscribe to real-time changes
         const channel = supabase
             .channel('sofia-realtime')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'incidencias_serincobot' },
                 () => {
+                    // Re-fetch all data to ensure joined fields (profiles, etc.) are correct.
+                    // This is simpler and safer than manually merging updates with joined data.
                     fetchIncidencias();
                 }
             )
@@ -141,9 +189,13 @@ export default function SofiaPage() {
         };
     }, []);
 
+    // Portal ready (client-only)
+    const [portalReady, setPortalReady] = useState(false);
+    useEffect(() => setPortalReady(true), []);
+
     // Prevent body scroll when any modal is open
     useEffect(() => {
-        if (showDeleteModal || showExportModal || showDetailModal || showAplazarModal) {
+        if (showForm || showDeleteModal || showExportModal || showDetailModal || showImportPreviewModal) {
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -151,24 +203,134 @@ export default function SofiaPage() {
         return () => {
             document.body.style.overflow = 'unset';
         };
-    }, [showDeleteModal, showExportModal, showDetailModal, showAplazarModal]);
+    }, [showForm, showDeleteModal, showExportModal, showDetailModal, showImportPreviewModal]);
 
     const fetchInitialData = async () => {
         setLoading(true);
-        // Metadata from primary, tickets from secondary
-        const [cdads, allProfs] = await Promise.all([fetchComunidades(), fetchProfiles()]);
-        await fetchIncidencias(cdads || [], allProfs || []);
+        // Cargar primero los lookups en paralelo y luego enriquecer las incidencias con ellos
+        const [cdads, profs, provs] = await Promise.all([
+            fetchComunidades(),
+            fetchProfiles(),
+            fetchProveedores(),
+        ]);
+        await fetchIncidencias(cdads, profs, provs);
         setLoading(false);
     };
 
+    const fetchProveedores = async () => {
+        const { data } = await supabase.from('proveedores').select('id, nombre, telefono, email').eq('activo', true).order('nombre');
+        if (data) {
+            setProveedores(data);
+            return data;
+        }
+        return [];
+    };
+
     const fetchProfiles = async () => {
-        // Fetch all profiles for name resolution and filtering
+        // En Sofia, los tickets vienen del bot y su receptor/gestor inicial es Sofia-Bot.
+        // El bot SI es asignable aqui, asi que cargamos TODOS los perfiles tanto para
+        // resolucion de nombres como para los selects de asignacion.
         const { data } = await supabase.from('profiles').select('user_id, nombre, rol, activo');
-        const allProfs = (data || []);
-        const activeProfs = allProfs.filter(p => p.activo === true && p.nombre !== 'Sofia-Bot');
-        setProfiles(activeProfs);        // activos sin bots → selects de reasignación
-        setAllProfilesForFilter(allProfs); // todos → dropdown filtro y resolución de nombres
-        return allProfs;
+        if (data) {
+            setAllProfilesForLookup(data);
+            setProfiles(data);
+            return data;
+        }
+        return [];
+    };
+
+    const closeImportModal = () => {
+        setShowImportPreviewModal(false);
+        setPendingImportFile(null);
+        setImportPreviewData(null);
+        setImportRecordEstados({});
+        setImportRecordComunidades({});
+        setImportReceptorName('');
+        if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
+    };
+
+    const handleImportPdf = async (file: File) => {
+        await withLoading(async () => {
+            setImportingPdf(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('No hay sesión activa');
+                const receptorProfile = profiles.find(p => p.user_id === user.id);
+                const payload = new FormData();
+                payload.append('pdf', file);
+                payload.append('receptor_id', user.id);
+                payload.append('isSecondary', 'true');
+                payload.append('table', 'incidencias_serincobot');
+                const response = await fetch('/api/incidencias/import-pdf?dryRun=true', { method: 'POST', body: payload });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al procesar el PDF');
+                setPendingImportFile(file);
+                setImportPreviewData(result);
+                setImportReceptorName(receptorProfile?.nombre ?? user.email ?? '');
+                setShowImportPreviewModal(true);
+            } catch (error) {
+                console.error('Error al importar PDF:', error);
+                toast.error(error instanceof Error ? error.message : 'Error al procesar el PDF');
+                if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
+            } finally {
+                setImportingPdf(false);
+            }
+        }, 'Procesando PDF...');
+    };
+
+    const handleConfirmImport = async () => {
+        if (!pendingImportFile || !importPreviewData) return;
+        setShowImportPreviewModal(false);
+        await withLoading(async () => {
+            setImportingPdf(true);
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error('No hay sesión activa');
+
+                // Build arrays: estados and comunidades_override indexed by position in 'ok' records
+                // For records that were skip but got a manual comunidad assigned, treat them as ok too
+                const estadosArray: string[] = [];
+                const comunidadesOverride: Record<number, number> = {}; // okIndex → comunidad_id
+                let okIndex = 0;
+                importPreviewData.records.forEach((rec, idx) => {
+                    if (rec.status === 'ok') {
+                        estadosArray.push(importRecordEstados[idx] || 'Pendiente');
+                        okIndex++;
+                    } else if (rec.status === 'skip' && rec.comunidad_not_found && importRecordComunidades[idx]) {
+                        estadosArray.push(importRecordEstados[idx] || 'Pendiente');
+                        comunidadesOverride[okIndex] = importRecordComunidades[idx];
+                        okIndex++;
+                    }
+                });
+
+                const payload = new FormData();
+                payload.append('pdf', pendingImportFile);
+                payload.append('receptor_id', user.id);
+                payload.append('estados', JSON.stringify(estadosArray));
+                payload.append('comunidades_override', JSON.stringify(comunidadesOverride));
+                payload.append('isSecondary', 'true');
+                payload.append('table', 'incidencias_serincobot');
+
+                const response = await fetch('/api/incidencias/import-pdf', { method: 'POST', body: payload });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Error al importar el PDF');
+                toast.success(
+                    `PDF importado: ${result.inserted} registros insertados de ${result.total_parsed} encontrados` +
+                    (result.skipped > 0 ? ` (${result.skipped} omitidos)` : '')
+                );
+                fetchIncidencias();
+            } catch (error) {
+                console.error('Error al importar PDF:', error);
+                toast.error(error instanceof Error ? error.message : 'Error al importar el PDF');
+            } finally {
+                setImportingPdf(false);
+                setPendingImportFile(null);
+                setImportPreviewData(null);
+                setImportRecordEstados({});
+                setImportRecordComunidades({});
+                if (pdfImportInputRef.current) pdfImportInputRef.current.value = '';
+            }
+        }, 'Importando incidencias...');
     };
 
     const fetchComunidades = async () => {
@@ -180,261 +342,540 @@ export default function SofiaPage() {
         return [];
     };
 
-    const fetchIncidencias = async (passedComunidades?: any[], passedProfiles?: any[]) => {
-        const currentComunidades = passedComunidades || comunidades;
-        const currentProfiles = passedProfiles || profiles;
-
-        console.log('Fetching incidencias from secondary...', (supabase as any).supabaseUrl);
-        // Fetch from secondary Supabase
+    const fetchIncidencias = async (
+        passedComunidades?: { id: number; nombre_cdad: string; codigo: string }[],
+        passedProfiles?: Profile[],
+        passedProveedores?: { id: number; nombre: string }[]
+    ) => {
+        // Sofia tabla puede no tener FKs hacia comunidades/profiles/proveedores,
+        // asi que cargamos sin joins y enriquecemos en memoria.
         const { data, error } = await supabase
             .from('incidencias_serincobot')
-            .select('*');
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(5000);
 
         if (error) {
-            toast.error('Error cargando datos de Sofia');
             console.error('Sofia fetch error:', error);
-        } else {
-            if (data && data.length > 0) {
-                console.log('Sofia schema sample keys:', Object.keys(data[0]));
-            }
-            // Sort in memory if created_at is missing or use a fallback
-            const dataToSort = data || [];
-            // Many tables use 'id' or another numeric field if created_at is missing
-            const sortedData = [...dataToSort].sort((a: any, b: any) => (b.created_at || b.id || 0) - (a.created_at || a.id || 0));
-
-            // Map data and enrich with metadata from primary Supabase (profiles, comunidades)
-            const formattedData = sortedData.map((item: any) => {
-                // Secondary DB fallbacks (Case-insensitive discovery)
-                const findValue = (regex: RegExp) => {
-                    const key = Object.keys(item).find(k => regex.test(k));
-                    return key ? item[key] : null;
-                };
-
-                const rawBuilding = item.comunidad || findValue(/comunida/i) || findValue(/edificio/i) || '';
-                const rawDate = item.created_at || findValue(/solicitud/i) || findValue(/fecha/i) || findValue(/created/i) || '';
-                const rawGestor = item.gestor_asignado || item.gestor || findValue(/gestor/i) || '';
-
-                const cdad = currentComunidades.find((c: any) =>
-                    (c.id === item.comunidad_id) ||
-                    (item.codigo && c.codigo === item.codigo)
-                );
-                const gestorProf = currentProfiles.find((p: any) =>
-                    p.user_id === rawGestor ||
-                    (typeof rawGestor === 'string' && p.nombre?.toLowerCase() === rawGestor.toLowerCase())
-                );
-                const receptorProf = currentProfiles.find((p: any) => p.user_id === item.quien_lo_recibe);
-                const resolverProf = currentProfiles.find((p: any) => p.user_id === item.resuelto_por);
-
-                return {
-                    ...item,
-                    comunidades: cdad ? { nombre_cdad: cdad.nombre_cdad, codigo: cdad.codigo } : undefined,
-                    comunidad: cdad?.nombre_cdad || rawBuilding || '',
-                    created_at: item.timestamp || rawDate,
-                    codigo: item.codigo || cdad?.codigo || '',
-                    gestor: gestorProf
-                        ? { nombre: gestorProf.nombre }
-                        : (rawGestor && !/^[0-9a-f-]{36}$/i.test(rawGestor) ? { nombre: rawGestor } : undefined),
-                    receptor: receptorProf ? { nombre: receptorProf.nombre } : undefined,
-                    resolver: resolverProf ? { nombre: resolverProf.nombre } : undefined,
-                    resuelto_por: item.resuelto_por // Ensure UUID is kept
-                };
-            });
-            setIncidencias(formattedData);
+            toast.error('Error cargando incidencias');
+            return;
         }
+
+        const currentComunidades = passedComunidades || comunidades;
+        // Para resolver nombres usamos la lista completa (incluye Sofia-Bot e inactivos).
+        const currentProfiles = passedProfiles || allProfilesForLookup;
+        const currentProveedores = passedProveedores || proveedores;
+
+        const formattedData = (data || []).map((item: any) => {
+            const cdad = currentComunidades.find((c: any) =>
+                c.id === item.comunidad_id ||
+                (item.codigo && c.codigo === item.codigo)
+            );
+            const gestorProf = currentProfiles.find((p: any) => p.user_id === item.gestor_asignado);
+            const receptorProf = currentProfiles.find((p: any) => p.user_id === item.quien_lo_recibe);
+            const resolverProf = currentProfiles.find((p: any) => p.user_id === item.resuelto_por);
+            const prov = currentProveedores.find((pr: any) => pr.id === item.proveedor_id);
+
+            return {
+                ...item,
+                comunidades: cdad ? { nombre_cdad: cdad.nombre_cdad, codigo: cdad.codigo } : undefined,
+                comunidad: cdad?.nombre_cdad || item.comunidad || '',
+                codigo: cdad?.codigo || item.codigo || '',
+                gestor: gestorProf ? { nombre: gestorProf.nombre } : undefined,
+                receptor: receptorProf ? { nombre: receptorProf.nombre } : undefined,
+                resolver: resolverProf ? { nombre: resolverProf.nombre } : undefined,
+                proveedor: prov ? { nombre: prov.nombre } : undefined,
+            };
+        });
+        setIncidencias(formattedData);
+    };
+
+    const handleFileUploads = async () => {
+        if (files.length === 0) return [];
+        setUploading(true);
+        const urls: string[] = [];
+        try {
+            for (const file of files) {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', `sofia/${Date.now()}`); // Folder per timestamp
+                formData.append('bucket', 'documentos');
+
+                const res = await fetch('/api/storage/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    console.error('Error uploading file via API:', error);
+                    continue;
+                }
+
+                const data = await res.json();
+                if (data.publicUrl) {
+                    urls.push(data.publicUrl);
+                }
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            toast.error('Error al subir algunos archivos');
+        } finally {
+            setUploading(false);
+        }
+        return urls;
+    };
+
+    const handleEdit = (incidencia: Incidencia) => {
+        setEditingId(incidencia.id);
+        setFormData({
+            comunidad_id: incidencia.comunidad_id?.toString() || '',
+            nombre_cliente: incidencia.nombre_cliente || '',
+            telefono: incidencia.telefono || '',
+            email: incidencia.email || '',
+            motivo_ticket: incidencia.motivo_ticket || '',
+            mensaje: incidencia.mensaje || '',
+            recibido_por: incidencia.quien_lo_recibe || '',
+            gestor_asignado: incidencia.gestor_asignado || '',
+            proveedor: incidencia.proveedor_id ? String(incidencia.proveedor_id) : '',
+            source: incidencia.source || '',
+            fecha_registro: incidencia.created_at ? new Date(incidencia.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            nota_gestor: incidencia.nota_gestor || '',
+        });
+        setIsManualDate(false);
+        setEnviarAviso(false);
+        setFiles([]);
+        setShowForm(true);
+    };
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Inline field validation
+        const errors: Record<string, string> = {};
+        if (!formData.comunidad_id) errors.comunidad_id = 'Debes seleccionar una comunidad para poder guardar';
+        if (!formData.nombre_cliente?.trim()) errors.nombre_cliente = 'El nombre del propietario es obligatorio';
+        if (!formData.recibido_por) errors.recibido_por = 'Debes indicar quién recibió la incidencia';
+        if (!formData.gestor_asignado) errors.gestor_asignado = 'Debes asignar un gestor para poder guardar el ticket';
+        if (!formData.source) errors.source = 'Debes indicar la entrada del ticket';
+        if (!formData.motivo_ticket?.trim()) errors.motivo_ticket = 'El motivo del ticket es obligatorio';
+        if (!formData.mensaje?.trim()) errors.mensaje = 'El mensaje de la incidencia es obligatorio';
+        if (formData.proveedor && !notifProveedorEmail && !notifProveedorWhatsapp && !notifProveedorNone) errors.notificacion_proveedor = 'Debes seleccionar una opción de notificación para el proveedor';
+
+        const phoneRegex = /^\d{9}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (formData.telefono && !phoneRegex.test(formData.telefono)) errors.telefono = 'El teléfono debe tener exactamente 9 dígitos sin espacios';
+        if (formData.email && !emailRegex.test(formData.email)) errors.email = 'El formato del email no es válido';
+        if (!editingId && notifEmail && !formData.email) errors.email = 'El email es obligatorio para notificar por Email';
+        if (!editingId && notifWhatsapp && !formData.telefono) errors.telefono = 'El teléfono es obligatorio para notificar por WhatsApp';
+
+        if (Object.keys(errors).length > 0) {
+            setFormErrors(errors);
+            return;
+        }
+        setFormErrors({});
+
+        if (isSubmitting) return;
+
+        await withLoading(async () => {
+        setIsSubmitting(true);
+        const loadingToastId = toast.loading(editingId ? 'Actualizando ticket...' : 'Creando ticket... espere');
+
+        try {
+            const adjuntos = await handleFileUploads();
+            const comunidad = comunidades.find(c => c.id === parseInt(formData.comunidad_id));
+
+            if (editingId) {
+                const updatePayload: any = {
+                    comunidad_id: parseInt(formData.comunidad_id),
+                    nombre_cliente: formData.nombre_cliente,
+                    telefono: formData.telefono,
+                    email: formData.email,
+                    motivo_ticket: formData.motivo_ticket || null,
+                    mensaje: formData.mensaje,
+                    quien_lo_recibe: formData.recibido_por || null,
+                    gestor_asignado: formData.gestor_asignado || null,
+                    proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
+                    source: formData.source || null,
+                    nota_gestor: formData.nota_gestor || null,
+                };
+
+                if (formData.fecha_registro) {
+                    const existing = incidencias.find(i => i.id === editingId);
+                    const originalDate = existing?.created_at ? new Date(existing.created_at).toISOString().slice(0, 10) : '';
+                    if (formData.fecha_registro !== originalDate) {
+                        updatePayload.created_at = new Date(formData.fecha_registro).toISOString();
+                    }
+                }
+
+                if (adjuntos.length > 0) {
+                    const existing = incidencias.find(i => i.id === editingId);
+                    updatePayload.adjuntos = [...(existing?.adjuntos || []), ...adjuntos];
+                }
+
+                const { error } = await supabase
+                    .from('incidencias_serincobot')
+                    .update(updatePayload)
+                    .eq('id', editingId);
+
+                if (error) throw error;
+
+                toast.success('Ticket actualizado');
+
+                const gestorAsignado = profiles.find(p => p.user_id === formData.gestor_asignado);
+                await logActivity({
+                    action: 'update',
+                    entityType: 'sofia_incidencia',
+                    entityId: editingId,
+                    entityName: `Incidencia - ${formData.nombre_cliente}`,
+                    details: {
+                        id: editingId,
+                        action: 'edit',
+                        comunidad: comunidad?.nombre_cdad,
+                        mensaje: formData.mensaje,
+                        asignado_a: gestorAsignado?.nombre || 'Sin asignar'
+                    }
+                });
+            } else {
+                const { data: insertedData, error } = await supabase.from('incidencias_serincobot').insert([{
+                    comunidad_id: parseInt(formData.comunidad_id),
+                    nombre_cliente: formData.nombre_cliente,
+                    telefono: formData.telefono,
+                    email: formData.email,
+                    motivo_ticket: formData.motivo_ticket || null,
+                    mensaje: formData.mensaje,
+                    quien_lo_recibe: formData.recibido_por || null,
+                    // @ts-ignore
+                    adjuntos: adjuntos,
+                    // @ts-ignore
+                    gestor_asignado: formData.gestor_asignado || null,
+                    aviso: (!notifEmail && !notifWhatsapp) ? 0 : (notifWhatsapp && !notifEmail) ? 1 : (!notifWhatsapp && notifEmail) ? 2 : 3,
+                    proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
+                    aviso_proveedor: (!notifProveedorEmail && !notifProveedorWhatsapp) ? 0 : (notifProveedorWhatsapp && !notifProveedorEmail) ? 1 : (!notifProveedorWhatsapp && notifProveedorEmail) ? 2 : 3,
+                    source: formData.source || null,
+                    nota_gestor: formData.nota_gestor || null,
+                    ...(formData.fecha_registro ? { created_at: new Date(formData.fecha_registro).toISOString() } : {})
+                }]).select();
+
+                if (error) throw error;
+
+                const incidenciaId = insertedData?.[0]?.id;
+
+                toast.success('Incidencia creada');
+
+                const gestorAsignado = profiles.find(p => p.user_id === formData.gestor_asignado);
+                const gestorAsignadoNombre = gestorAsignado?.nombre || 'Sin asignar';
+                const receptorProfile = profiles.find(p => p.user_id === formData.recibido_por);
+                await logActivity({
+                    action: 'create',
+                    entityType: 'sofia_incidencia',
+                    entityId: incidenciaId,
+                    entityName: `Incidencia - ${formData.nombre_cliente}`,
+                    details: {
+                        comunidad: comunidad?.nombre_cdad,
+                        recibido_por: receptorProfile?.nombre || 'Sin especificar',
+                        asignado_a: gestorAsignadoNombre,
+                        entrada: formData.source || 'Sin especificar',
+                    }
+                });
+
+                // Webhook disparado por Supabase nativo (INSERT en incidencias → trigger-new-ticket)
+            }
+
+            setShowForm(false);
+            setEditingId(null);
+            setFormData({
+                comunidad_id: '',
+                nombre_cliente: '',
+                telefono: '',
+                email: '',
+                motivo_ticket: '',
+                mensaje: '',
+                recibido_por: '',
+                gestor_asignado: '',
+                proveedor: '',
+                source: '',
+                fecha_registro: '',
+                nota_gestor: '',
+            });
+            setFiles([]);
+            setEnviarAviso(null);
+            setNotifEmail(false);
+            setNotifWhatsapp(false);
+            setNotifProveedorWhatsapp(false);
+            setNotifProveedorEmail(false);
+            setNotifProveedorNone(false);
+            fetchIncidencias();
+        } catch (error: any) {
+            toast.error('Error: ' + error.message);
+        } finally {
+            toast.dismiss(loadingToastId);
+            setIsSubmitting(false);
+        }
+        }, 'Guardando incidencia...');
     };
 
     const handleDetailFileUpload = async (files: FileList) => {
         if (!selectedDetailIncidencia) return;
 
-        setIsUpdatingRecord(true);
         await withLoading(async () => {
-            const loadingToast = toast.loading('Subiendo archivos...');
-            try {
-                const newUrls: string[] = [];
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    const fileExt = file.name.split('.').pop();
-                    const fileName = `${Math.random()}.${fileExt}`;
-                    const filePath = `sofia/${fileName}`;
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Subiendo archivos...');
 
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('path', 'sofia');
-                    formData.append('bucket', 'documentos');
+        try {
+            const newUrls: string[] = [];
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('path', `sofia/${selectedDetailIncidencia.id}`);
+                formData.append('bucket', 'documentos');
 
-                    const res = await fetch('/api/storage/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
+                const res = await fetch('/api/storage/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    if (!res.ok) {
-                        const error = await res.json();
-                        throw new Error(error.error || 'Error al subir archivo');
-                    }
-
-                    const data = await res.json();
-                    newUrls.push(data.publicUrl);
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.error || 'Error al subir archivo');
                 }
 
-                const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
-                const updatedAdjuntos = [...currentAdjuntos, ...newUrls];
-
-                const { error: updateError } = await supabase
-                    .from('incidencias_serincobot')
-                    .update({ adjuntos: updatedAdjuntos })
-                    .eq('id', selectedDetailIncidencia.id);
-
-                if (updateError) throw updateError;
-
-                setSelectedDetailIncidencia({
-                    ...selectedDetailIncidencia,
-                    adjuntos: updatedAdjuntos
-                });
-
-                setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
-
-                await logActivity({
-                    action: 'update',
-                    entityType: 'sofia_incidencia',
-                    entityId: selectedDetailIncidencia.id,
-                    entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
-                    details: {
-                        id: selectedDetailIncidencia.id,
-                        action: 'adjuntar_archivos',
-                        archivos_nuevos: newUrls.length,
-                        total_archivos: updatedAdjuntos.length
-                    }
-                });
-
-                toast.success('Archivos añadidos', { id: loadingToast });
-            } catch (error: any) {
-                console.error(error);
-                toast.error('Error al subir archivos', { id: loadingToast });
-            } finally {
-                setIsUpdatingRecord(false);
+                const data = await res.json();
+                if (data.publicUrl) {
+                    newUrls.push(data.publicUrl);
+                }
             }
+
+            const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
+            const updatedAdjuntos = [...currentAdjuntos, ...newUrls];
+
+            const { error: updateError } = await supabase
+                .from('incidencias_serincobot')
+                .update({ adjuntos: updatedAdjuntos })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (updateError) throw updateError;
+
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                adjuntos: updatedAdjuntos
+            });
+
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+
+            // Log activity
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // record_messages log
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'sofia_incidencia',
+                    entity_id: selectedDetailIncidencia.id,
+                    user_id: user.id,
+                    content: `📎 SE HAN ADJUNTO ${newUrls.length} NUEVOS DOCUMENTOS AL TICKET.`
+                }]);
+            }
+
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Incidencia - ${selectedDetailIncidencia.nombre_cliente}`,
+                details: {
+                    acción: 'Documentos adjuntos añadidos',
+                    cantidad_nuevos: newUrls.length,
+                    total_documentos: updatedAdjuntos.length,
+                    comunidad: selectedDetailIncidencia.comunidades?.nombre_cdad || selectedDetailIncidencia.comunidad || 'N/A'
+                }
+            });
+
+            toast.success('Archivos añadidos hoy', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al subir archivos', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
+        }
         }, 'Subiendo archivos...');
     };
 
-    const handleDeleteAttachment = async (urlToDelete: string) => {
-        if (!selectedDetailIncidencia) return;
+    const handleDeleteAttachment = async () => {
+        if (!selectedDetailIncidencia || !urlToConfirmDelete) return;
 
-        const isConfirmed = window.confirm('¿Estás seguro de que deseas eliminar este documento?');
-        if (!isConfirmed) return;
+        setShowDeleteDocConfirm(false);
+        const urlToDelete = urlToConfirmDelete;
+        setUrlToConfirmDelete(null);
 
-        setIsUpdatingRecord(true);
         await withLoading(async () => {
-            const loadingToast = toast.loading('Eliminando archivo...');
-            try {
-                const updatedAdjuntos = (selectedDetailIncidencia.adjuntos || []).filter(url => url !== urlToDelete);
+        setIsUpdatingRecord(true);
+        const loadingToast = toast.loading('Eliminando archivo...');
 
-                const { error: updateError } = await supabase
-                    .from('incidencias_serincobot')
-                    .update({ adjuntos: updatedAdjuntos })
-                    .eq('id', selectedDetailIncidencia.id);
+        try {
+            // 1. Extract bucket and path from URL if it's our proxy URL
+            let bucket = 'documentos';
+            let path = '';
 
-                if (updateError) throw updateError;
-
-                setSelectedDetailIncidencia({
-                    ...selectedDetailIncidencia,
-                    adjuntos: updatedAdjuntos
-                });
-
-                setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
-
-                await logActivity({
-                    action: 'update',
-                    entityType: 'sofia_incidencia',
-                    entityId: selectedDetailIncidencia.id,
-                    entityName: `Sofia - ${selectedDetailIncidencia.nombre_cliente}`,
-                    details: {
-                        id: selectedDetailIncidencia.id,
-                        action: 'eliminar_archivo',
-                        url: urlToDelete
-                    }
-                });
-
-                toast.success('Archivo eliminado', { id: loadingToast });
-            } catch (error: any) {
-                console.error(error);
-                toast.error('Error al eliminar archivo', { id: loadingToast });
-            } finally {
-                setIsUpdatingRecord(false);
+            if (urlToDelete.includes('/api/storage/view')) {
+                const urlObj = new URL(urlToDelete, window.location.origin);
+                bucket = urlObj.searchParams.get('bucket') || 'documentos';
+                path = urlObj.searchParams.get('path') || '';
+            } else if (urlToDelete.includes('.supabase.co/storage/v1/object/public/')) {
+                const parts = urlToDelete.split('/object/public/')[1].split('/');
+                bucket = parts[0];
+                path = parts.slice(1).join('/');
             }
-        }, 'Eliminando archivo...');
+
+            // 2. Delete from storage if we have a path
+            if (path) {
+                const res = await fetch('/api/storage/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ bucket, path })
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    console.warn('[Storage Delete] Could not delete file from storage:', error.error);
+                }
+            }
+
+            // 3. Update database
+            const currentAdjuntos = selectedDetailIncidencia.adjuntos || [];
+            const updatedAdjuntos = currentAdjuntos.filter(url => url !== urlToDelete);
+
+            const { error: updateError } = await supabase
+                .from('incidencias_serincobot')
+                .update({ adjuntos: updatedAdjuntos })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (updateError) throw updateError;
+
+            // 4. Update local state
+            setSelectedDetailIncidencia({
+                ...selectedDetailIncidencia,
+                adjuntos: updatedAdjuntos
+            });
+
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, adjuntos: updatedAdjuntos } : i));
+
+            // Log activity
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // record_messages log
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'sofia_incidencia',
+                    entity_id: selectedDetailIncidencia.id,
+                    user_id: user.id,
+                    content: `🗑️ SE HA ELIMINADO UN DOCUMENTO ADJUNTO DEL TICKET.`
+                }]);
+            }
+
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: selectedDetailIncidencia.id,
+                entityName: `Incidencia - ${selectedDetailIncidencia.nombre_cliente}`,
+                details: {
+                    acción: 'Documento adjunto eliminado',
+                    comunidad: selectedDetailIncidencia.comunidades?.nombre_cdad || selectedDetailIncidencia.comunidad || 'N/A'
+                }
+            });
+
+            toast.success('Documento eliminado', { id: loadingToast });
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al eliminar el documento', { id: loadingToast });
+        } finally {
+            setIsUpdatingRecord(false);
+        }
+        }, 'Eliminando adjunto...');
     };
 
     const toggleResuelto = async (id: number, currentStatus: boolean) => {
         if (isUpdatingStatus === id) return;
-        setIsUpdatingStatus(id);
         await withLoading(async () => {
+        setIsUpdatingStatus(id);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const newResuelto = !currentStatus;
+            const newEstado = newResuelto ? 'Resuelto' : 'Pendiente';
+            const { error } = await supabase
+                .from('incidencias_serincobot')
+                .update({
+                    resuelto: newResuelto,
+                    estado: newEstado,
+                    dia_resuelto: newResuelto ? new Date().toISOString() : null,
+                    resuelto_por: newResuelto ? user?.id : null,
+                    fecha_recordatorio: null // Clear reminder if resolving/reopening
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            toast.success(currentStatus ? 'Marcado como pendiente' : 'Marcado como resuelto');
+
+            setIncidencias(prev => prev.map(i => i.id === id ? {
+                ...i,
+                resuelto: newResuelto,
+                estado: newEstado as any,
+                dia_resuelto: newResuelto ? new Date().toISOString() : undefined,
+                resuelto_por: newResuelto ? user?.id : undefined,
+                fecha_recordatorio: undefined
+            } : i));
+
+            // Log activity
+            const incidencia = incidencias.find(i => i.id === id);
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: id,
+                entityName: `Incidencia - ${incidencia?.nombre_cliente}`,
+                details: {
+                    id: id,
+                    comunidad: incidencia?.comunidades?.nombre_cdad,
+                    resuelto: newResuelto,
+                    estado: newEstado
+                }
+            });
+
+            // Webhook de resolución disparado por Supabase nativo (UPDATE en incidencias → trigger-resolved-ticket)
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al actualizar estado');
+        } finally {
+            setIsUpdatingStatus(null);
+        }
+        }, currentStatus ? 'Reabriendo incidencia...' : 'Resolviendo incidencia...');
+    };
+
+    const reactivarDesdeAplazado = async (id: number) => {
+        if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
+            setIsUpdatingStatus(id);
             try {
-                const { data: { user } } = await supabase.auth.getUser();
-
-                const updatePayload: any = {
-                    resuelto: !currentStatus,
-                    dia_resuelto: !currentStatus ? new Date().toISOString() : null,
-                    resuelto_por: !currentStatus ? (user?.id || 'manual_user') : null,
-                    estado: !currentStatus ? 'Resuelto' : 'Pendiente',
-                    fecha_recordatorio: null
-                };
-
                 const { error } = await supabase
                     .from('incidencias_serincobot')
-                    .update(updatePayload)
+                    .update({ estado: 'Pendiente', fecha_recordatorio: null })
                     .eq('id', id);
-
                 if (error) throw error;
-
-                toast.success(currentStatus ? 'Marcado como pendiente' : 'Marcado como resuelto');
-
-                const currentProfile = profiles.find(p => p.user_id === user?.id);
-                setIncidencias(prev => prev.map(i => i.id === id ? {
-                    ...i,
-                    resuelto: !currentStatus,
-                    estado: !currentStatus ? 'Resuelto' : 'Pendiente',
-                    fecha_recordatorio: undefined,
-                    dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
-                    resuelto_por: !currentStatus ? user?.id : undefined,
-                    resolver: !currentStatus ? { nombre: currentProfile?.nombre || 'Tú' } : undefined
-                } : i));
-
-                if (selectedDetailIncidencia?.id === id) {
-                    setSelectedDetailIncidencia({
-                        ...selectedDetailIncidencia,
-                        resuelto: !currentStatus,
-                        estado: !currentStatus ? 'Resuelto' : 'Pendiente',
-                        fecha_recordatorio: undefined,
-                        dia_resuelto: !currentStatus ? new Date().toISOString() : undefined,
-                        resuelto_por: !currentStatus ? user?.id : undefined,
-                        resolver: !currentStatus ? { nombre: currentProfile?.nombre || 'Tú' } : undefined
-                    });
-                }
-
-                const incidencia = incidencias.find(i => i.id === id);
-                await logActivity({
-                    action: 'update',
-                    entityType: 'sofia_incidencia',
-                    entityId: id,
-                    entityName: `Sofia - ${incidencia?.nombre_cliente}`,
-                    details: { id, comunidad: incidencia?.comunidades?.nombre_cdad, resuelto: !currentStatus }
-                });
-
-                setShowDetailModal(false);
-            } catch (error: any) {
-                console.error('Error toggling resuelto:', error);
-                toast.error(`Error al actualizar estado: ${error.message || 'Error desconocido'}`);
+                toast.success('Ticket vuelto a Pendiente');
+                setIncidencias(prev => prev.map(i => i.id === id ? { ...i, estado: 'Pendiente' as any, fecha_recordatorio: undefined } : i));
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al reactivar ticket');
             } finally {
                 setIsUpdatingStatus(null);
             }
-        }, currentStatus ? 'Reabriendo ticket...' : 'Resolviendo ticket...');
+        }, 'Reactivando ticket...');
     };
 
     const openAplazarModal = (id: number) => {
         setAplazarIncidenciaId(id);
+        // Default: tomorrow
         const tomorrow = new Date();
         tomorrow.setDate(tomorrow.getDate() + 1);
-        setAplazarDate(tomorrow.toISOString().slice(0, 10));
+        const dateStr = tomorrow.toISOString().slice(0, 10); // yyyy-MM-dd
+        setAplazarDate(dateStr);
         setShowAplazarModal(true);
     };
 
@@ -442,64 +883,75 @@ export default function SofiaPage() {
         if (!aplazarIncidenciaId || !aplazarDate) return;
 
         await withLoading(async () => {
-            const loadingToast = toast.loading('Aplazando ticket...');
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
+        const loadingToast = toast.loading('Aplazando ticket...');
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
 
-                const { error } = await supabase
-                    .from('incidencias_serincobot')
-                    .update({
-                        estado: 'Aplazado',
-                        resuelto: false,
-                        fecha_recordatorio: aplazarDate
-                    })
-                    .eq('id', aplazarIncidenciaId);
+            const { error } = await supabase
+                .from('incidencias_serincobot')
+                .update({
+                    estado: 'Aplazado',
+                    resuelto: false,
+                    fecha_recordatorio: aplazarDate
+                })
+                .eq('id', aplazarIncidenciaId);
 
-                if (error) throw error;
+            if (error) throw error;
 
-                const fechaFormateada = new Date(aplazarDate + 'T00:00:00').toLocaleDateString('es-ES', {
-                    day: '2-digit', month: '2-digit', year: 'numeric'
-                });
+            const fechaFormateada = new Date(aplazarDate + 'T00:00:00').toLocaleDateString('es-ES', {
+                day: '2-digit', month: '2-digit', year: 'numeric'
+            });
 
-                if (user) {
-                    await supabase.from('record_messages').insert([{
-                        entity_type: 'sofia_incidencia',
-                        entity_id: aplazarIncidenciaId,
-                        user_id: user.id,
-                        content: `⏸️ Ticket aplazado hasta el ${fechaFormateada}`
-                    }]);
-                }
-
-                await logActivity({
-                    action: 'update',
-                    entityType: 'sofia_incidencia',
-                    entityId: aplazarIncidenciaId,
-                    entityName: `Sofia - Aplazado hasta ${fechaFormateada}`,
-                    details: { id: aplazarIncidenciaId, action: 'aplazar', fecha_recordatorio: aplazarDate }
-                });
-
-                setIncidencias(prev => prev.map(i => i.id === aplazarIncidenciaId ? {
-                    ...i, estado: 'Aplazado' as any, resuelto: false, fecha_recordatorio: aplazarDate
-                } : i));
-
-                if (selectedDetailIncidencia?.id === aplazarIncidenciaId) {
-                    setSelectedDetailIncidencia({
-                        ...selectedDetailIncidencia,
-                        estado: 'Aplazado',
-                        resuelto: false,
-                        fecha_recordatorio: aplazarDate
-                    });
-                }
-
-                setShowAplazarModal(false);
-                setAplazarIncidenciaId(null);
-                setAplazarDate('');
-
-                toast.success(`Ticket aplazado hasta ${fechaFormateada}`, { id: loadingToast });
-            } catch (error: any) {
-                console.error('Error aplazando ticket:', error);
-                toast.error('Error al aplazar ticket', { id: loadingToast });
+            // Record in timeline chat
+            if (user) {
+                await supabase.from('record_messages').insert([{
+                    entity_type: 'sofia_incidencia',
+                    entity_id: aplazarIncidenciaId,
+                    user_id: user.id,
+                    content: `⏱️ TICKET APLAZADO HASTA: ${fechaFormateada}`
+                }]);
             }
+
+            // Log activity
+            const incidencia = incidencias.find(i => i.id === aplazarIncidenciaId);
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: aplazarIncidenciaId,
+                entityName: `Incidencia - ${incidencia?.nombre_cliente}`,
+                details: {
+                    acción: 'Ticket aplazado',
+                    fecha_recordatorio: fechaFormateada,
+                    comunidad: incidencia?.comunidades?.nombre_cdad || incidencia?.comunidad || 'N/A'
+                }
+            });
+
+            // Optimistic update
+            setIncidencias(prev => prev.map(i => i.id === aplazarIncidenciaId ? {
+                ...i,
+                estado: 'Aplazado' as any,
+                resuelto: false,
+                fecha_recordatorio: aplazarDate
+            } : i));
+
+            // Update detail modal if open
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === aplazarIncidenciaId) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    estado: 'Aplazado',
+                    resuelto: false,
+                    fecha_recordatorio: aplazarDate
+                });
+            }
+
+            toast.success(`Ticket aplazado hasta ${fechaFormateada}`, { id: loadingToast });
+            setShowAplazarModal(false);
+            setAplazarIncidenciaId(null);
+            setAplazarDate('');
+        } catch (error: any) {
+            console.error(error);
+            toast.error('Error al aplazar el ticket', { id: loadingToast });
+        }
         }, 'Aplazando ticket...');
     };
 
@@ -507,8 +959,10 @@ export default function SofiaPage() {
         const idsToExport = idsOverride || Array.from(selectedIds);
         if (idsToExport.length === 0) return;
 
+        // If overriding IDs (from modal), imply detail view if single item
         const isDetailView = !!idsOverride && idsToExport.length === 1 && type === 'pdf';
 
+        // Custom Modal Logic
         if (isDetailView && includeNotesFromModal === undefined) {
             setPendingExportParams({ type, ids: idsOverride });
             setShowExportModal(true);
@@ -517,54 +971,56 @@ export default function SofiaPage() {
 
         const includeNotes = includeNotesFromModal !== undefined ? includeNotesFromModal : false;
 
-        setExporting(true);
+        const label = type === 'pdf' ? 'Generando PDF...' : 'Exportando CSV...';
         await withLoading(async () => {
-            try {
-                const res = await fetch('/api/incidencias/export', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ids: idsToExport,
-                        type,
-                        layout: isDetailView ? 'detail' : 'list',
-                        includeNotes,
-                        table: 'incidencias_serincobot',
-                        isSecondary: true
-                    })
-                });
+        setExporting(true);
+        try {
+            const res = await fetch('/api/incidencias/export', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ids: idsToExport,
+                    type,
+                    layout: isDetailView ? 'detail' : 'list',
+                    includeNotes,
+                    table: 'incidencias_serincobot',
+                    isSecondary: true
+                })
+            });
 
-                if (!res.ok) {
-                    const errData = await res.json();
-                    throw new Error(errData.error || 'Export failed');
-                }
-
-                const blob = await res.blob();
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-
-                const now = new Date();
-                const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
-
-                if (isDetailView) {
-                    a.download = `sofia_ticket_${idsToExport[0]}_${dateStr}.pdf`;
-                } else {
-                    a.download = `listado_sofia_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
-                }
-
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
-
-                toast.success('Exportación completada');
-            } catch (error) {
-                console.error(error);
-                toast.error('Error al exportar');
-            } finally {
-                setExporting(false);
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || 'Export failed');
             }
-        }, 'Generando exportación...');
+
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            // Filename Logic
+            const now = new Date();
+            const dateStr = `${now.getDate().toString().padStart(2, '0')}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+
+            if (isDetailView) {
+                a.download = `sofia_ticket_${idsToExport[0]}_${dateStr}.pdf`;
+            } else {
+                a.download = `listado_sofia_${dateStr}.${type === 'csv' ? 'csv' : 'pdf'}`;
+            }
+
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            toast.success('Exportación completada');
+        } catch (error) {
+            console.error(error);
+            toast.error('Error al exportar');
+        } finally {
+            setExporting(false);
+        }
+        }, label);
     };
 
     const handleDeleteClick = (id: number) => {
@@ -577,103 +1033,295 @@ export default function SofiaPage() {
     const handleConfirmDelete = async ({ email, password }: any) => {
         if (!itemToDelete || !email || !password) return;
 
-        setIsDeleting(true);
         await withLoading(async () => {
-            try {
-                const res = await fetch('/api/admin/universal-delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: itemToDelete,
-                        email,
-                        password,
-                        type: 'sofia_incidencia',
-                        table: 'incidencias_serincobot',
-                        isSecondary: true
-                    })
-                });
+        setIsDeleting(true);
+        try {
+            const res = await fetch('/api/admin/universal-delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: itemToDelete,
+                    email,
+                    password,
+                    type: 'sofia_incidencia',
+                    table: 'incidencias_serincobot',
+                    isSecondary: true
+                })
+            });
 
-                const data = await res.json();
+            const data = await res.json();
 
-                if (!res.ok) {
-                    throw new Error(data.error || 'Error al eliminar');
-                }
-
-                toast.success('Incidencia eliminada correctamente');
-                setIncidencias(prev => prev.filter(i => i.id !== itemToDelete));
-                setShowDeleteModal(false);
-
-                await logActivity({
-                    action: 'delete',
-                    entityType: 'sofia_incidencia',
-                    entityId: itemToDelete,
-                    entityName: `Sofia Deleted`,
-                    details: { id: itemToDelete, deleted_by_admin: email }
-                });
-
-            } catch (error: any) {
-                toast.error(error.message);
-            } finally {
-                setIsDeleting(false);
+            if (!res.ok) {
+                throw new Error(data.error || 'Error al eliminar');
             }
+
+            toast.success('Incidencia eliminada correctamente');
+            setIncidencias(prev => prev.filter(i => i.id !== itemToDelete));
+            setShowDeleteModal(false);
+            setItemToDelete(null);
+
+            // Log delete activity
+            await logActivity({
+                action: 'delete',
+                entityType: 'sofia_incidencia',
+                entityId: itemToDelete,
+                entityName: `Incidencia Deleted`,
+                details: {
+                    id: itemToDelete,
+                    deleted_by_admin: email
+                }
+            });
+
+        } catch (error: any) {
+            toast.error(error.message);
+        } finally {
+            setIsDeleting(false);
+        }
         }, 'Eliminando incidencia...');
     };
 
-    const handleUpdateGestor = async () => {
-        if (!selectedDetailIncidencia || !newGestorId || !newComunidadId) {
-            toast.error('Selecciona una comunidad y un gestor');
-            return;
-        }
-
-        setIsUpdatingGestor(true);
+    const reassignGestor = async (targetIncidencia: Incidencia, gestorId: string) => {
         await withLoading(async () => {
-            const loadingToast = toast.loading('Transfiriendo ticket a gestión...');
-            try {
-                const res = await fetch('/api/sofia/transfer', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        sofiaId: selectedDetailIncidencia.id,
-                        gestorId: newGestorId,
-                        comunidadId: newComunidadId
-                    })
+        setIsUpdatingGestor(true);
+        try {
+            // Obtener info del usuario actual
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const { error } = await supabase
+                .from('incidencias_serincobot')
+                .update({ gestor_asignado: gestorId })
+                .eq('id', targetIncidencia.id);
+
+            if (error) throw error;
+
+            // Actualizar estado local
+            const newGestorProfile = profiles.find(p => p.user_id === gestorId);
+            const oldGestorName = targetIncidencia.gestor?.nombre || 'Sin asignar';
+            const newGestorName = newGestorProfile?.nombre || 'Desconocido';
+
+            // Si la incidencia reasignada es la abierta en el detalle, sincronizar
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === targetIncidencia.id) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    gestor_asignado: gestorId,
+                    gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : selectedDetailIncidencia.gestor
+                });
+            }
+
+            // Actualizar lista principal
+            setIncidencias(prev => prev.map(inc =>
+                inc.id === targetIncidencia.id
+                    ? { ...inc, gestor_asignado: gestorId, gestor: newGestorProfile ? { nombre: newGestorProfile.nombre } : inc.gestor }
+                    : inc
+            ));
+
+            // 1. Insertar mensaje en el Timeline (Chat)
+            await supabase
+                .from('record_messages')
+                .insert({
+                    entity_type: 'sofia_incidencia',
+                    entity_id: targetIncidencia.id,
+                    user_id: user.id,
+                    content: `🔄 TICKET REASIGNADO\nDe: ${oldGestorName}\nA: ${newGestorName}`
                 });
 
-                const data = await res.json();
-
-                if (!res.ok) {
-                    const err = new Error(data.error || 'Error al transferir ticket') as any;
-                    err.details = data.details;
-                    throw err;
-                }
-
-                toast.success('Ticket transferido a Gestión de Tickets', { id: loadingToast });
-
-                setIncidencias(prev => prev.filter(inc => inc.id !== selectedDetailIncidencia.id));
-                setShowDetailModal(false);
-                setSelectedDetailIncidencia(null);
-                setIsReassigning(false);
-                setNewGestorId('');
-                setNewComunidadId('');
-
-            } catch (error: any) {
-                console.error('Error transferring ticket:', error);
-                const errorMessage = error.message || 'Error al reasignar gestor';
-                toast.error(errorMessage, { id: loadingToast });
-                if (error.details) {
-                    console.error('Detailed DB Error:', error.details);
-                }
-            } finally {
-                setIsUpdatingGestor(false);
+            // 2. Crear Notificación para el nuevo gestor
+            if (gestorId !== user.id) { // No notificarse a sí mismo si se autoasigna
+                await supabase
+                    .from('notifications')
+                    .insert({
+                        user_id: gestorId,
+                        type: 'assignment',
+                        title: 'Nueva Asignación de Ticket',
+                        content: `Se te ha asignado la incidencia #${targetIncidencia.id} (Reasignado por reasignación)`,
+                        entity_id: targetIncidencia.id,
+                        entity_type: 'sofia_incidencia',
+                        link: `/dashboard/incidencias?id=${targetIncidencia.id}`,
+                        is_read: false
+                    });
             }
-        }, 'Transfiriendo ticket...');
+
+            // 3. Log de Actividad del Sistema
+            const currentUserProfile = profiles.find(p => p.user_id === user.id);
+            const currentUserName = currentUserProfile?.nombre || user.email || 'Desconocido';
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: targetIncidencia.id,
+                entityName: `Incidencia #${targetIncidencia.id}`,
+                details: {
+                    change: 'reasignacion',
+                    old_gestor: oldGestorName,
+                    new_gestor: newGestorName,
+                    by: currentUserName
+                }
+            });
+
+            setShowQuickReassignModal(false);
+            setQuickReassignIncidencia(null);
+            setQuickReassignNewGestorId('');
+            setShowReassignSuccessModal(true);
+
+        } catch (error: any) {
+            console.error('Error updating gestor:', error);
+            toast.error('Error al reasignar gestor');
+        } finally {
+            setIsUpdatingGestor(false);
+        }
+        }, 'Reasignando gestor...');
+    };
+
+    const handleQuickReassignSubmit = async () => {
+        if (!quickReassignIncidencia || !quickReassignNewGestorId) return;
+        await reassignGestor(quickReassignIncidencia, quickReassignNewGestorId);
+    };
+
+    const addNotaGestor = async (texto: string) => {
+        if (!selectedDetailIncidencia || !texto.trim()) return;
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const autor = profiles.find(p => p.user_id === user?.id)?.nombre
+                || allProfilesForLookup.find(p => p.user_id === user?.id)?.nombre
+                || 'Usuario';
+            const fecha = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const nuevaEntrada = `[${fecha} - ${autor}] ${texto.trim()}`;
+            const notaActual = (selectedDetailIncidencia.nota_gestor || '').trim();
+            const notaNueva = notaActual ? `${nuevaEntrada}\n\n${notaActual}` : nuevaEntrada;
+
+            const { error } = await supabase
+                .from('incidencias_serincobot')
+                .update({ nota_gestor: notaNueva })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (error) throw error;
+
+            setSelectedDetailIncidencia({ ...selectedDetailIncidencia, nota_gestor: notaNueva });
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, nota_gestor: notaNueva } : i));
+            toast.success('Nota añadida');
+        } catch (error: any) {
+            toast.error('Error al añadir nota: ' + (error.message || 'desconocido'));
+        }
+    };
+
+    // Used by DetailModal's inline reassign UI
+    const handleUpdateGestorFromDetail = async () => {
+        if (!selectedDetailIncidencia || !newGestorId) return;
+        await reassignGestor(selectedDetailIncidencia, newGestorId);
+        setIsReassigning(false);
+        setNewGestorId('');
+    };
+
+    const reassignProveedor = async (
+        targetIncidencia: Incidencia,
+        proveedorId: string,
+        opts: { notifEmail: boolean; notifWhatsapp: boolean }
+    ) => {
+        await withLoading(async () => {
+        setIsUpdatingProveedor(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error('Usuario no autenticado');
+
+            const proveedorIdNum = proveedorId ? parseInt(proveedorId) : null;
+            const avisoProveedor = !proveedorIdNum
+                ? 0
+                : (!opts.notifEmail && !opts.notifWhatsapp)
+                    ? 0
+                    : (opts.notifWhatsapp && !opts.notifEmail)
+                        ? 1
+                        : (!opts.notifWhatsapp && opts.notifEmail)
+                            ? 2
+                            : 3;
+
+            const { error } = await supabase
+                .from('incidencias_serincobot')
+                .update({ proveedor_id: proveedorIdNum, aviso_proveedor: avisoProveedor })
+                .eq('id', targetIncidencia.id);
+
+            if (error) throw error;
+
+            const newProveedor = proveedorIdNum ? proveedores.find(p => p.id === proveedorIdNum) : null;
+            const oldProveedorName = (targetIncidencia as any).proveedor?.nombre || 'Sin asignar';
+            const newProveedorName = newProveedor?.nombre || 'Sin asignar';
+            const avisoLabel = avisoProveedor === 0 ? 'Sin aviso' : avisoProveedor === 1 ? 'WhatsApp' : avisoProveedor === 2 ? 'Email' : 'Email + WhatsApp';
+
+            // Si la incidencia reasignada es la abierta en el detalle, sincronizar
+            if (selectedDetailIncidencia && selectedDetailIncidencia.id === targetIncidencia.id) {
+                setSelectedDetailIncidencia({
+                    ...selectedDetailIncidencia,
+                    proveedor_id: proveedorIdNum,
+                    aviso_proveedor: avisoProveedor,
+                    proveedor: newProveedor ? { nombre: newProveedor.nombre } : null,
+                } as unknown as Incidencia);
+            }
+
+            // Actualizar lista principal
+            setIncidencias(prev => prev.map(inc =>
+                inc.id === targetIncidencia.id
+                    ? ({ ...inc, proveedor_id: proveedorIdNum, aviso_proveedor: avisoProveedor, proveedor: newProveedor ? { nombre: newProveedor.nombre } : null } as unknown as Incidencia)
+                    : inc
+            ));
+
+            // 1. Insertar mensaje en el Timeline (Chat)
+            await supabase
+                .from('record_messages')
+                .insert({
+                    entity_type: 'sofia_incidencia',
+                    entity_id: targetIncidencia.id,
+                    user_id: user.id,
+                    content: `🔧 PROVEEDOR REASIGNADO\nDe: ${oldProveedorName}\nA: ${newProveedorName}\nAviso: ${avisoLabel}`
+                });
+
+            // 2. Log de Actividad del Sistema
+            const currentUserProfile = profiles.find(p => p.user_id === user.id);
+            const currentUserName = currentUserProfile?.nombre || user.email || 'Desconocido';
+            await logActivity({
+                action: 'update',
+                entityType: 'sofia_incidencia',
+                entityId: targetIncidencia.id,
+                entityName: `Incidencia #${targetIncidencia.id}`,
+                details: {
+                    change: 'reasignacion_proveedor',
+                    old_proveedor: oldProveedorName,
+                    new_proveedor: newProveedorName,
+                    aviso_proveedor: avisoLabel,
+                    by: currentUserName
+                }
+            });
+
+            setShowQuickReassignProveedorModal(false);
+            setQuickReassignProveedorIncidencia(null);
+            setQuickReassignNewProveedorId('');
+            setQuickNotifProveedorEmail(false);
+            setQuickNotifProveedorWhatsapp(false);
+            setQuickNotifProveedorNone(false);
+            setShowProveedorReassignSuccessModal(true);
+
+        } catch (error: any) {
+            console.error('Error updating proveedor:', error);
+            toast.error('Error al reasignar proveedor');
+        } finally {
+            setIsUpdatingProveedor(false);
+        }
+        }, 'Reasignando proveedor...');
+    };
+
+    const handleQuickReassignProveedorSubmit = async () => {
+        if (!quickReassignProveedorIncidencia) return;
+        await reassignProveedor(quickReassignProveedorIncidencia, quickReassignNewProveedorId, {
+            notifEmail: quickNotifProveedorEmail,
+            notifWhatsapp: quickNotifProveedorWhatsapp,
+        });
     };
 
     const filteredIncidencias = incidencias.filter(inc => {
-        let matchesEstado = true;
-        if (filterEstado === 'pendiente') matchesEstado = !inc.resuelto && inc.estado !== 'Aplazado';
-        else if (filterEstado === 'resuelto') matchesEstado = inc.resuelto;
-        else if (filterEstado === 'aplazado') matchesEstado = inc.estado === 'Aplazado';
+        const estado = inc.estado || (inc.resuelto ? 'Resuelto' : 'Pendiente');
+        const matchesEstado =
+            filterEstado === 'pendiente' ? estado === 'Pendiente' :
+            filterEstado === 'resuelto' ? estado === 'Resuelto' :
+            filterEstado === 'aplazado' ? estado === 'Aplazado' :
+            true; // 'all'
 
         const matchesGestor = filterGestor === 'all' ? true : inc.gestor_asignado === filterGestor;
         const matchesComunidad = filterComunidad === 'all' ? true : inc.comunidad_id === Number(filterComunidad);
@@ -681,448 +1329,126 @@ export default function SofiaPage() {
         return matchesEstado && matchesGestor && matchesComunidad;
     });
 
-    const columns: Column<Incidencia>[] = [
-        { key: 'id', label: 'ID' },
-        {
-            key: 'codigo',
-            label: 'Código',
-            render: (row) => (
-                <div className="flex items-start gap-3">
-                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${row.resuelto ? 'bg-neutral-900' : row.estado === 'Aplazado' ? 'bg-orange-400' : 'bg-yellow-400'}`} />
-                    <span className="font-semibold">{row.codigo || '-'}</span>
-                </div>
-            ),
-        },
-        {
-            key: 'comunidad',
-            label: 'Edificio',
-            render: (row) => row.comunidad || '-',
-        },
-        {
-            key: 'urgencia',
-            label: 'Urgencia',
-            render: (row) => {
-                const urgency = row.urgencia?.toLowerCase() ?? '';
-                const colors: Record<string, string> = {
-                    alta: 'bg-red-100 text-red-700 border-red-200',
-                    media: 'bg-amber-100 text-amber-700 border-amber-200',
-                    baja: 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                };
-                return (
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase ${colors[urgency] || 'bg-neutral-100 text-neutral-600'}`}>
-                        {row.urgencia || '-'}
-                    </span>
-                );
-            }
-        },
-        {
-            key: 'categoria',
-            label: 'Categoría',
-            render: (row) => <span className="text-[11px] font-medium text-neutral-600 truncate max-w-[100px] block" title={row.categoria}>{row.categoria || '-'}</span>
-        },
-        {
-            key: 'source',
-            label: 'Entrada',
-            render: (row) => row.source
-                ? <span className="text-[11px] font-medium text-neutral-600 truncate max-w-[120px] block capitalize" title={row.source}>{row.source}</span>
-                : <span className="text-neutral-300">-</span>
-        },
-        {
-            key: 'motivo_ticket',
-            label: 'Motivo',
-            render: (row) => <div className="max-w-[120px] truncate text-[11px] text-neutral-500" title={row.motivo_ticket}>{row.motivo_ticket || '-'}</div>
-        },
-        {
-            key: 'sentimiento',
-            label: 'Sentimiento',
-            render: (row) => {
-                const colors: Record<string, string> = {
-                    positivo: 'text-emerald-600',
-                    negativo: 'text-red-600',
-                    neutral: 'text-neutral-400'
-                };
-                const sentKey = row.sentimiento?.toLowerCase() ?? '';
-                return <span className={`text-[11px] font-bold uppercase ${colors[sentKey] || 'text-neutral-400'}`}>{row.sentimiento || '-'}</span>;
-            }
-        },
-        { key: 'nombre_cliente', label: 'Cliente' },
-        { key: 'telefono', label: 'Teléfono' },
-        {
-            key: 'email',
-            label: 'Email',
-            render: (row) => <span className="text-xs">{row.email || '-'}</span>,
-        },
-        {
-            key: 'nota_propietario',
-            label: 'Notas Propietario',
-            render: (row) => <div className="max-w-[150px] truncate text-[11px] text-neutral-500" title={row.nota_propietario}>{row.nota_propietario || '-'}</div>
-        },
-        {
-            key: 'nota_gestor',
-            label: 'Notas Gestor',
-            render: (row) => <div className="max-w-[150px] truncate text-[11px] text-neutral-500" title={row.nota_gestor}>{row.nota_gestor || '-'}</div>
-        },
-        {
-            key: 'mensaje',
-            label: 'Mensaje',
-            render: (row) => (
-                <div className="max-w-xs truncate text-xs" title={row.mensaje}>
-                    {row.mensaje}
-                </div>
-            ),
-        },
-        {
-            key: 'adjuntos',
-            label: 'Adjuntos',
-            render: (row) => (
-                <div className="flex flex-wrap gap-1">
-                    {row.adjuntos && row.adjuntos.length > 0 ? (
-                        row.adjuntos.map((url, i) => (
-                            <a
-                                key={i}
-                                href={getSecureUrl(url)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-colors"
-                            >
-                                <FileText className="w-4 h-4" />
-                            </a>
-                        ))
-                    ) : '-'}
-                </div>
-            ),
-        },
-        {
-            key: 'created_at',
-            label: 'Fecha',
-            render: (row) => row.created_at ? new Date(row.created_at).toLocaleDateString() : '-',
-        },
-        {
-            key: 'gestor_asignado',
-            label: 'Gestor',
-            render: (row) => row.gestor?.nombre || row.gestor_asignado || '-',
-        },
-        {
-            key: 'resuelto',
-            label: 'Estado',
-            render: (row) => {
-                if (row.estado === 'Aplazado') {
-                    return (
-                        <div className="flex flex-col items-start gap-1">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-700 border border-orange-200">
-                                <Pause className="w-3 h-3" /> Aplazado
-                            </span>
-                            {row.fecha_recordatorio && (
-                                <span className="inline-flex items-center gap-1 text-[10px] text-orange-500 font-medium">
-                                    <CalendarClock className="w-3 h-3" />
-                                    {new Date(row.fecha_recordatorio + (row.fecha_recordatorio.includes('T') ? '' : 'T00:00:00')).toLocaleDateString('es-ES')}
-                                </span>
-                            )}
-                        </div>
-                    );
-                }
-                return (
-                    <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold ${row.resuelto
-                        ? 'bg-neutral-900 text-white'
-                        : 'bg-yellow-400 text-neutral-950'
-                        }`}
-                    >
-                        {row.resuelto ? 'Resuelto' : 'Pendiente'}
-                    </span>
-                );
-            },
-        },
-    ];
+    const columns: Column<Incidencia>[] = buildColumns(profiles, 'yellow');
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center gap-4">
-                <h1 className="text-xl font-bold text-neutral-900">Sofia - Gestión Bot</h1>
-            </div>
+            <input
+                ref={pdfImportInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleImportPdf(file);
+                }}
+            />
+            <PageHeader
+                title="Sofía Local"
+                showForm={showForm}
+                onToggleForm={() => {
+                    setEditingId(null);
+                    setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10), nota_gestor: '' });
+                    setIsManualDate(false);
+                    setEnviarAviso(null);
+                    setNotifEmail(false);
+                    setNotifWhatsapp(false);
+                    setNotifProveedorEmail(false);
+                    setNotifProveedorWhatsapp(false);
+                    setNotifProveedorNone(false);
+                    setFiles([]);
+                    setFormErrors({});
+                    setShowForm(!showForm);
+                }}
+                newButtonLabel="Nuevo Ticket"
+                newButtonShortLabel="Ticket"
+                disableNewButton={true}
+                disabledTooltip="Los tickets de Sofía se registran automáticamente"
+                extraButtons={
+                    <button
+                        onClick={() => pdfImportInputRef.current?.click()}
+                        disabled={importingPdf}
+                        className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm disabled:opacity-50"
+                    >
+                        {importingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 flex-shrink-0" />}
+                        <span className="hidden sm:inline">Importar desde PDF</span>
+                        <span className="sm:hidden">Importar</span>
+                    </button>
+                }
+            />
 
-            <div className="flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
-                <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2 w-full sm:w-auto">
-                    {['pendiente', 'aplazado', 'resuelto', 'all'].map(status => (
-                        <button
-                            key={status}
-                            onClick={() => setFilterEstado(status)}
-                            className={`px-3 py-1 rounded-full text-sm font-medium transition ${
-                                filterEstado === status
-                                    ? status === 'aplazado' ? 'bg-orange-400 text-white' : 'bg-yellow-400 text-neutral-950'
-                                    : 'bg-neutral-200'
-                            }`}
-                        >
-                            {status === 'pendiente' ? 'Pendientes' : status === 'aplazado' ? 'Aplazadas' : status === 'resuelto' ? 'Resueltas' : 'Todas'}
-                        </button>
-                    ))}
-                </div>
+            {/* Filters and Actions */}
+            <div className="flex flex-col gap-3">
+                <FilterBar
+                    value={filterEstado}
+                    onChange={(v) => setFilterEstado(v)}
+                    options={[
+                        { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-yellow-400 text-neutral-950' },
+                        { value: 'aplazado', label: 'Aplazadas', activeClass: 'bg-orange-400 text-white' },
+                        { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-neutral-900 text-white' },
+                        { value: 'all', label: 'Todas', activeClass: 'bg-neutral-900 text-white' },
+                    ]}
+                />
 
+                {/* Export Actions (Visible only if selection) */}
                 {selectedIds.size > 0 && (
-                    <div className="flex gap-2 items-center">
-                        <span className="text-sm font-medium text-neutral-500">{selectedIds.size} seleccionados</span>
-                        <button onClick={() => handleExport('csv')} className="bg-white border px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
-                            <FileText className="w-4 h-4 text-green-600" /> CSV
+                    <div className="flex gap-2 items-center animate-in fade-in slide-in-from-bottom-2">
+                        <span className="text-sm font-medium text-neutral-500 mr-2">{selectedIds.size} seleccionados</span>
+
+                        <button
+                            onClick={() => handleExport('csv')}
+                            disabled={exporting}
+                            className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50"
+                        >
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 text-green-600" />}
+                            CSV
                         </button>
-                        <button onClick={() => handleExport('pdf')} className="bg-white border px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium">
-                            <Download className="w-4 h-4 text-red-600" /> PDF
+
+                        <button
+                            onClick={() => handleExport('pdf')}
+                            disabled={exporting}
+                            className="bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 px-3 py-2 rounded-lg flex items-center gap-2 text-sm font-medium transition disabled:opacity-50"
+                        >
+                            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4 text-red-600" />}
+                            PDF
                         </button>
                     </div>
                 )}
             </div>
 
-            <DataTable
-                data={filteredIncidencias}
-                columns={columns}
-                keyExtractor={(row) => row.id}
-                storageKey="sofia_tickets"
-                loading={loading}
-                emptyMessage="No hay registros de Sofia"
-                selectable={true}
-                selectedKeys={selectedIds}
-                onSelectionChange={(keys) => setSelectedIds(keys)}
-                onRowClick={handleRowClick}
-                rowActions={(row) => [
-                    {
-                        label: row.resuelto ? 'Reabrir' : 'Resolver',
-                        icon: row.resuelto ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />,
-                        onClick: (r) => toggleResuelto(r.id, r.resuelto),
-                        disabled: isUpdatingStatus === row.id,
-                        variant: row.resuelto ? 'default' : 'success',
-                    },
-                    {
-                        label: 'Aplazar',
-                        icon: <Pause className="w-4 h-4" />,
-                        onClick: (r) => openAplazarModal(r.id),
-                        hidden: row.resuelto || row.estado === 'Aplazado',
-                        variant: 'warning',
-                    },
-                    {
-                        label: 'Eliminar',
-                        icon: <Trash2 className="w-4 h-4" />,
-                        onClick: (r) => handleDeleteClick(r.id),
-                        variant: 'danger',
-                        separator: true,
-                    },
-                ]}
-                extraFilters={
-                    <div className="flex items-center gap-2">
-                        <SearchableSelect
-                            value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
-                            onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
-                            options={comunidades.map(c => ({ value: c.id, label: `${c.codigo || ''} - ${c.nombre_cdad}` }))}
-                            placeholder="Todas las Comunidades"
-                            className="w-[240px]"
-                        />
-                        <SearchableSelect
-                            value={filterGestor === 'all' ? '' : filterGestor}
-                            onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
-                            options={allProfilesForFilter.map(p => ({ value: p.user_id, label: p.nombre }))}
-                            placeholder="Todos los Gestores"
-                            className="w-[200px]"
-                        />
-                    </div>
-                }
+            {/* Form Modal */}
+            <IncidenciaFormModal
+                accent="yellow"
+                show={showForm}
+                editingId={editingId}
+                formData={formData}
+                formErrors={formErrors}
+                files={files}
+                uploading={uploading}
+                isSubmitting={isSubmitting}
+                isManualDate={isManualDate}
+                enviarAviso={enviarAviso}
+                notifEmail={notifEmail}
+                notifWhatsapp={notifWhatsapp}
+                notifProveedorEmail={notifProveedorEmail}
+                notifProveedorWhatsapp={notifProveedorWhatsapp}
+                comunidades={comunidades}
+                profiles={profiles}
+                extraProfiles={allProfilesForLookup}
+                proveedores={proveedores}
+                onChange={(field, value) => setFormData(prev => ({ ...prev, [field]: value }))}
+                onFilesChange={(f) => setFiles(f)}
+                onSubmit={handleSubmit}
+                onClose={resetForm}
+                setEnviarAviso={setEnviarAviso}
+                setNotifEmail={setNotifEmail}
+                setNotifWhatsapp={setNotifWhatsapp}
+                setNotifProveedorEmail={setNotifProveedorEmail}
+                setNotifProveedorWhatsapp={setNotifProveedorWhatsapp}
+                setIsManualDate={setIsManualDate}
+                setFormErrors={setFormErrors}
             />
 
-            {/* Detail Modal (Cloned from Incidencias) */}
-            {showDetailModal && selectedDetailIncidencia && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[9999] flex items-center justify-center p-0 sm:p-4 backdrop-blur-md">
-                    <div className="bg-white rounded-none sm:rounded-2xl shadow-2xl w-full sm:max-w-4xl h-full sm:h-auto sm:max-h-[92dvh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-                        <div className="px-6 py-5 border-b flex justify-between items-center bg-neutral-50/50">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 bg-amber-400 rounded-xl flex items-center justify-center text-neutral-900">
-                                    <FileText className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <h3 className="text-xl font-black text-neutral-900 uppercase">Sofia Ticket #{selectedDetailIncidencia.id}</h3>
-                                    <p className="text-xs text-neutral-500 font-medium uppercase">Registrado el {selectedDetailIncidencia.created_at && !isNaN(new Date(selectedDetailIncidencia.created_at).getTime()) ? new Date(selectedDetailIncidencia.created_at).toLocaleString().toUpperCase() : (selectedDetailIncidencia.created_at || 'FECHA NO DISPONIBLE')}</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <input type="file" multiple className="hidden" ref={detailFileInputRef} onChange={(e) => e.target.files && handleDetailFileUpload(e.target.files)} />
-                                <div className="flex bg-white rounded-lg border p-1 shadow-sm">
-                                    <button onClick={() => detailFileInputRef.current?.click()} className="p-2 hover:bg-neutral-50 rounded-md border-r"><Paperclip className="w-5 h-5 text-neutral-400" /></button>
-                                    <button onClick={() => handleExport('pdf', [selectedDetailIncidencia.id])} className="p-2 hover:bg-neutral-50 rounded-md border-r"><Download className="w-5 h-5 text-neutral-400" /></button>
-                                    <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-red-50 rounded-md"><X className="w-5 h-5 text-neutral-400 hover:text-red-600" /></button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-1.5">Identificación</h4>
-                                    <div className="divide-y text-sm">
-                                        <div className="py-2 flex justify-between items-center bg-yellow-50/50 px-3 rounded-lg mb-2 -mx-3 border border-yellow-100">
-                                            <span className="font-bold text-amber-700 uppercase text-[10px]">Edificio Origen (Sofia)</span>
-                                            <span className="font-black text-neutral-900 uppercase">{selectedDetailIncidencia.comunidad}</span>
-                                        </div>
-                                        <div className="py-2 flex justify-between items-center"><span className="font-bold text-neutral-400 uppercase">Comunidad</span>
-                                            <div className="w-48">
-                                                <SearchableSelect
-                                                    value={newComunidadId}
-                                                    onChange={(val) => setNewComunidadId(Number(val))}
-                                                    options={comunidades.map(c => ({ value: c.id, label: `${c.codigo || ''} - ${c.nombre_cdad}` }))}
-                                                    placeholder="Asignar Comunidad"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Propietario</span><span className="uppercase">{selectedDetailIncidencia.nombre_cliente}</span></div>
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Teléfono</span><span>{selectedDetailIncidencia.telefono}</span></div>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-1.5">Gestión</h4>
-                                    <div className="divide-y text-sm">
-                                        <div className="py-2 flex justify-between items-center"><span className="font-bold text-neutral-400 uppercase">Gestor</span>
-                                            <div className="w-48">
-                                                <SearchableSelect
-                                                    value={newGestorId}
-                                                    onChange={(val) => setNewGestorId(String(val))}
-                                                    options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
-                                                    placeholder="Asignar Gestor"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div className="py-2 flex justify-between items-center">
-                                            <span className="font-bold text-neutral-400 uppercase">Urgencia</span>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs font-bold border uppercase ${selectedDetailIncidencia.urgencia?.toLowerCase() === 'alta' ? 'bg-red-100 text-red-700 border-red-200' :
-                                                selectedDetailIncidencia.urgencia?.toLowerCase() === 'media' ? 'bg-amber-100 text-amber-700 border-amber-200' :
-                                                    'bg-neutral-100 text-neutral-600 border-neutral-200'
-                                                }`}>
-                                                {selectedDetailIncidencia.urgencia || 'Media'}
-                                            </span>
-                                        </div>
-                                        <div className="py-2 flex justify-between items-center">
-                                            <span className="font-bold text-neutral-400 uppercase">Resuelto Por</span>
-                                            <span className="font-medium text-neutral-900">
-                                                {selectedDetailIncidencia.resolver?.nombre || selectedDetailIncidencia.resuelto_por || '-'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-1.5">Análisis del Bot</h4>
-                                    <div className="divide-y text-sm">
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Receptor</span><span className="uppercase text-amber-600 font-bold">{selectedDetailIncidencia.receptor?.nombre || selectedDetailIncidencia.quien_lo_recibe || 'Bot'}</span></div>
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Categoría</span><span className="font-medium">{selectedDetailIncidencia.categoria || '-'}</span></div>
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Entrada</span><span className="font-medium capitalize">{selectedDetailIncidencia.source || '-'}</span></div>
-                                        <div className="py-2 flex justify-between"><span className="font-bold text-neutral-400 uppercase">Motivo del Ticket</span><span className="font-medium text-right max-w-[60%]">{selectedDetailIncidencia.motivo_ticket || '-'}</span></div>
-                                        <div className="py-2 flex justify-between items-center">
-                                            <span className="font-bold text-neutral-400 uppercase">Sentimiento</span>
-                                            <span className={`font-black uppercase ${selectedDetailIncidencia.sentimiento?.toLowerCase() === 'positivo' ? 'text-emerald-600' :
-                                                selectedDetailIncidencia.sentimiento?.toLowerCase() === 'negativo' ? 'text-red-600' :
-                                                    'text-neutral-400'
-                                                }`}>
-                                                {selectedDetailIncidencia.sentimiento || 'Neutral'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-1.5">Notas del Sistema</h4>
-                                    <div className="space-y-3">
-                                        {selectedDetailIncidencia.nota_propietario && (
-                                            <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                                                <span className="block text-[10px] font-black text-blue-600 uppercase mb-1">Nota del Propietario</span>
-                                                <p className="text-xs text-blue-900 leading-relaxed italic">"{selectedDetailIncidencia.nota_propietario}"</p>
-                                            </div>
-                                        )}
-                                        {selectedDetailIncidencia.nota_gestor && (
-                                            <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
-                                                <span className="block text-[10px] font-black text-neutral-900 uppercase mb-1">Nota del Bot/Gestor</span>
-                                                <p className="text-xs text-neutral-600 leading-relaxed">{selectedDetailIncidencia.nota_gestor}</p>
-                                            </div>
-                                        )}
-                                        {!selectedDetailIncidencia.nota_propietario && !selectedDetailIncidencia.nota_gestor && (
-                                            <p className="text-xs text-neutral-400 italic">No hay notas adicionales registradas.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="space-y-2">
-                                <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-1.5">Mensaje</h4>
-                                <p className="text-neutral-800 text-base leading-relaxed uppercase">{selectedDetailIncidencia.mensaje}</p>
-                            </div>
-
-                            {/* Documentation Section */}
-                            {(selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0) && (
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-l-4 border-neutral-900 pl-4">Anexos y Documentación Adjunta</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {selectedDetailIncidencia.adjuntos.map((url: string, i: number) => (
-                                            <div key={i} className="group relative">
-                                                <a
-                                                    href={getSecureUrl(url)}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="flex items-center justify-between bg-white border border-neutral-200 p-4 rounded-xl hover:border-neutral-900 transition-all shadow-sm pr-12"
-                                                >
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-lg bg-neutral-50 flex items-center justify-center text-neutral-400 group-hover:bg-neutral-900 group-hover:text-white transition-colors">
-                                                            <FileText className="w-5 h-5" />
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-normal text-neutral-900 truncate max-w-[150px] md:max-w-xs">
-                                                                Documento Adjunto {i + 1}
-                                                            </span>
-                                                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-tight">Ver archivo oficial</span>
-                                                        </div>
-                                                    </div>
-                                                    <Download className="w-4 h-4 text-neutral-300 group-hover:text-neutral-900" />
-                                                </a>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.preventDefault();
-                                                        e.stopPropagation();
-                                                        handleDeleteAttachment(url);
-                                                    }}
-                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-neutral-400 hover:text-red-600 transition-colors"
-                                                    title="Eliminar documento"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="space-y-4 pt-6">
-                                <h4 className="text-sm font-black text-neutral-900 uppercase tracking-widest border-b-2 border-neutral-900 pb-2">Chat de Gestores (Sofia)</h4>
-                                <TimelineChat entityType="sofia_incidencia" entityId={selectedDetailIncidencia.id} />
-                            </div>
-                        </div>
-
-                        <div className="px-4 py-3 border-t bg-white flex justify-between items-center gap-2">
-                            <ModalActionsMenu actions={[
-                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
-                                ...(!selectedDetailIncidencia.resuelto && selectedDetailIncidencia.estado !== 'Aplazado' ? [{ label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const }] : []),
-                            ]} />
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleUpdateGestor}
-                                    disabled={!newGestorId || !newComunidadId || isUpdatingGestor}
-                                    className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all flex items-center gap-2 ${(!newGestorId || !newComunidadId || isUpdatingGestor) ? 'bg-neutral-100 text-neutral-400 cursor-not-allowed opacity-70' : 'bg-green-600 text-white hover:bg-green-700 active:scale-95'}`}
-                                >
-                                    {isUpdatingGestor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                    <span className="hidden sm:inline">Traspasar a </span>Gestión
-                                </button>
-                                <button onClick={() => toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto)} className={`px-4 py-2.5 rounded-xl font-black text-xs uppercase transition-all ${selectedDetailIncidencia.resuelto ? 'bg-white border-2 border-neutral-900' : 'bg-amber-400 hover:bg-amber-500'}`}>
-                                    {selectedDetailIncidencia.resuelto ? <><span className="hidden sm:inline">Reabrir </span>Ticket</> : <><span className="hidden sm:inline">Resolver </span>Ticket</>}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Modals for delete, reassign success, and export (same as incidencias but adapted) */}
-            {/* ... simplified for brevity or similar to incidencias ... */}
             {/* Delete Confirmation Modal */}
             <DeleteConfirmationModal
                 isOpen={showDeleteModal}
@@ -1131,55 +1457,427 @@ export default function SofiaPage() {
                     setItemToDelete(null);
                 }}
                 onConfirm={handleConfirmDelete}
-                itemType="incidencia de Sofia"
+                itemType="incidencia"
                 isDeleting={isDeleting}
             />
 
-            {showReassignSuccessModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
-                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><Check className="w-8 h-8 text-green-600" /></div>
-                        <h3 className="text-xl font-bold mb-2">Gestor Reasignado</h3>
-                        <button onClick={() => setShowReassignSuccessModal(false)} className="w-full py-3 bg-neutral-900 text-white rounded-xl font-bold">Aceptar</button>
-                    </div>
-                </div>
+            {/* Export Notes Modal */}
+            <ExportModal
+                show={showExportModal}
+                pendingExportParams={pendingExportParams}
+                onConfirm={(includeNotes) => {
+                    const params = pendingExportParams;
+                    setPendingExportParams(null);
+                    setShowExportModal(false);
+                    if (params) {
+                        handleExport(params.type, params.ids, includeNotes);
+                    }
+                }}
+                onClose={() => {
+                    setPendingExportParams(null);
+                    setShowExportModal(false);
+                }}
+            />
+
+            <DataTable
+                data={filteredIncidencias}
+                columns={columns}
+                keyExtractor={(row) => row.id}
+                storageKey="sofia"
+                loading={loading}
+                emptyMessage="No hay incidencias en esta vista"
+                selectable={true}
+                selectedKeys={selectedIds}
+                onSelectionChange={(keys) => setSelectedIds(keys)}
+                onRowClick={handleRowClick}
+                extraFilters={
+                    <>
+                        <SearchableSelect
+                            value={filterComunidad === 'all' ? '' : Number(filterComunidad)}
+                            onChange={(val) => setFilterComunidad(val === '' ? 'all' : String(val))}
+                            options={comunidades.map(c => ({ value: c.id, label: `${c.codigo || ''} - ${c.nombre_cdad}` }))}
+                            placeholder="Todas las Comunidades"
+                            className="w-[200px]"
+                        />
+                        <SearchableSelect
+                            value={filterGestor === 'all' ? '' : filterGestor}
+                            onChange={(val) => setFilterGestor(val === '' ? 'all' : String(val))}
+                            options={profiles.map(p => ({ value: p.user_id, label: p.nombre }))}
+                            placeholder="Todos los Gestores"
+                            className="w-[170px]"
+                        />
+                    </>
+                }
+                rowActions={(row) => {
+                    const estado = row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente');
+                    return [
+                        {
+                            label: 'Empezar tarea',
+                            icon: <Play className="w-4 h-4" />,
+                            onClick: (r) => { setStartTaskIncidencia(r); setShowStartTaskModal(true); },
+                            hidden: estado !== 'Pendiente',
+                            variant: 'info',
+                        },
+                        {
+                            label: 'Aplazar',
+                            icon: <Pause className="w-4 h-4" />,
+                            onClick: (r) => openAplazarModal(r.id),
+                            hidden: estado === 'Resuelto' || estado === 'Aplazado',
+                            variant: 'warning',
+                        },
+                        {
+                            label: estado === 'Resuelto' ? 'Reabrir' : (estado === 'Aplazado' ? 'Volver a Pendiente' : 'Resolver'),
+                            icon: estado === 'Resuelto' ? <RotateCcw className="w-4 h-4" /> : <Check className="w-4 h-4" />,
+                            onClick: (r) => estado === 'Aplazado' ? reactivarDesdeAplazado(r.id) : toggleResuelto(r.id, r.resuelto),
+                            disabled: isUpdatingStatus === row.id,
+                            variant: estado === 'Resuelto' ? 'default' : 'success',
+                        },
+                        { label: 'Editar', icon: <Pencil className="w-4 h-4" />, onClick: (r) => handleEdit(r) },
+                        {
+                            label: 'Reasignar gestor',
+                            icon: <UserCog className="w-4 h-4" />,
+                            onClick: (r) => {
+                                setQuickReassignIncidencia(r);
+                                setQuickReassignNewGestorId(r.gestor_asignado || '');
+                                setShowQuickReassignModal(true);
+                            },
+                        },
+                        {
+                            label: 'Reasignar proveedor',
+                            icon: <Wrench className="w-4 h-4" />,
+                            onClick: (r) => {
+                                setQuickReassignProveedorIncidencia(r);
+                                setQuickReassignNewProveedorId(r.proveedor_id ? String(r.proveedor_id) : '');
+                                setQuickNotifProveedorEmail(false);
+                                setQuickNotifProveedorWhatsapp(false);
+                                setQuickNotifProveedorNone(false);
+                                setShowQuickReassignProveedorModal(true);
+                            },
+                            hidden: estado === 'Resuelto' || estado === 'Aplazado',
+                        },
+                        {
+                            label: 'Eliminar',
+                            icon: <Trash2 className="w-4 h-4" />,
+                            onClick: (r) => handleDeleteClick(r.id),
+                            variant: 'danger',
+                            separator: true,
+                        },
+                    ];
+                }}
+            />
+
+            {/* Detail Modal */}
+            <DetailModal
+                show={showDetailModal}
+                selectedDetailIncidencia={selectedDetailIncidencia}
+                profiles={profiles}
+                comunidades={comunidades}
+                isUpdatingRecord={isUpdatingRecord}
+                isUpdatingGestor={isUpdatingGestor}
+                isReassigning={isReassigning}
+                newGestorId={newGestorId}
+                exporting={exporting}
+                showReassignSuccessModal={showReassignSuccessModal}
+                detailFileInputRef={detailFileInputRef}
+                entityType="sofia_incidencia"
+                accent="yellow"
+                onClose={() => setShowDetailModal(false)}
+                onDetailFileUpload={handleDetailFileUpload}
+                onDeleteAttachmentRequest={(url) => { setUrlToConfirmDelete(url); setShowDeleteDocConfirm(true); }}
+                onToggleResuelto={toggleResuelto}
+                onDeleteClick={handleDeleteClick}
+                onExport={handleExport}
+                onOpenAplazar={openAplazarModal}
+                onUpdateGestor={handleUpdateGestorFromDetail}
+                onAddNota={addNotaGestor}
+                setIsReassigning={setIsReassigning}
+                setNewGestorId={setNewGestorId}
+                setSelectedDetailIncidencia={setSelectedDetailIncidencia as any}
+                setShowReassignSuccessModal={setShowReassignSuccessModal}
+                setShowDetailModal={setShowDetailModal}
+            />
+
+            {/* Start Task From Ticket Modal */}
+            {showStartTaskModal && startTaskIncidencia && (
+                <StartTaskFromTicketModal
+                    incidenciaId={startTaskIncidencia.id}
+                    comunidadId={startTaskIncidencia.comunidad_id ?? null}
+                    comunidadLabel={
+                        startTaskIncidencia.comunidades
+                            ? `${startTaskIncidencia.comunidades.codigo ? startTaskIncidencia.comunidades.codigo + ' - ' : ''}${startTaskIncidencia.comunidades.nombre_cdad}`
+                            : (startTaskIncidencia.comunidad || undefined)
+                    }
+                    ticketLabel={`${startTaskIncidencia.nombre_cliente || 'Sin nombre'} · Ticket #${startTaskIncidencia.id}`}
+                    onClose={() => { setShowStartTaskModal(false); setStartTaskIncidencia(null); }}
+                />
             )}
 
-            {/* Aplazar Modal */}
-            {showAplazarModal && (
-                <div className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm">
+            {/* Quick Reassign Gestor Modal */}
+            {portalReady && showQuickReassignModal && quickReassignIncidencia && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => { if (!isUpdatingGestor) { setShowQuickReassignModal(false); setQuickReassignIncidencia(null); setQuickReassignNewGestorId(''); } }}
+                >
                     <div
-                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 relative max-h-[92dvh] overflow-visible animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
                         onClick={e => e.stopPropagation()}
                     >
-                        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                            <Pause className="w-8 h-8 text-orange-600" />
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center shrink-0">
+                                <UserCog className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Reasignar gestor</h3>
+                                <p className="text-xs text-neutral-500">
+                                    Ticket #{quickReassignIncidencia.id} · Actual: {quickReassignIncidencia.gestor?.nombre || 'Sin asignar'}
+                                </p>
+                            </div>
                         </div>
-                        <h3 className="text-xl font-bold text-neutral-900 mb-2">Aplazar Ticket</h3>
-                        <p className="text-neutral-500 mb-6 text-sm">Selecciona la fecha en la que quieres que el ticket vuelva a estar pendiente.</p>
-                        <input
-                            type="date"
-                            value={aplazarDate}
-                            onChange={(e) => setAplazarDate(e.target.value)}
-                            min={new Date().toISOString().slice(0, 10)}
-                            className="w-full border-2 border-neutral-200 rounded-xl px-4 py-3 text-sm font-medium text-neutral-900 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none transition-all mb-6"
-                        />
-                        <div className="flex gap-3 w-full">
+
+                        <div className="mb-6">
+                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nuevo gestor</label>
+                            <SearchableSelect
+                                value={quickReassignNewGestorId}
+                                onChange={(val) => setQuickReassignNewGestorId(String(val))}
+                                options={profiles.map(p => ({ value: p.user_id, label: `${p.nombre} (${p.rol})` }))}
+                                placeholder="Selecciona un gestor..."
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
                             <button
-                                onClick={() => { setShowAplazarModal(false); setAplazarIncidenciaId(null); setAplazarDate(''); }}
-                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all"
-                            >Cancelar</button>
-                            <button
-                                onClick={aplazarTicket}
-                                disabled={!aplazarDate}
-                                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                onClick={() => { setShowQuickReassignModal(false); setQuickReassignIncidencia(null); setQuickReassignNewGestorId(''); }}
+                                disabled={isUpdatingGestor}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all disabled:opacity-50"
                             >
-                                <Pause className="w-4 h-4" /> Aplazar
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleQuickReassignSubmit}
+                                disabled={!quickReassignNewGestorId || quickReassignNewGestorId === quickReassignIncidencia.gestor_asignado || isUpdatingGestor}
+                                className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isUpdatingGestor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Reasignar
                             </button>
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
+
+            {/* Reassign Success Modal */}
+            {portalReady && showReassignSuccessModal && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                    >
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                            <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            Gestor Reasignado
+                        </h3>
+                        <p className="text-neutral-500 mb-6">
+                            La incidencia ha sido reasignada al nuevo gestor correctamente.
+                        </p>
+                        <button
+                            onClick={() => setShowReassignSuccessModal(false)}
+                            className="w-full py-3 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold transition-transform active:scale-[0.98]"
+                        >
+                            Aceptar
+                        </button>
+                    </div>
+                </div>
+            , document.body)}
+
+            {/* Quick Reassign Proveedor Modal */}
+            {portalReady && showQuickReassignProveedorModal && quickReassignProveedorIncidencia && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                    onClick={() => { if (!isUpdatingProveedor) { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } }}
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-lg p-6 relative max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 bg-yellow-50 rounded-full flex items-center justify-center shrink-0">
+                                <Wrench className="w-6 h-6 text-yellow-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Reasignar proveedor</h3>
+                                <p className="text-xs text-neutral-500">
+                                    Ticket #{quickReassignProveedorIncidencia.id} · Actual: {(quickReassignProveedorIncidencia as any).proveedor?.nombre || 'Sin asignar'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Nuevo proveedor</label>
+                            <SearchableSelect
+                                value={quickReassignNewProveedorId ? Number(quickReassignNewProveedorId) : ''}
+                                onChange={(val) => {
+                                    setQuickReassignNewProveedorId(val ? String(val) : '');
+                                    if (!val) { setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); }
+                                }}
+                                options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
+                                placeholder="Selecciona un proveedor..."
+                            />
+                            <p className="text-[10px] text-neutral-400 mt-2">Deja vacío para quitar el proveedor asignado.</p>
+                        </div>
+
+                        {quickReassignNewProveedorId && (() => {
+                            const selectedProvQuick = proveedores.find(p => p.id === parseInt(quickReassignNewProveedorId));
+                            if (!selectedProvQuick) return null;
+                            return (
+                                <div className="mb-6 bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
+                                    <label className="text-xs font-bold text-neutral-900 uppercase tracking-widest block mb-2">
+                                        Notificar al proveedor
+                                    </label>
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={quickNotifProveedorNone}
+                                                onChange={e => { if (e.target.checked) { setQuickNotifProveedorNone(true); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); } else { setQuickNotifProveedorNone(false); } }}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className="text-xs font-semibold text-neutral-700">No notificar</span>
+                                        </label>
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={quickNotifProveedorEmail}
+                                                onChange={e => { setQuickNotifProveedorEmail(e.target.checked); if (e.target.checked) setQuickNotifProveedorNone(false); }}
+                                                disabled={!selectedProvQuick.email}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className={`text-xs font-semibold ${selectedProvQuick.email ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por Email</span>
+                                        </label>
+                                        <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                                            <input
+                                                type="checkbox"
+                                                checked={quickNotifProveedorWhatsapp}
+                                                onChange={e => { setQuickNotifProveedorWhatsapp(e.target.checked); if (e.target.checked) setQuickNotifProveedorNone(false); }}
+                                                disabled={!selectedProvQuick.telefono}
+                                                className="w-4 h-4 rounded accent-yellow-400"
+                                            />
+                                            <span className={`text-xs font-semibold ${selectedProvQuick.telefono ? 'text-neutral-700' : 'text-neutral-400'}`}>Notificar por WhatsApp</span>
+                                        </label>
+                                    </div>
+                                    {quickNotifProveedorEmail && !selectedProvQuick.email && (
+                                        <p className="text-[10px] text-amber-500 font-medium mt-1.5">Este proveedor no tiene email registrado.</p>
+                                    )}
+                                    {quickNotifProveedorWhatsapp && !selectedProvQuick.telefono && (
+                                        <p className="text-[10px] text-amber-500 font-medium mt-1.5">Este proveedor no tiene teléfono registrado.</p>
+                                    )}
+                                </div>
+                            );
+                        })()}
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => { setShowQuickReassignProveedorModal(false); setQuickReassignProveedorIncidencia(null); setQuickReassignNewProveedorId(''); setQuickNotifProveedorEmail(false); setQuickNotifProveedorWhatsapp(false); setQuickNotifProveedorNone(false); }}
+                                disabled={isUpdatingProveedor}
+                                className="flex-1 py-3 bg-neutral-100 hover:bg-neutral-200 text-neutral-600 rounded-xl font-bold transition-all disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleQuickReassignProveedorSubmit}
+                                disabled={isUpdatingProveedor || (!!quickReassignNewProveedorId && !quickNotifProveedorNone && !quickNotifProveedorEmail && !quickNotifProveedorWhatsapp)}
+                                className="flex-1 py-3 bg-yellow-400 hover:bg-yellow-500 text-neutral-900 rounded-xl font-bold transition-transform active:scale-[0.98] shadow-lg shadow-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isUpdatingProveedor ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Reasignar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            , document.body)}
+
+            {/* Proveedor Reassign Success Modal */}
+            {portalReady && showProveedorReassignSuccessModal && createPortal(
+                <div
+                    className="fixed inset-0 bg-neutral-900/60 z-[10000] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200"
+                >
+                    <div
+                        className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 relative flex flex-col items-center text-center max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                    >
+                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
+                            <Check className="w-8 h-8 text-green-600" />
+                        </div>
+                        <h3 className="text-xl font-bold text-neutral-900 mb-2">
+                            Proveedor Reasignado
+                        </h3>
+                        <p className="text-neutral-500 mb-6">
+                            La incidencia ha sido reasignada al nuevo proveedor correctamente.
+                        </p>
+                        <button
+                            onClick={() => setShowProveedorReassignSuccessModal(false)}
+                            className="w-full py-3 bg-neutral-900 hover:bg-black text-white rounded-xl font-bold transition-transform active:scale-[0.98]"
+                        >
+                            Aceptar
+                        </button>
+                    </div>
+                </div>
+            , document.body)}
+
+            {/* Document Delete Confirmation Modal */}
+            <DeleteDocConfirmModal
+                show={showDeleteDocConfirm}
+                onConfirm={handleDeleteAttachment}
+                onClose={() => {
+                    setShowDeleteDocConfirm(false);
+                    setUrlToConfirmDelete(null);
+                }}
+            />
+
+            {/* PDF Import Preview Modal */}
+            <ImportPreviewModal
+                show={showImportPreviewModal}
+                importPreviewData={importPreviewData}
+                importRecordEstados={importRecordEstados}
+                importRecordComunidades={importRecordComunidades}
+                importReceptorName={importReceptorName}
+                comunidades={comunidades}
+                onClose={closeImportModal}
+                onConfirm={handleConfirmImport}
+                setImportRecordEstados={setImportRecordEstados}
+                setImportRecordComunidades={setImportRecordComunidades}
+            />
+
+            {/* Aplazar Date Picker Modal */}
+            <AplazarModal
+                show={showAplazarModal}
+                aplazarDate={aplazarDate}
+                onDateChange={setAplazarDate}
+                onConfirm={aplazarTicket}
+                onClose={() => {
+                    setShowAplazarModal(false);
+                    setAplazarIncidenciaId(null);
+                    setAplazarDate('');
+                }}
+            />
+
+            {/* Global Blocking Loader — cubre toda la pantalla mientras se parsea el PDF */}
+            {portalReady && importingPdf && createPortal(
+                <div className="fixed inset-0 z-[99999] flex flex-col items-center justify-center bg-neutral-900/80 backdrop-blur-md">
+                    <div className="relative w-24 h-24 mb-6">
+                        <div className="absolute inset-0 border-4 border-yellow-400/20 rounded-full" />
+                        <div className="absolute inset-0 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
+                        <FileText className="absolute inset-0 m-auto w-10 h-10 text-yellow-400 animate-pulse" />
+                    </div>
+                    <div className="text-center space-y-2">
+                        <h3 className="text-xl font-bold text-white tracking-tight">Procesando PDF</h3>
+                        <p className="text-neutral-400 text-sm max-w-xs px-6">
+                            Analizando y extrayendo los registros del informe. Por favor, no cierres esta ventana.
+                        </p>
+                    </div>
+                </div>
+            , document.body)}
         </div>
     );
 }
