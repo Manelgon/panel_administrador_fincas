@@ -10,6 +10,8 @@ interface PageHeaderProps {
     newButtonLabel: string;
     newButtonShortLabel?: string;
     extraButtons?: ReactNode;
+    disableNewButton?: boolean;
+    disabledTooltip?: string;
 }
 
 export default function PageHeader({
@@ -19,6 +21,8 @@ export default function PageHeader({
     newButtonLabel,
     newButtonShortLabel,
     extraButtons,
+    disableNewButton,
+    disabledTooltip,
 }: PageHeaderProps) {
     return (
         <div className="flex justify-between items-center gap-3">
@@ -27,7 +31,13 @@ export default function PageHeader({
                 {extraButtons}
                 <button
                     onClick={onToggleForm}
-                    className="bg-yellow-400 hover:bg-yellow-500 text-neutral-950 px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-semibold text-sm shadow-sm flex-shrink-0"
+                    disabled={disableNewButton}
+                    title={disableNewButton ? disabledTooltip : undefined}
+                    className={`px-3 py-2 rounded-xl flex items-center gap-1.5 transition font-semibold text-sm shadow-sm flex-shrink-0 ${
+                        disableNewButton
+                            ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                            : 'bg-yellow-400 hover:bg-yellow-500 text-neutral-950'
+                    }`}
                 >
                     <Plus className="w-4 h-4 flex-shrink-0" />
                     <span className="hidden sm:inline">

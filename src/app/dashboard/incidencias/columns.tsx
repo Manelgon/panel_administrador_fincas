@@ -4,7 +4,8 @@ import Badge from '@/components/ui/Badge';
 import { getSecureUrl } from '@/lib/storage';
 import { Incidencia, Profile } from '@/lib/schemas';
 
-export function buildColumns(profiles: Profile[]): Column<Incidencia>[] {
+export function buildColumns(profiles: Profile[], accent: 'red' | 'yellow' = 'red'): Column<Incidencia>[] {
+    const pendingDotClass = accent === 'yellow' ? 'bg-yellow-400' : 'bg-[#bf4b50]';
     return [
         { key: 'id', label: 'ID' },
         {
@@ -12,7 +13,7 @@ export function buildColumns(profiles: Profile[]): Column<Incidencia>[] {
             label: 'Código',
             render: (row) => (
                 <div className="flex items-start gap-3">
-                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${(row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente')) === 'Resuelto' ? 'bg-neutral-900' : (row.estado === 'Aplazado' ? 'bg-orange-400' : 'bg-[#bf4b50]')}`} />
+                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${(row.estado || (row.resuelto ? 'Resuelto' : 'Pendiente')) === 'Resuelto' ? 'bg-neutral-900' : (row.estado === 'Aplazado' ? 'bg-orange-400' : pendingDotClass)}`} />
                     <span className="font-semibold">{row.comunidades?.codigo || '-'}</span>
                 </div>
             ),
