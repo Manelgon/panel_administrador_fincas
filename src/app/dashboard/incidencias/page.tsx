@@ -2189,7 +2189,7 @@ export default function IncidenciasPage() {
                                 setQuickNotifProveedorNone(false);
                                 setShowQuickReassignProveedorModal(true);
                             },
-                            hidden: estado === 'Resuelto' || estado === 'Aplazado',
+                            hidden: estado === 'Resuelto',
                         },
                         {
                             label: 'Eliminar',
@@ -2356,7 +2356,7 @@ export default function IncidenciasPage() {
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Proveedor</label>
                                         <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 flex items-center justify-between gap-2">
                                             <span>{(selectedDetailIncidencia as any).proveedor?.nombre || '—'}</span>
-                                            {!selectedDetailIncidencia.resuelto && selectedDetailIncidencia.estado !== 'Aplazado' && (
+                                            {!selectedDetailIncidencia.resuelto && (
                                                 <button
                                                     onClick={() => {
                                                         setQuickReassignProveedorIncidencia(selectedDetailIncidencia);
