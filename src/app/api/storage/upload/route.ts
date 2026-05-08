@@ -9,7 +9,33 @@ const ALLOWED_TYPES = [
     "application/pdf",
     "image/jpeg",
     "image/png",
-    "image/webp"
+    "image/webp",
+    // Microsoft Word
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    // Microsoft Excel
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    // Microsoft PowerPoint
+    "application/vnd.ms-powerpoint",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    // OpenDocument
+    "application/vnd.oasis.opendocument.text",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "application/vnd.oasis.opendocument.presentation",
+    // Google Docs / Sheets / Slides exports
+    "application/vnd.google-apps.document",
+    "application/vnd.google-apps.spreadsheet",
+    // Texto plano y CSV
+    "text/plain",
+    "text/csv",
+    "application/csv",
+];
+const ALLOWED_EXTENSIONS = [
+    "pdf", "jpg", "jpeg", "png", "webp",
+    "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+    "odt", "ods", "odp",
+    "txt", "csv"
 ];
 
 export async function POST(req: Request) {
@@ -30,9 +56,14 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "El archivo excede el límite de 10MB" }, { status: 400 });
         }
 
-        // 2. Validate MIME Type (Whitelist)
-        if (!ALLOWED_TYPES.includes(file.type)) {
-            return NextResponse.json({ error: "Tipo de archivo no permitido. Solo PDF, JPG, PNG o WebP." }, { status: 400 });
+        // 2. Validate MIME Type (Whitelist) with extension fallback
+        // Some browsers/OS send application/octet-stream or empty type for Office files,
+        // so we also accept by extension when the MIME is not in the whitelist.
+        const extension = (file.name.split('.').pop() || '').toLowerCase();
+        const mimeOk = ALLOWED_TYPES.includes(file.type);
+        const extOk = ALLOWED_EXTENSIONS.includes(extension);
+        if (!mimeOk && !extOk) {
+            return NextResponse.json({ error: "Tipo de archivo no permitido. Formatos válidos: PDF, imágenes, Word, Excel, PowerPoint, ODT/ODS/ODP, TXT o CSV." }, { status: 400 });
         }
 
         const buffer = await file.arrayBuffer();
