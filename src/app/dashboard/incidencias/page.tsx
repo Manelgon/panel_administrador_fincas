@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Wrench } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Wrench } from 'lucide-react';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -72,7 +72,7 @@ export default function IncidenciasPage() {
     const resetForm = () => {
         setShowForm(false);
         setEditingId(null);
-        setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: '' });
+        setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: '', nota_gestor: '' });
         setFiles([]);
         setEnviarAviso(null);
         setNotifEmail(false);
@@ -96,6 +96,7 @@ export default function IncidenciasPage() {
         proveedor: '', // Placeholder
         source: '',
         fecha_registro: new Date().toISOString().slice(0, 10),
+        nota_gestor: '',
     });
 
     // Delete state
@@ -146,6 +147,9 @@ export default function IncidenciasPage() {
 
     // Aplazar (Postpone) Modal State
     const [showAplazarModal, setShowAplazarModal] = useState(false);
+    const [showAddNotaModal, setShowAddNotaModal] = useState(false);
+    const [notaTexto, setNotaTexto] = useState('');
+    const [savingNota, setSavingNota] = useState(false);
     const [aplazarIncidenciaId, setAplazarIncidenciaId] = useState<number | null>(null);
     const [aplazarDate, setAplazarDate] = useState('');
 
@@ -386,6 +390,7 @@ export default function IncidenciasPage() {
             proveedor: incidencia.proveedor_id ? String(incidencia.proveedor_id) : '',
             source: incidencia.source || '',
             fecha_registro: incidencia.created_at ? new Date(incidencia.created_at).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+            nota_gestor: incidencia.nota_gestor || '',
         });
         setIsManualDate(false);
         setEnviarAviso(false);
@@ -442,6 +447,7 @@ export default function IncidenciasPage() {
                     gestor_asignado: formData.gestor_asignado || null,
                     proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
                     source: formData.source || null,
+                    nota_gestor: (formData as any).nota_gestor || null,
                 };
 
                 if (formData.fecha_registro) {
@@ -497,6 +503,7 @@ export default function IncidenciasPage() {
                     proveedor_id: formData.proveedor ? parseInt(formData.proveedor) : null,
                     aviso_proveedor: (!notifProveedorEmail && !notifProveedorWhatsapp) ? 0 : (notifProveedorWhatsapp && !notifProveedorEmail) ? 1 : (!notifProveedorWhatsapp && notifProveedorEmail) ? 2 : 3,
                     source: formData.source || null,
+                    nota_gestor: (formData as any).nota_gestor || null,
                     ...(formData.fecha_registro ? { created_at: new Date(formData.fecha_registro).toISOString() } : {})
                 }]).select();
 
@@ -539,6 +546,7 @@ export default function IncidenciasPage() {
                 proveedor: '',
                 source: '',
                 fecha_registro: '',
+                nota_gestor: '',
             });
             setFiles([]);
             setEnviarAviso(null);
@@ -809,6 +817,36 @@ export default function IncidenciasPage() {
                 setIsUpdatingStatus(null);
             }
         }, 'Reactivando ticket...');
+    };
+
+    const addNotaGestor = async (texto: string) => {
+        if (!selectedDetailIncidencia || !texto.trim()) return;
+        setSavingNota(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            const autor = profiles.find(p => p.user_id === user?.id)?.nombre || 'Usuario';
+            const fecha = new Date().toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const nuevaEntrada = `[${fecha} - ${autor}] ${texto.trim()}`;
+            const notaActual = ((selectedDetailIncidencia as any).nota_gestor || '').trim();
+            const notaNueva = notaActual ? `${nuevaEntrada}\n\n${notaActual}` : nuevaEntrada;
+
+            const { error } = await supabase
+                .from('incidencias')
+                .update({ nota_gestor: notaNueva })
+                .eq('id', selectedDetailIncidencia.id);
+
+            if (error) throw error;
+
+            setSelectedDetailIncidencia({ ...selectedDetailIncidencia, nota_gestor: notaNueva } as any);
+            setIncidencias(prev => prev.map(i => i.id === selectedDetailIncidencia.id ? { ...i, nota_gestor: notaNueva } as any : i));
+            setNotaTexto('');
+            setShowAddNotaModal(false);
+            toast.success('Nota añadida');
+        } catch (error: any) {
+            toast.error('Error al añadir nota: ' + (error.message || 'desconocido'));
+        } finally {
+            setSavingNota(false);
+        }
     };
 
     const openAplazarModal = (id: number) => {
@@ -1492,7 +1530,7 @@ export default function IncidenciasPage() {
                 showForm={showForm}
                 onToggleForm={() => {
                     setEditingId(null);
-                    setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10) });
+                    setFormData({ comunidad_id: '', nombre_cliente: '', telefono: '', email: '', motivo_ticket: '', mensaje: '', recibido_por: '', gestor_asignado: '', proveedor: '', source: '', fecha_registro: new Date().toISOString().slice(0, 10), nota_gestor: '' });
                     setIsManualDate(false);
                     setEnviarAviso(null);
                     setNotifEmail(false);
@@ -1766,6 +1804,18 @@ export default function IncidenciasPage() {
                                                 onChange={e => { setFormData({ ...formData, mensaje: e.target.value }); setFormErrors(prev => ({ ...prev, mensaje: '' })); }}
                                             />
                                             {formErrors.mensaje && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.mensaje}</p>}
+                                        </div>
+                                        <div className="md:col-span-4">
+                                            <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                                Nota del Gestor
+                                            </label>
+                                            <textarea
+                                                rows={3}
+                                                placeholder="Notas internas del gestor (visible solo para el equipo)..."
+                                                className="w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:bg-white transition placeholder:text-neutral-400 resize-y border-neutral-200"
+                                                value={(formData as any).nota_gestor || ''}
+                                                onChange={e => setFormData({ ...formData, nota_gestor: e.target.value } as any)}
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -2408,6 +2458,39 @@ export default function IncidenciasPage() {
                                 </div>
                             </FormSection>
 
+                            {/* Notas del Propietario (solo lectura) */}
+                            {(selectedDetailIncidencia.nota_propietario || (selectedDetailIncidencia as any).todas_notas_propietario) && (
+                                <FormSection title="Notas del Propietario">
+                                    <div className="space-y-3">
+                                        {selectedDetailIncidencia.nota_propietario && (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Última nota</label>
+                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                                    {selectedDetailIncidencia.nota_propietario}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {(selectedDetailIncidencia as any).todas_notas_propietario && (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Historial de notas</label>
+                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                                    {(selectedDetailIncidencia as any).todas_notas_propietario}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </FormSection>
+                            )}
+
+                            {/* Notas del Gestor (historial) */}
+                            {(selectedDetailIncidencia as any).nota_gestor && (
+                                <FormSection title="Notas del Gestor">
+                                    <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                        {(selectedDetailIncidencia as any).nota_gestor}
+                                    </div>
+                                </FormSection>
+                            )}
+
                             {/* Sección 3: Documentación */}
                             {selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0 && (
                                 <FormSection title="Documentación">
@@ -2456,6 +2539,7 @@ export default function IncidenciasPage() {
                                 { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
                                 { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailIncidencia.id]), disabled: exporting },
+                                { label: 'Añadir nota', icon: <MessageSquarePlus className="w-4 h-4" />, onClick: () => { setNotaTexto(''); setShowAddNotaModal(true); } },
                                 ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [
                                     { label: 'Empezar tarea', icon: <Play className="w-4 h-4" />, onClick: () => { setStartTaskIncidencia(selectedDetailIncidencia); setShowStartTaskModal(true); }, variant: 'info' as const },
                                     { label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const },
@@ -2989,6 +3073,47 @@ export default function IncidenciasPage() {
                             >
                                 <FileText className="w-3.5 h-3.5" />
                                 Importar {importPreviewData.to_insert + Object.keys(importRecordComunidades).length} registros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            , document.body)}
+            {/* Add Nota Modal */}
+            {portalReady && showAddNotaModal && createPortal(
+                <div className="fixed inset-0 bg-neutral-900/60 z-[10001] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center">
+                                <MessageSquarePlus className="w-5 h-5 text-neutral-950" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Añadir nota</h3>
+                                <p className="text-xs text-neutral-500">Se añadira al historial con tu nombre y la fecha</p>
+                            </div>
+                        </div>
+                        <textarea
+                            rows={4}
+                            placeholder="Escribe tu nota..."
+                            className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:bg-white transition placeholder:text-neutral-400 resize-y mb-4"
+                            value={notaTexto}
+                            onChange={e => setNotaTexto(e.target.value)}
+                            autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => { setShowAddNotaModal(false); setNotaTexto(''); }}
+                                disabled={savingNota}
+                                className="px-4 py-2 rounded-lg text-sm font-bold text-neutral-600 hover:bg-neutral-100 transition disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => addNotaGestor(notaTexto)}
+                                disabled={!notaTexto.trim() || savingNota}
+                                className="px-4 py-2 rounded-lg text-sm font-bold bg-yellow-400 hover:bg-yellow-500 text-neutral-950 transition disabled:opacity-50 flex items-center gap-2"
+                            >
+                                {savingNota ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Guardar
                             </button>
                         </div>
                     </div>

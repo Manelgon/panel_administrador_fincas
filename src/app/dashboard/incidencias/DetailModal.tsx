@@ -1,7 +1,8 @@
 'use client';
 
 import { createPortal } from 'react-dom';
-import { X, Trash2, FileText, Check, Paperclip, Download, RotateCcw, Loader2, UserCog, Save, Pause, CalendarClock } from 'lucide-react';
+import { useState } from 'react';
+import { X, Trash2, FileText, Check, Paperclip, Download, RotateCcw, Loader2, UserCog, Save, Pause, CalendarClock, MessageSquarePlus } from 'lucide-react';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import SearchableSelect from '@/components/SearchableSelect';
 import TimelineChat from '@/components/TimelineChat';
@@ -20,6 +21,8 @@ interface Props {
     exporting: boolean;
     showReassignSuccessModal: boolean;
     detailFileInputRef: React.RefObject<HTMLInputElement | null>;
+    entityType?: 'incidencia' | 'morosidad' | 'gestion' | 'proveedor' | 'comunidad' | 'sofia_incidencia';
+    accent?: 'red' | 'yellow';
     onClose: () => void;
     onDetailFileUpload: (files: FileList) => void;
     onDeleteAttachmentRequest: (url: string) => void;
@@ -28,6 +31,7 @@ interface Props {
     onExport: (type: 'csv' | 'pdf', ids?: number[]) => void;
     onOpenAplazar: (id: number) => void;
     onUpdateGestor: () => void;
+    onAddNota?: (texto: string) => Promise<void> | void;
     setIsReassigning: (v: boolean) => void;
     setNewGestorId: (v: string) => void;
     setSelectedDetailIncidencia: (v: Incidencia | ((prev: Incidencia | null) => Incidencia | null)) => void;
@@ -47,6 +51,8 @@ export default function DetailModal({
     exporting,
     showReassignSuccessModal,
     detailFileInputRef,
+    entityType = 'incidencia',
+    accent = 'red',
     onClose,
     onDetailFileUpload,
     onDeleteAttachmentRequest,
@@ -55,13 +61,37 @@ export default function DetailModal({
     onExport,
     onOpenAplazar,
     onUpdateGestor,
+    onAddNota,
     setIsReassigning,
     setNewGestorId,
     setSelectedDetailIncidencia,
     setShowReassignSuccessModal,
     setShowDetailModal,
 }: Props) {
+    const [showAddNotaModal, setShowAddNotaModal] = useState(false);
+    const [notaTexto, setNotaTexto] = useState('');
+    const [savingNota, setSavingNota] = useState(false);
+
     if (!show || !selectedDetailIncidencia) return null;
+
+    const handleSaveNota = async () => {
+        if (!notaTexto.trim() || !onAddNota) return;
+        setSavingNota(true);
+        try {
+            await onAddNota(notaTexto.trim());
+            setNotaTexto('');
+            setShowAddNotaModal(false);
+        } finally {
+            setSavingNota(false);
+        }
+    };
+
+    // Colores configurables segun el panel (Tickets = rojo, Sofia = amarillo)
+    const accentBorder = accent === 'yellow' ? 'border-yellow-400' : 'border-[#bf4b50]';
+    const accentBg = accent === 'yellow' ? 'bg-yellow-400' : 'bg-[#bf4b50]';
+    const accentBgHover = accent === 'yellow' ? 'hover:bg-yellow-500' : 'hover:bg-[#a03d42]';
+    const accentBorderDark = accent === 'yellow' ? 'border-yellow-500' : 'border-[#a03d42]';
+    const accentText = accent === 'yellow' ? 'text-neutral-950' : 'text-white';
 
     return (
         <>
@@ -88,7 +118,7 @@ export default function DetailModal({
                                 <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
                                     {/* Estado */}
                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${selectedDetailIncidencia.resuelto ? 'bg-emerald-100 text-emerald-700' : selectedDetailIncidencia.estado === 'Aplazado' ? 'bg-orange-100 text-orange-700' : 'bg-amber-100 text-amber-700'}`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedDetailIncidencia.resuelto ? 'bg-emerald-500' : selectedDetailIncidencia.estado === 'Aplazado' ? 'bg-orange-500' : 'bg-[#a03d42]'}`} />
+                                        <span className={`w-1.5 h-1.5 rounded-full ${selectedDetailIncidencia.resuelto ? 'bg-emerald-500' : selectedDetailIncidencia.estado === 'Aplazado' ? 'bg-orange-500' : (accent === 'yellow' ? 'bg-amber-500' : 'bg-[#a03d42]')}`} />
                                         {selectedDetailIncidencia.resuelto ? 'Resuelto' : selectedDetailIncidencia.estado === 'Aplazado' ? 'Aplazado' : 'En trámite'}
                                     </span>
                                     {/* Prioridad */}
@@ -148,7 +178,7 @@ export default function DetailModal({
 
                             {/* Sección 1: Identificación del Cliente */}
                             <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-[#bf4b50]">
+                                <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
                                     Identificación del Cliente
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -181,7 +211,7 @@ export default function DetailModal({
 
                             {/* Sección 2: Datos de la Incidencia */}
                             <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-[#bf4b50]">
+                                <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
                                     Datos de la Incidencia
                                 </h3>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -210,7 +240,7 @@ export default function DetailModal({
                                             {!isReassigning && (
                                                 <button
                                                     onClick={() => { setNewGestorId(selectedDetailIncidencia.gestor_asignado || ''); setIsReassigning(true); }}
-                                                    className="p-1 bg-[#bf4b50] hover:bg-[#a03d42] text-white rounded border border-[#a03d42] transition-all shrink-0"
+                                                    className={`p-1 ${accentBg} ${accentBgHover} ${accentText} rounded border ${accentBorderDark} transition-all shrink-0`}
                                                     title="Reasignar gestor"
                                                 >
                                                     <UserCog className="w-3.5 h-3.5" />
@@ -285,10 +315,49 @@ export default function DetailModal({
                                 </div>
                             </div>
 
-                            {/* Sección 3: Documentación */}
+                            {/* Sección 3: Notas del Propietario (solo lectura) */}
+                            {(selectedDetailIncidencia.nota_propietario || selectedDetailIncidencia.todas_notas_propietario) && (
+                                <div>
+                                    <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
+                                        Notas del Propietario
+                                    </h3>
+                                    <div className="space-y-3">
+                                        {selectedDetailIncidencia.nota_propietario && (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Última nota</label>
+                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                                    {selectedDetailIncidencia.nota_propietario}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {selectedDetailIncidencia.todas_notas_propietario && (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Historial de notas</label>
+                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                                    {selectedDetailIncidencia.todas_notas_propietario}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sección: Notas del Gestor (historial) */}
+                            {selectedDetailIncidencia.nota_gestor && (
+                                <div>
+                                    <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
+                                        Notas del Gestor
+                                    </h3>
+                                    <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">
+                                        {selectedDetailIncidencia.nota_gestor}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Sección 4: Documentación */}
                             {selectedDetailIncidencia.adjuntos && selectedDetailIncidencia.adjuntos.length > 0 && (
                                 <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-[#bf4b50]">
+                                    <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
                                         Documentación
                                     </h3>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -325,10 +394,10 @@ export default function DetailModal({
 
                             {/* Sección 4: Chat de Gestores */}
                             <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-[#bf4b50]">
+                                <h3 className={`text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b ${accentBorder}`}>
                                     Chat de Gestores
                                 </h3>
-                                <TimelineChat entityType="incidencia" entityId={selectedDetailIncidencia.id} />
+                                <TimelineChat entityType={entityType} entityId={selectedDetailIncidencia.id} />
                             </div>
 
                         </div>
@@ -339,6 +408,7 @@ export default function DetailModal({
                                 { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { onDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
                                 { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => onExport('pdf', [selectedDetailIncidencia.id]), disabled: exporting },
+                                ...(onAddNota ? [{ label: 'Añadir nota', icon: <MessageSquarePlus className="w-4 h-4" />, onClick: () => { setNotaTexto(''); setShowAddNotaModal(true); } }] : []),
                                 ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [{ label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => onOpenAplazar(selectedDetailIncidencia.id), variant: 'warning' as const }] : []),
                             ]} />
                             <div className="flex items-center gap-2">
@@ -359,7 +429,7 @@ export default function DetailModal({
                                 ) : (
                                     <button
                                         onClick={() => { onToggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto); setShowDetailModal(false); }}
-                                        className="px-5 py-2.5 text-sm font-black text-white bg-[#bf4b50] hover:bg-[#a03d42] rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                        className={`px-5 py-2.5 text-sm font-black ${accentText} ${accentBg} ${accentBgHover} rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap`}
                                     >
                                         <Check className="w-4 h-4" />
                                         <span className="hidden sm:inline">Resolver </span>Ticket
@@ -394,6 +464,48 @@ export default function DetailModal({
                         >
                             Aceptar
                         </button>
+                    </div>
+                </div>
+            , document.body)}
+
+            {/* Add Nota Modal */}
+            {showAddNotaModal && createPortal(
+                <div className="fixed inset-0 bg-neutral-900/60 z-[10001] flex items-end sm:items-center sm:justify-center sm:p-4 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-md p-6 max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className={`w-10 h-10 ${accentBg} rounded-xl flex items-center justify-center`}>
+                                <MessageSquarePlus className={`w-5 h-5 ${accentText}`} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-neutral-900">Añadir nota</h3>
+                                <p className="text-xs text-neutral-500">Se añadira al historial con tu nombre y la fecha</p>
+                            </div>
+                        </div>
+                        <textarea
+                            rows={4}
+                            placeholder="Escribe tu nota..."
+                            className="w-full rounded-lg border border-neutral-200 bg-neutral-50/60 px-3 py-2.5 text-sm text-neutral-900 focus:outline-none focus:bg-white transition placeholder:text-neutral-400 resize-y mb-4"
+                            value={notaTexto}
+                            onChange={e => setNotaTexto(e.target.value)}
+                            autoFocus
+                        />
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => { setShowAddNotaModal(false); setNotaTexto(''); }}
+                                disabled={savingNota}
+                                className="px-4 py-2 rounded-lg text-sm font-bold text-neutral-600 hover:bg-neutral-100 transition disabled:opacity-50"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleSaveNota}
+                                disabled={!notaTexto.trim() || savingNota}
+                                className={`px-4 py-2 rounded-lg text-sm font-bold ${accentBg} ${accentBgHover} ${accentText} transition disabled:opacity-50 flex items-center gap-2`}
+                            >
+                                {savingNota ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                Guardar
+                            </button>
+                        </div>
                     </div>
                 </div>
             , document.body)}

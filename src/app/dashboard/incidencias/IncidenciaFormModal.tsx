@@ -17,6 +17,7 @@ interface FormData {
     proveedor: string;
     source: string;
     fecha_registro: string;
+    nota_gestor?: string;
 }
 
 interface Props {
@@ -35,6 +36,7 @@ interface Props {
     notifProveedorWhatsapp: boolean;
     comunidades: ComunidadOption[];
     profiles: Profile[];
+    extraProfiles?: Profile[];
     proveedores: { id: number; nombre: string; telefono: string | null; email: string | null }[];
     onChange: (field: string, value: string) => void;
     onFilesChange: (files: File[]) => void;
@@ -47,6 +49,7 @@ interface Props {
     setNotifProveedorWhatsapp: (v: boolean) => void;
     setIsManualDate: (v: boolean) => void;
     setFormErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    accent?: 'red' | 'yellow';
 }
 
 export default function IncidenciaFormModal({
@@ -65,6 +68,7 @@ export default function IncidenciaFormModal({
     notifProveedorWhatsapp,
     comunidades,
     profiles,
+    extraProfiles,
     proveedores,
     onChange,
     onFilesChange,
@@ -77,8 +81,14 @@ export default function IncidenciaFormModal({
     setNotifProveedorWhatsapp,
     setIsManualDate,
     setFormErrors,
+    accent = 'red',
 }: Props) {
     if (!show) return null;
+
+    // Color hex sustituible por panel (Tickets = rojo, Sofia = amarillo).
+    // Inyectamos como CSS vars en el wrapper y referenciamos via Tailwind arbitrary values.
+    const accentHex = accent === 'yellow' ? '#facc15' : '#bf4b50';
+    const accentDarkHex = accent === 'yellow' ? '#eab308' : '#a03d42';
 
     return createPortal(
         <div
@@ -111,7 +121,7 @@ export default function IncidenciaFormModal({
                     <form id="incidencia-form" onSubmit={onSubmit} className="space-y-4">
                         {/* Section 1: Identificación del Cliente */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Identificación del Cliente</h3>
+                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b" style={{ borderBottomColor: accentHex }}>Identificación del Cliente</h3>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
                                 <div className="md:col-span-2">
@@ -177,7 +187,7 @@ export default function IncidenciaFormModal({
 
                         {/* Section 2: Datos de la Incidencia */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Datos de la Incidencia</h3>
+                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b" style={{ borderBottomColor: accentHex }}>Datos de la Incidencia</h3>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
                                 <div className="md:col-span-2">
@@ -217,7 +227,7 @@ export default function IncidenciaFormModal({
                                                         onChange('fecha_registro', new Date().toISOString().slice(0, 10));
                                                     }
                                                 }}
-                                                className="w-3 h-3 rounded border-neutral-300 text-[#a03d42] focus:ring-[#bf4b50]"
+                                                className="w-3 h-3 rounded border-neutral-300" style={{ accentColor: accentHex }}
                                             />
                                             <label htmlFor="manual-date" className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest cursor-pointer hover:text-neutral-600 transition-colors">
                                                 Modificar
@@ -239,10 +249,15 @@ export default function IncidenciaFormModal({
                                     <SearchableSelect
                                         value={formData.recibido_por}
                                         onChange={(val) => { onChange('recibido_por', String(val)); setFormErrors(prev => ({ ...prev, recibido_por: '' })); }}
-                                        options={profiles.map(p => ({
-                                            value: p.user_id,
-                                            label: p.nombre
-                                        }))}
+                                        options={(() => {
+                                            const opts = profiles.map(p => ({ value: p.user_id, label: p.nombre }));
+                                            // Si el valor actual no esta en options, anadirlo desde extraProfiles
+                                            if (formData.recibido_por && !opts.find(o => o.value === formData.recibido_por)) {
+                                                const extra = extraProfiles?.find(p => p.user_id === formData.recibido_por);
+                                                if (extra) opts.push({ value: extra.user_id, label: `${extra.nombre} (no asignable)` });
+                                            }
+                                            return opts;
+                                        })()}
                                         placeholder="Buscar persona..."
                                     />
                                     {formErrors.recibido_por && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.recibido_por}</p>}
@@ -254,10 +269,14 @@ export default function IncidenciaFormModal({
                                     <SearchableSelect
                                         value={formData.gestor_asignado}
                                         onChange={(val) => { onChange('gestor_asignado', String(val)); setFormErrors(prev => ({ ...prev, gestor_asignado: '' })); }}
-                                        options={profiles.map(p => ({
-                                            value: p.user_id,
-                                            label: `${p.nombre} (${p.rol})`
-                                        }))}
+                                        options={(() => {
+                                            const opts = profiles.map(p => ({ value: p.user_id, label: `${p.nombre} (${p.rol})` }));
+                                            if (formData.gestor_asignado && !opts.find(o => o.value === formData.gestor_asignado)) {
+                                                const extra = extraProfiles?.find(p => p.user_id === formData.gestor_asignado);
+                                                if (extra) opts.push({ value: extra.user_id, label: `${extra.nombre} (no asignable)` });
+                                            }
+                                            return opts;
+                                        })()}
                                         placeholder="Buscar gestor..."
                                     />
                                     {formErrors.gestor_asignado && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.gestor_asignado}</p>}
@@ -288,12 +307,24 @@ export default function IncidenciaFormModal({
                                     />
                                     {formErrors.mensaje && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{formErrors.mensaje}</p>}
                                 </div>
+                                <div className="md:col-span-4">
+                                    <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
+                                        Nota del Gestor
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Notas internas del gestor (visible solo para el equipo)..."
+                                        className="w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:bg-white transition placeholder:text-neutral-400 resize-y border-neutral-200"
+                                        value={formData.nota_gestor || ''}
+                                        onChange={e => onChange('nota_gestor', e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
 
                         {/* Section 3: Archivos */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Archivos</h3>
+                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b" style={{ borderBottomColor: accentHex }}>Archivos</h3>
 
                             <div>
                                 <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
@@ -318,7 +349,7 @@ export default function IncidenciaFormModal({
 
                         {/* Section: Notificación */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Notificación al Propietario</h3>
+                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b" style={{ borderBottomColor: accentHex }}>Notificación al Propietario</h3>
                             <div className="flex flex-col gap-3">
                                 {/* Checkboxes de canal */}
                                 <div className="bg-neutral-50/60 border border-neutral-100 rounded-lg p-3">
@@ -335,7 +366,7 @@ export default function IncidenciaFormModal({
                                                     setEnviarAviso(e.target.checked || notifWhatsapp ? true : false);
                                                     setFormErrors(prev => ({ ...prev, contacto: '' }));
                                                 }}
-                                                className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                className="w-4 h-4 rounded" style={{ accentColor: accentHex }}
                                             />
                                             <span className="text-xs font-semibold text-neutral-700">Notificar por Email</span>
                                         </label>
@@ -348,7 +379,7 @@ export default function IncidenciaFormModal({
                                                     setEnviarAviso(notifEmail || e.target.checked ? true : false);
                                                     setFormErrors(prev => ({ ...prev, contacto: '' }));
                                                 }}
-                                                className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                className="w-4 h-4 rounded" style={{ accentColor: accentHex }}
                                             />
                                             <span className="text-xs font-semibold text-neutral-700">Notificar por WhatsApp</span>
                                         </label>
@@ -412,7 +443,7 @@ export default function IncidenciaFormModal({
 
                         {/* Section: Proveedor */}
                         <div>
-                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-[#bf4b50]">Proveedor</h3>
+                            <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b" style={{ borderBottomColor: accentHex }}>Proveedor</h3>
 
                             <div className="space-y-3">
                                 <div>
@@ -445,7 +476,7 @@ export default function IncidenciaFormModal({
                                                         setNotifProveedorEmail(e.target.checked);
                                                         setFormErrors(prev => ({ ...prev, notificacion_proveedor: '' }));
                                                     }}
-                                                    className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                    className="w-4 h-4 rounded" style={{ accentColor: accentHex }}
                                                 />
                                                 <span className="text-xs font-semibold text-neutral-700">Notificar por Email</span>
                                             </label>
@@ -457,7 +488,7 @@ export default function IncidenciaFormModal({
                                                         setNotifProveedorWhatsapp(e.target.checked);
                                                         setFormErrors(prev => ({ ...prev, notificacion_proveedor: '' }));
                                                     }}
-                                                    className="w-4 h-4 rounded accent-[#bf4b50]"
+                                                    className="w-4 h-4 rounded" style={{ accentColor: accentHex }}
                                                 />
                                                 <span className="text-xs font-semibold text-neutral-700">Notificar por WhatsApp</span>
                                             </label>
@@ -494,7 +525,10 @@ export default function IncidenciaFormModal({
                             !!(formData.telefono && !/^\d{9}$/.test(formData.telefono)) ||
                             !!(formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
                         }
-                        className="px-6 py-2 bg-[#bf4b50] hover:bg-[#a03d42] text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                        className={`px-6 py-2 rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-2 shadow-sm ${accent === 'yellow' ? 'text-neutral-950' : 'text-white'}`}
+                        style={{ backgroundColor: accentHex }}
+                        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = accentDarkHex; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = accentHex; }}
                     >
                         {isSubmitting || uploading ? (
                             <>
