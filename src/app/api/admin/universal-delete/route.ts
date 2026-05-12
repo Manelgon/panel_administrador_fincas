@@ -166,8 +166,15 @@ export async function POST(request: Request) {
                 .eq('entity_id', id);
 
         } else if (type === 'comunidad') {
-            const { data } = await supabaseAdmin.from('comunidades').select('nombre_cdad').eq('id', id).single();
+            const { data } = await supabaseAdmin.from('comunidades').select('nombre_cdad, activo').eq('id', id).single();
             entityName = data?.nombre_cdad || `Comunidad #${id}`;
+
+            if (data?.activo) {
+                return NextResponse.json({
+                    error: 'No se puede eliminar una comunidad activa. Desactívala primero para proteger su historial.',
+                    code: 'COMMUNITY_ACTIVE',
+                }, { status: 409 });
+            }
         } else if (type === 'perfil') {
             const { data } = await supabaseAdmin.from('profiles').select('nombre').eq('user_id', id).single();
             entityName = data?.nombre || `Usuario #${id}`;

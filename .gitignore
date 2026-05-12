@@ -71,3 +71,6 @@ Thumbs.db
 # Supabase
 supabase/.branches
 supabase/.temp
+
+# DB recovery backups (contain sensitive customer data)
+backup-pre-restore-*/
