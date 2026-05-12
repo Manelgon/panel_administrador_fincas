@@ -2,10 +2,11 @@
 
 import { createPortal } from 'react-dom';
 import { Trash2, X, Edit2, Plus, Check, Upload } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import toast from 'react-hot-toast';
 import { useCRUDPage } from '@/hooks/useCRUDPage';
+import { useGlobalLoading } from '@/lib/globalLoading';
 import DataTable, { Column } from '@/components/DataTable';
-import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import DeleteComunidadModal, { ComunidadSummary } from '@/components/DeleteComunidadModal';
 import PageHeader from '@/components/PageHeader';
 import FilterBar from '@/components/FilterBar';
 import FormModal from '@/components/FormModal';
@@ -13,8 +14,16 @@ import FormSection from '@/components/FormSection';
 import FormField from '@/components/FormField';
 import ImportComunidadesModal from '@/components/ImportComunidadesModal';
 import SearchableSelect from '@/components/SearchableSelect';
-import { Comunidad, DeleteCredentials } from '@/lib/schemas';
-import { useState } from 'react';
+import { Comunidad } from '@/lib/schemas';
+import { useState, useCallback } from 'react';
+
+type ComunidadCounts = {
+    tickets: number;
+    morosidad: number;
+    reuniones: number;
+    fichajes: number;
+    empleados: number;
+};
 
 const defaultFormData = {
     codigo: '',
@@ -43,6 +52,85 @@ export default function ComunidadesPage() {
         onAfterSave: () => window.dispatchEvent(new Event('communitiesChanged')),
         onAfterDelete: () => window.dispatchEvent(new Event('communitiesChanged')),
     });
+
+    const { withLoading } = useGlobalLoading();
+    const [deleteTarget, setDeleteTarget] = useState<ComunidadSummary | null>(null);
+    const [deleteCounts, setDeleteCounts] = useState<ComunidadCounts | null>(null);
+    const [loadingCounts, setLoadingCounts] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const openDeleteFlow = useCallback(async (row: Comunidad) => {
+        setDeleteTarget({
+            id: row.id,
+            codigo: row.codigo,
+            nombre_cdad: row.nombre_cdad,
+            activo: row.activo,
+        });
+        setDeleteCounts(null);
+        setLoadingCounts(true);
+        try {
+            const res = await fetch(`/api/admin/comunidad-dependencies?id=${row.id}`);
+            const json = await res.json();
+            if (!res.ok) throw new Error(json.error || 'Error al consultar dependencias');
+            setDeleteCounts(json.counts as ComunidadCounts);
+            setDeleteTarget({
+                id: json.comunidad.id,
+                codigo: json.comunidad.codigo,
+                nombre_cdad: json.comunidad.nombre_cdad,
+                activo: json.comunidad.activo,
+            });
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Error al consultar dependencias';
+            toast.error(msg);
+        } finally {
+            setLoadingCounts(false);
+        }
+    }, []);
+
+    const closeDeleteFlow = useCallback(() => {
+        if (isProcessing) return;
+        setDeleteTarget(null);
+        setDeleteCounts(null);
+    }, [isProcessing]);
+
+    const handleDeactivate = useCallback(async () => {
+        if (!deleteTarget) return;
+        setIsProcessing(true);
+        try {
+            await crud.toggleActive(deleteTarget.id, true);
+            setDeleteTarget(null);
+            setDeleteCounts(null);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [deleteTarget, crud]);
+
+    const handleDeleteForever = useCallback(async ({ email, password }: { email: string; password: string }) => {
+        if (!deleteTarget) return;
+        setIsProcessing(true);
+        try {
+            await withLoading(async () => {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: deleteTarget.id, email, password, type: 'comunidad' }),
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || 'Error al eliminar');
+
+                toast.success(`Comunidad "${deleteTarget.nombre_cdad}" eliminada`);
+                crud.setData((prev) => prev.filter((item) => item.id !== deleteTarget.id));
+                setDeleteTarget(null);
+                setDeleteCounts(null);
+                window.dispatchEvent(new Event('communitiesChanged'));
+            }, 'Eliminando comunidad y su historial...');
+        } catch (err) {
+            const msg = err instanceof Error ? err.message : 'Error al eliminar';
+            toast.error(msg);
+        } finally {
+            setIsProcessing(false);
+        }
+    }, [deleteTarget, crud, withLoading]);
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -220,7 +308,7 @@ export default function ComunidadesPage() {
                     {
                         label: 'Eliminar',
                         icon: <Trash2 className="w-4 h-4" />,
-                        onClick: (r) => crud.handleDeleteClick(r.id),
+                        onClick: (r) => openDeleteFlow(r),
                         variant: 'danger',
                         separator: true,
                     },
@@ -292,7 +380,7 @@ export default function ComunidadesPage() {
 
                         <div className="px-6 py-4 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 flex-wrap">
                             <button
-                                onClick={() => { crud.handleDeleteClick(crud.selectedDetail!.id); crud.closeDetail(); }}
+                                onClick={() => { openDeleteFlow(crud.selectedDetail!); crud.closeDetail(); }}
                                 className="px-4 py-2 text-sm font-bold text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all flex items-center gap-2"
                             >
                                 <Trash2 className="w-4 h-4" />
@@ -318,12 +406,16 @@ export default function ComunidadesPage() {
                 document.body
             )}
 
-            <DeleteConfirmationModal
-                isOpen={crud.showDeleteModal}
-                onClose={() => { crud.setShowDeleteModal(false); }}
-                onConfirm={crud.handleConfirmDelete}
-                itemType="comunidad"
-                isDeleting={crud.isDeleting}
+            <DeleteComunidadModal
+                key={deleteTarget?.id ?? 'closed'}
+                isOpen={deleteTarget !== null}
+                comunidad={deleteTarget}
+                counts={deleteCounts}
+                loadingCounts={loadingCounts}
+                isProcessing={isProcessing}
+                onClose={closeDeleteFlow}
+                onDeactivate={handleDeactivate}
+                onDeleteForever={handleDeleteForever}
             />
         </div>
     );
