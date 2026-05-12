@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, Pencil, Save, AlertCircle } from 'lucide-react';
+import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, Pencil, Save, AlertCircle, AlertTriangle, Gavel, UserX } from 'lucide-react';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
@@ -358,6 +358,7 @@ export default function MorosidadPage() {
                 .from('morosidad')
                 .update({
                     estado: 'Pagado',
+                    subtipo_disputa: null,
                     fecha_pago: new Date().toISOString(),
                     resuelto_por: user?.id,
                     fecha_resuelto: new Date().toISOString()
@@ -392,6 +393,63 @@ export default function MorosidadPage() {
         }, 'Marcando como pagado...');
     };
 
+    const changeEstado = async (id: number, nuevoEstado: 'Pendiente' | 'En disputa' | 'Demanda', subtipo: 'No localizable' | null = null) => {
+        if (isUpdatingStatus === id) return;
+        await withLoading(async () => {
+            setIsUpdatingStatus(id);
+            try {
+                const moroso = morosos.find(m => m.id === id);
+                const { data: { user } } = await supabase.auth.getUser();
+
+                const update: Record<string, unknown> = {
+                    estado: nuevoEstado,
+                    subtipo_disputa: nuevoEstado === 'En disputa' ? subtipo : null,
+                    fecha_pago: null,
+                    resuelto_por: null,
+                    fecha_resuelto: null,
+                };
+
+                const { error } = await supabase
+                    .from('morosidad')
+                    .update(update)
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                toast.success(`Estado cambiado a "${nuevoEstado}${subtipo ? ` · ${subtipo}` : ''}"`);
+
+                if (user) {
+                    await supabase.from('record_messages').insert([{
+                        entity_type: 'morosidad',
+                        entity_id: id,
+                        user_id: user.id,
+                        content: `🔄 Estado actualizado a "${nuevoEstado}${subtipo ? ` (${subtipo})` : ''}".`,
+                    }]);
+                }
+
+                await logActivity({
+                    action: 'update',
+                    entityType: 'morosidad',
+                    entityId: id,
+                    entityName: `${moroso?.nombre_deudor} ${moroso?.apellidos}`,
+                    details: {
+                        comunidad: moroso?.comunidades?.nombre_cdad,
+                        importe: moroso?.importe,
+                        estado: nuevoEstado,
+                        subtipo_disputa: subtipo,
+                    },
+                });
+
+                fetchMorosidad();
+            } catch (error) {
+                console.error(error);
+                toast.error('Error al actualizar el estado');
+            } finally {
+                setIsUpdatingStatus(null);
+            }
+        }, 'Actualizando estado...');
+    };
+
     const reopenDebt = async (id: number) => {
         if (isUpdatingStatus === id) return;
         await withLoading(async () => {
@@ -404,6 +462,7 @@ export default function MorosidadPage() {
                 .from('morosidad')
                 .update({
                     estado: 'Pendiente',
+                    subtipo_disputa: null,
                     fecha_pago: null,
                     resuelto_por: null,
                     fecha_resuelto: null
@@ -585,7 +644,13 @@ export default function MorosidadPage() {
             label: 'Código',
             render: (row) => (
                 <div className="flex items-start gap-3">
-                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${row.estado === 'Pendiente' ? 'bg-yellow-400' : 'bg-neutral-900'}`} />
+                    <span className={`mt-1 h-3.5 w-1.5 rounded-full ${
+                        row.estado === 'Pendiente' ? 'bg-yellow-400' :
+                        row.estado === 'En disputa' ? 'bg-orange-500' :
+                        row.estado === 'Demanda' ? 'bg-red-600' :
+                        row.estado === 'Pagado' ? 'bg-emerald-500' :
+                        'bg-neutral-900'
+                    }`} />
                     <span className="font-semibold">{row.comunidades?.codigo || '-'}</span>
                 </div>
             ),
@@ -661,10 +726,13 @@ export default function MorosidadPage() {
             render: (row) => (
                 <Badge variant={
                     row.estado === 'Pagado' ? 'success' :
+                    row.estado === 'Demanda' ? 'danger' :
                     row.estado === 'En disputa' ? 'neutral' :
                     'warning'
                 }>
-                    {row.estado}
+                    {row.estado === 'En disputa' && row.subtipo_disputa
+                        ? `En disputa · ${row.subtipo_disputa}`
+                        : row.estado}
                 </Badge>
             ),
         },
@@ -731,8 +799,12 @@ export default function MorosidadPage() {
     ];
 
     const filteredMorosidad = morosos.filter(m => {
-        const matchesEstado = filterEstado === 'pendiente' ? m.estado !== 'Pagado' :
-            filterEstado === 'resuelto' ? m.estado === 'Pagado' : true;
+        const matchesEstado =
+            filterEstado === 'pendiente' ? m.estado === 'Pendiente' :
+            filterEstado === 'disputa' ? m.estado === 'En disputa' :
+            filterEstado === 'demanda' ? m.estado === 'Demanda' :
+            filterEstado === 'resuelto' ? m.estado === 'Pagado' :
+            true;
 
         const matchesGestor = filterGestor === 'all' ? true : m.gestor === filterGestor;
         const matchesComunidad = filterComunidad === 'all' ? true : m.comunidad_id === Number(filterComunidad);
@@ -757,7 +829,9 @@ export default function MorosidadPage() {
                     onChange={(v) => setFilterEstado(v)}
                     options={[
                         { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-yellow-400 text-neutral-950' },
-                        { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-neutral-900 text-white' },
+                        { value: 'disputa', label: 'En disputa', activeClass: 'bg-orange-500 text-white' },
+                        { value: 'demanda', label: 'Demanda', activeClass: 'bg-red-600 text-white' },
+                        { value: 'resuelto', label: 'Resueltas', activeClass: 'bg-emerald-600 text-white' },
                         { value: 'all', label: 'Todas', activeClass: 'bg-neutral-900 text-white' },
                     ]}
                 />
@@ -1240,6 +1314,27 @@ export default function MorosidadPage() {
                                     hidden: row.estado === 'Pagado',
                                 },
                                 {
+                                    label: 'Pasar a En disputa (No localizable)',
+                                    icon: <UserX className="w-4 h-4" />,
+                                    onClick: (r) => changeEstado(r.id, 'En disputa', 'No localizable'),
+                                    disabled: isUpdatingStatus === row.id,
+                                    hidden: row.estado === 'Pagado' || (row.estado === 'En disputa' && row.subtipo_disputa === 'No localizable'),
+                                },
+                                {
+                                    label: 'Pasar a Demanda',
+                                    icon: <Gavel className="w-4 h-4" />,
+                                    onClick: (r) => changeEstado(r.id, 'Demanda'),
+                                    disabled: isUpdatingStatus === row.id,
+                                    hidden: row.estado === 'Pagado' || row.estado === 'Demanda',
+                                },
+                                {
+                                    label: 'Volver a Pendiente',
+                                    icon: <RotateCcw className="w-4 h-4" />,
+                                    onClick: (r) => changeEstado(r.id, 'Pendiente'),
+                                    disabled: isUpdatingStatus === row.id,
+                                    hidden: row.estado === 'Pagado' || row.estado === 'Pendiente',
+                                },
+                                {
                                     label: 'Reabrir deuda',
                                     icon: <RotateCcw className="w-4 h-4" />,
                                     onClick: (r) => reopenDebt(r.id),
@@ -1354,8 +1449,15 @@ export default function MorosidadPage() {
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Estado</label>
-                                        <div className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold ${selectedDetailMorosidad.estado === 'Pagado' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-yellow-200 bg-yellow-50 text-yellow-700'}`}>
-                                            {selectedDetailMorosidad.estado}
+                                        <div className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold ${
+                                            selectedDetailMorosidad.estado === 'Pagado' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' :
+                                            selectedDetailMorosidad.estado === 'Demanda' ? 'border-red-200 bg-red-50 text-red-700' :
+                                            selectedDetailMorosidad.estado === 'En disputa' ? 'border-orange-200 bg-orange-50 text-orange-700' :
+                                            'border-yellow-200 bg-yellow-50 text-yellow-700'
+                                        }`}>
+                                            {selectedDetailMorosidad.estado === 'En disputa' && selectedDetailMorosidad.subtipo_disputa
+                                                ? `En disputa · ${selectedDetailMorosidad.subtipo_disputa}`
+                                                : selectedDetailMorosidad.estado}
                                         </div>
                                     </div>
                                     <div>
@@ -1423,13 +1525,45 @@ export default function MorosidadPage() {
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailMorosidad.id]), disabled: exporting },
                             ]} />
                             {selectedDetailMorosidad.estado !== 'Pagado' ? (
-                                <button
-                                    onClick={() => { markAsPaid(selectedDetailMorosidad.id); setShowDetailModal(false); }}
-                                    className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
-                                >
-                                    <Check className="w-4 h-4" />
-                                    <span className="hidden sm:inline">Marcar como </span>Pagado
-                                </button>
+                                <div className="flex flex-wrap items-center gap-2 justify-end">
+                                    {!(selectedDetailMorosidad.estado === 'En disputa' && selectedDetailMorosidad.subtipo_disputa === 'No localizable') && (
+                                        <button
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No localizable'); setShowDetailModal(false); }}
+                                            className="px-3 py-2 text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            title="Pasar a En disputa · No localizable"
+                                        >
+                                            <UserX className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">No localizable</span>
+                                        </button>
+                                    )}
+                                    {selectedDetailMorosidad.estado !== 'Demanda' && (
+                                        <button
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Demanda'); setShowDetailModal(false); }}
+                                            className="px-3 py-2 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            title="Pasar a Demanda"
+                                        >
+                                            <Gavel className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">Demanda</span>
+                                        </button>
+                                    )}
+                                    {selectedDetailMorosidad.estado !== 'Pendiente' && (
+                                        <button
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Pendiente'); setShowDetailModal(false); }}
+                                            className="px-3 py-2 text-xs font-bold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            title="Volver a Pendiente"
+                                        >
+                                            <RotateCcw className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">Pendiente</span>
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => { markAsPaid(selectedDetailMorosidad.id); setShowDetailModal(false); }}
+                                        className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <Check className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Marcar como </span>Pagado
+                                    </button>
+                                </div>
                             ) : (
                                 <button
                                     onClick={() => { reopenDebt(selectedDetailMorosidad.id); setShowDetailModal(false); }}
