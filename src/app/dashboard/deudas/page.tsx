@@ -394,7 +394,7 @@ export default function MorosidadPage() {
         }, 'Marcando como pagado...');
     };
 
-    const changeEstado = async (id: number, nuevoEstado: 'Pendiente' | 'En disputa' | 'Demanda', subtipo: 'No localizable' | null = null) => {
+    const changeEstado = async (id: number, nuevoEstado: 'Pendiente' | 'En disputa' | 'Demanda', subtipo: 'No localizable' | 'No conforme' | null = null) => {
         if (isUpdatingStatus === id) return;
         await withLoading(async () => {
             setIsUpdatingStatus(id);
@@ -1308,6 +1308,7 @@ export default function MorosidadPage() {
                                             onChange={(val) => setFilterSubtipoDisputa(val === '' ? 'all' : String(val))}
                                             options={[
                                                 { value: 'No localizable', label: 'No localizable' },
+                                                { value: 'No conforme', label: 'No conforme' },
                                             ]}
                                             placeholder="Todos los subtipos"
                                             className="w-[180px]"
@@ -1336,6 +1337,13 @@ export default function MorosidadPage() {
                                     onClick: (r) => changeEstado(r.id, 'En disputa', 'No localizable'),
                                     disabled: isUpdatingStatus === row.id,
                                     hidden: row.estado === 'Pagado' || (row.estado === 'En disputa' && row.subtipo_disputa === 'No localizable'),
+                                },
+                                {
+                                    label: 'Pasar a En disputa (No conforme)',
+                                    icon: <AlertTriangle className="w-4 h-4" />,
+                                    onClick: (r) => changeEstado(r.id, 'En disputa', 'No conforme'),
+                                    disabled: isUpdatingStatus === row.id,
+                                    hidden: row.estado === 'Pagado' || (row.estado === 'En disputa' && row.subtipo_disputa === 'No conforme'),
                                 },
                                 {
                                     label: 'Pasar a Demanda',
@@ -1551,6 +1559,16 @@ export default function MorosidadPage() {
                                         >
                                             <UserX className="w-3.5 h-3.5" />
                                             <span className="hidden sm:inline">No localizable</span>
+                                        </button>
+                                    )}
+                                    {!(selectedDetailMorosidad.estado === 'En disputa' && selectedDetailMorosidad.subtipo_disputa === 'No conforme') && (
+                                        <button
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No conforme'); setShowDetailModal(false); }}
+                                            className="px-3 py-2 text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
+                                            title="Pasar a En disputa · No conforme"
+                                        >
+                                            <AlertTriangle className="w-3.5 h-3.5" />
+                                            <span className="hidden sm:inline">No conforme</span>
                                         </button>
                                     )}
                                     {selectedDetailMorosidad.estado !== 'Demanda' && (

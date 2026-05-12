@@ -142,7 +142,7 @@ export interface Morosidad {
   observaciones: string;
   ref?: string;
   estado: 'Pendiente' | 'Pagado' | 'En disputa' | 'Demanda';
-  subtipo_disputa?: 'No localizable' | null;
+  subtipo_disputa?: 'No localizable' | 'No conforme' | null;
   fecha_pago: string;
   gestor: string;
   aviso?: string | null;
