@@ -38,6 +38,7 @@ export default function MorosidadPage() {
     const [filterEstado, setFilterEstado] = useState('pendiente');
     const [filterGestor, setFilterGestor] = useState('all');
     const [filterComunidad, setFilterComunidad] = useState('all');
+    const [filterSubtipoDisputa, setFilterSubtipoDisputa] = useState('all');
 
     // Detail Modal State
     const [selectedDetailMorosidad, setSelectedDetailMorosidad] = useState<Morosidad | null>(null);
@@ -806,10 +807,15 @@ export default function MorosidadPage() {
             filterEstado === 'resuelto' ? m.estado === 'Pagado' :
             true;
 
+        const matchesSubtipo =
+            filterEstado !== 'disputa' || filterSubtipoDisputa === 'all'
+                ? true
+                : m.subtipo_disputa === filterSubtipoDisputa;
+
         const matchesGestor = filterGestor === 'all' ? true : m.gestor === filterGestor;
         const matchesComunidad = filterComunidad === 'all' ? true : m.comunidad_id === Number(filterComunidad);
 
-        return matchesEstado && matchesGestor && matchesComunidad;
+        return matchesEstado && matchesSubtipo && matchesGestor && matchesComunidad;
     });
 
     return (
@@ -826,7 +832,7 @@ export default function MorosidadPage() {
             <div className="flex flex-col gap-3">
                 <FilterBar
                     value={filterEstado}
-                    onChange={(v) => setFilterEstado(v)}
+                    onChange={(v) => { setFilterEstado(v); setFilterSubtipoDisputa('all'); }}
                     options={[
                         { value: 'pendiente', label: 'Pendientes', activeClass: 'bg-yellow-400 text-neutral-950' },
                         { value: 'disputa', label: 'En disputa', activeClass: 'bg-orange-500 text-white' },
@@ -1296,6 +1302,17 @@ export default function MorosidadPage() {
                                         placeholder="Todos los Gestores"
                                         className="w-[170px]"
                                     />
+                                    {filterEstado === 'disputa' && (
+                                        <SearchableSelect
+                                            value={filterSubtipoDisputa === 'all' ? '' : filterSubtipoDisputa}
+                                            onChange={(val) => setFilterSubtipoDisputa(val === '' ? 'all' : String(val))}
+                                            options={[
+                                                { value: 'No localizable', label: 'No localizable' },
+                                            ]}
+                                            placeholder="Todos los subtipos"
+                                            className="w-[180px]"
+                                        />
+                                    )}
                                 </>
                             }
                             rowActions={(row) => [
