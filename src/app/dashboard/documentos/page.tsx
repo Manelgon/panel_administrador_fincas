@@ -11,13 +11,14 @@ import ClientHistoryTable from "@/components/dashboard/ClientHistoryTable";
 import SuplidosForm from "./suplidos/suplidos-form";
 import VariosForm from "./varios/varios-form";
 import CertificadoForm from "./certificado-renta/certificado-form";
+import PresupuestosForm from "./presupuestos/presupuestos-form";
 
 export default function DocumentosPage() {
     const [isAdmin, setIsAdmin] = useState(false);
     const [loadingEntries, setLoadingEntries] = useState(true);
     const [entries, setEntries] = useState<any[]>([]);
     const [selectorOpen, setSelectorOpen] = useState(false);
-    const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | null>(null);
+    const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | "presupuesto_anual" | null>(null);
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,7 +50,7 @@ export default function DocumentosPage() {
                         id, created_at, title, pdf_path, payload, doc_key,
                         profiles:user_id ( nombre, apellido, rol, email )
                     `)
-                    .in("doc_key", ["suplidos", "certificado_renta", "facturas_varias"])
+                    .in("doc_key", ["suplidos", "certificado_renta", "facturas_varias", "presupuesto_anual"])
                     .order("created_at", { ascending: false })
                     .limit(200);
 
@@ -97,6 +98,13 @@ export default function DocumentosPage() {
             key: "varios",
             title: "Certificados de estar al dia y Factura",
             desc: "Genera facturas varias y certificado de pagos al día en un único PDF.",
+            settingsHref: "#",
+            available: true,
+        },
+        {
+            key: "presupuesto_anual",
+            title: "Presupuesto anual",
+            desc: "La IA analiza la liquidación y las cuotas actuales y propone presupuesto + subida (DOCX + PDF).",
             settingsHref: "#",
             available: true,
         },
@@ -204,6 +212,7 @@ export default function DocumentosPage() {
                                 {activeModal === "suplidos" && "Registrar Nuevo Suplido"}
                                 {activeModal === "varios" && "Registrar Certificado de estar al dia y Factura"}
                                 {activeModal === "certificado_renta" && "Registrar Certificado Renta"}
+                                {activeModal === "presupuesto_anual" && "Nuevo Presupuesto Anual"}
                             </h2>
                             <button
                                 onClick={() => setActiveModal(null)}
@@ -218,6 +227,7 @@ export default function DocumentosPage() {
                             {activeModal === "suplidos" && <SuplidosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
                             {activeModal === "varios" && <VariosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
                             {activeModal === "certificado_renta" && <CertificadoForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
+                            {activeModal === "presupuesto_anual" && <PresupuestosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
                         </div>
                     </div>
                 </div>

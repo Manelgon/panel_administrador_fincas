@@ -8,7 +8,7 @@ import DataTable, { Column } from "@/components/DataTable";
 import ModalPortal from '@/components/ModalPortal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 
-type HistoryType = "varios" | "suplidos" | "certificado-renta" | "all";
+type HistoryType = "varios" | "suplidos" | "certificado-renta" | "presupuesto-anual" | "all";
 
 interface ClientHistoryTableProps {
     entries: any[];
@@ -19,11 +19,12 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
     const getDocType = (doc: any): Exclude<HistoryType, "all"> => {
         if (doc?.doc_key === "suplidos") return "suplidos";
         if (doc?.doc_key === "certificado_renta") return "certificado-renta";
+        if (doc?.doc_key === "presupuesto_anual") return "presupuesto-anual";
         return "varios";
     };
 
     const getDocTypeMeta = (doc: any) => {
-        const docType = getDocType(doc);
+        const docType = type === "all" ? getDocType(doc) : type;
         if (docType === "suplidos") {
             return {
                 type: docType,
@@ -38,6 +39,14 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 label: "Certif. Renta",
                 badgeClass: "bg-indigo-50 text-indigo-700 border-indigo-100",
                 modalBadgeClass: "bg-indigo-100 text-indigo-700",
+            };
+        }
+        if (docType === "presupuesto-anual") {
+            return {
+                type: docType,
+                label: "Presupuesto",
+                badgeClass: "bg-purple-50 text-purple-700 border-purple-100",
+                modalBadgeClass: "bg-purple-100 text-purple-700",
             };
         }
 
@@ -206,18 +215,21 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
         }
     };
 
-    const handleDownload = async (doc: any) => {
+    const handleDownload = async (doc: any, format: "pdf" | "docx" = "pdf") => {
         const loadingToast = toast.loading("Preparando descarga...");
         try {
             const downloadType = type === "all" ? getDocType(doc) : type;
-            const res = await fetch(`/api/documentos/${downloadType}/signed-url?id=${doc.id}`);
+            const endpointSegment = downloadType === "presupuesto-anual" ? "presupuestos" : downloadType;
+            const query = downloadType === "presupuesto-anual" ? `id=${doc.id}&format=${format}` : `id=${doc.id}`;
+            const res = await fetch(`/api/documentos/${endpointSegment}/signed-url?${query}`);
             const data = await res.json();
 
             if (!res.ok || !data.url) {
                 throw new Error(data.error || "Error obteniendo URL de descarga");
             }
 
-            const filename = (data.pdfPath || "documento.pdf").split("/").pop() || "documento.pdf";
+            const defaultExt = format === "docx" ? "docx" : "pdf";
+            const filename = (data.pdfPath || `documento.${defaultExt}`).split("/").pop() || `documento.${defaultExt}`;
             const link = document.createElement("a");
             link.href = data.url;
             link.download = filename;
@@ -244,6 +256,14 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             { label: "Descripción", value: doc.payload?.Descripcion || "-" },
             { label: "Total", value: doc.payload?.["Suma final"] ? parseFloat(doc.payload["Suma final"]).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
             { label: "Fecha Emisión", value: doc.payload?.["Fecha emisión"] ? new Date(doc.payload["Fecha emisión"]).toLocaleDateString("es-ES") : new Date(doc.created_at).toLocaleDateString("es-ES") },
+        ];
+        if (effectiveType === "presupuesto-anual") return [
+            { label: "Comunidad", value: doc.payload?.nombre_comunidad || doc.payload?.comunidad || "-" },
+            { label: "Ejercicio analizado", value: doc.payload?.ejercicio_analizado || "-" },
+            { label: "Gasto presupuestado", value: doc.payload?.total_presupuesto_propuesto != null ? Number(doc.payload.total_presupuesto_propuesto).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+            { label: "Ingresos previstos", value: doc.payload?.ingresos_previstos_anual != null ? Number(doc.payload.ingresos_previstos_anual).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+            { label: "Subida media ponderada", value: doc.payload?.subida_propuesta?.pct_medio_ponderado != null ? `${Number(doc.payload.subida_propuesta.pct_medio_ponderado).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : "-" },
+            { label: "Fecha", value: new Date(doc.created_at).toLocaleDateString("es-ES") },
         ];
         if (effectiveType === "certificado-renta") return [
             { label: "Código", value: doc.payload?.["Código"] || doc.payload?.codigo || "-" },
@@ -418,6 +438,44 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 },
                 creadoPorCol
             ];
+        } else if (type === "presupuesto-anual") {
+            typeCols = [
+                {
+                    key: "comunidad",
+                    label: "Comunidad",
+                    sortable: true,
+                    render: (r) => r.payload?.nombre_comunidad || r.payload?.comunidad || "-",
+                },
+                {
+                    key: "ejercicio",
+                    label: "Ejercicio",
+                    sortable: true,
+                    render: (r) => r.payload?.ejercicio_analizado || "-",
+                },
+                {
+                    key: "presupuesto",
+                    label: "Presupuesto",
+                    sortable: true,
+                    align: 'right',
+                    width: "130px",
+                    render: (r) => r.payload?.total_presupuesto_propuesto != null ? Number(r.payload.total_presupuesto_propuesto).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-",
+                },
+                {
+                    key: "subida",
+                    label: "Subida %",
+                    sortable: true,
+                    align: 'right',
+                    width: "100px",
+                    render: (r) => r.payload?.subida_propuesta?.pct_medio_ponderado != null ? `${Number(r.payload.subida_propuesta.pct_medio_ponderado).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : "-",
+                },
+                {
+                    key: "created_at",
+                    label: "Fecha",
+                    sortable: true,
+                    render: (r) => new Date(r.created_at).toLocaleDateString("es-ES"),
+                },
+                creadoPorCol
+            ];
         } else if (type === "all") {
             typeCols = [
                 {
@@ -430,24 +488,59 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     key: "nombre_comunidad",
                     label: "Comunidad",
                     sortable: true,
-                    render: (r) => r.payload?.["Nombre Comunidad"] || r.payload?.nombre_comunidad || r.payload?.["Nombre Cliente"] || "-",
+                    render: (r) => r.payload?.["Nombre Comunidad"] || r.payload?.nombre_comunidad || r.payload?.["Nombre Cliente"] || r.payload?.comunidad || "-",
                 },
                 {
                     key: "cliente",
-                    label: "Cliente / Declarante",
+                    label: "Cliente / Ejercicio",
                     sortable: true,
-                    render: (r) =>
-                        r.payload?.cliente ||
-                        r.payload?.nombre_apellidos ||
-                        `${r.payload?.Apellidos || ""} ${r.payload?.Nombre || ""}`.trim() ||
-                        r.payload?.["Nombre Cliente"] ||
-                        "-",
+                    render: (r) => {
+                        if (getDocType(r) === "presupuesto-anual") {
+                            return r.payload?.ejercicio_analizado || "-";
+                        }
+                        return (
+                            r.payload?.cliente ||
+                            r.payload?.nombre_apellidos ||
+                            `${r.payload?.Apellidos || ""} ${r.payload?.Nombre || ""}`.trim() ||
+                            r.payload?.["Nombre Cliente"] ||
+                            "-"
+                        );
+                    },
                 },
                 {
                     key: "nif",
-                    label: "NIF",
+                    label: "NIF / Subida %",
                     sortable: true,
-                    render: (r) => r.payload?.nif || r.payload?.Nif || r.payload?.NIF || "-",
+                    render: (r) => {
+                        if (getDocType(r) === "presupuesto-anual") {
+                            const p = r.payload?.subida_propuesta?.pct_medio_ponderado;
+                            return p != null ? `${Number(p).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : "-";
+                        }
+                        return r.payload?.nif || r.payload?.Nif || r.payload?.NIF || "-";
+                    },
+                },
+                {
+                    key: "importe",
+                    label: "Importe",
+                    sortable: true,
+                    align: 'right',
+                    width: "120px",
+                    render: (r) => {
+                        const t = getDocType(r);
+                        if (t === "presupuesto-anual") {
+                            const total = r.payload?.total_presupuesto_propuesto;
+                            return total != null ? Number(total).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-";
+                        }
+                        if (t === "suplidos") {
+                            const v = r.payload?.["Suma final"];
+                            return v != null ? Number(v).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-";
+                        }
+                        if (t === "varios") {
+                            const v = r.payload?.suma_final;
+                            return v != null ? `${v} €` : "-";
+                        }
+                        return "-";
+                    },
                 },
                 {
                     key: "created_at",
@@ -493,6 +586,12 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                     >
                         Certif. Estar al Día y Factura
                     </Link>
+                    <Link
+                        href="/dashboard/documentos/presupuestos/historial"
+                        className={`px-3 py-1 rounded-full text-sm font-medium transition text-center ${type === 'presupuesto-anual' ? 'bg-yellow-400 text-neutral-950' : 'bg-neutral-200 text-neutral-700 hover:bg-neutral-300'}`}
+                    >
+                        Presupuesto
+                    </Link>
                 </div>
 
                 {/* Acciones de selección (visible solo si hay selección) */}
@@ -532,25 +631,32 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                 selectedKeys={selectedIds}
                 onSelectionChange={setSelectedIds}
                 onRowClick={handleRowClick}
-                rowActions={(row) => [
-                    {
-                        label: "Descargar PDF",
-                        icon: <Download className="w-4 h-4" />,
-                        onClick: (r) => handleDownload(r),
-                    },
-                    {
-                        label: "Enviar por Email",
-                        icon: <Send className="w-4 h-4" />,
-                        onClick: (r) => handleSendClick(r),
-                    },
-                    {
-                        label: "Eliminar",
-                        icon: <Trash2 className="w-4 h-4" />,
-                        onClick: (r) => handleDeleteClick(r),
-                        variant: "danger" as const,
-                        separator: true,
-                    },
-                ]}
+                rowActions={(row) => {
+                    const isPresupuesto = getDocType(row) === "presupuesto-anual";
+                    return [
+                        {
+                            label: "Descargar PDF",
+                            icon: <Download className="w-4 h-4" />,
+                            onClick: (r) => handleDownload(r, "pdf"),
+                        },
+                        ...(isPresupuesto ? [{
+                            label: "Descargar Word (DOCX)",
+                            icon: <Download className="w-4 h-4" />,
+                            onClick: (r: any) => handleDownload(r, "docx"),
+                        }] : [{
+                            label: "Enviar por Email",
+                            icon: <Send className="w-4 h-4" />,
+                            onClick: (r: any) => handleSendClick(r),
+                        }]),
+                        {
+                            label: "Eliminar",
+                            icon: <Trash2 className="w-4 h-4" />,
+                            onClick: (r: any) => handleDeleteClick(r),
+                            variant: "danger" as const,
+                            separator: true,
+                        },
+                    ];
+                }}
             />
 
             {/* DETAIL MODAL */}
@@ -609,21 +715,31 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
 
                             {/* Footer */}
                             <div className="px-5 py-4 border-t border-neutral-100 flex justify-between items-center gap-3 bg-neutral-50 shrink-0">
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 flex-wrap">
                                     <button
-                                        onClick={() => handleDownload(selectedDoc)}
+                                        onClick={() => handleDownload(selectedDoc, "pdf")}
                                         className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
                                     >
                                         <Download className="w-4 h-4 text-blue-600" />
                                         Descargar PDF
                                     </button>
-                                    <button
-                                        onClick={() => handleSendClick(selectedDoc)}
-                                        className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
-                                    >
-                                        <Send className="w-4 h-4 text-yellow-600" />
-                                        Enviar
-                                    </button>
+                                    {getDocType(selectedDoc) === "presupuesto-anual" ? (
+                                        <button
+                                            onClick={() => handleDownload(selectedDoc, "docx")}
+                                            className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
+                                        >
+                                            <Download className="w-4 h-4 text-blue-600" />
+                                            Descargar Word
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => handleSendClick(selectedDoc)}
+                                            className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 rounded-lg text-sm font-medium transition"
+                                        >
+                                            <Send className="w-4 h-4 text-yellow-600" />
+                                            Enviar
+                                        </button>
+                                    )}
                                 </div>
                                 <div className="flex gap-2">
                                     <button
