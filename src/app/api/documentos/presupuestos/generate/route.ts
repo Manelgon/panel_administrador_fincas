@@ -106,7 +106,7 @@ const PALETTE = [
     "#C0606B", "#D9989B", "#7A7A7A", "#B5B5B5",
 ];
 
-async function fetchChartPng(config: any, width = 900, height = 500): Promise<Uint8Array | null> {
+async function fetchChartPng(config: any | string, width = 900, height = 500): Promise<Uint8Array | null> {
     try {
         const url = "https://quickchart.io/chart";
         const res = await fetch(url, {
@@ -131,33 +131,106 @@ async function fetchChartPng(config: any, width = 900, height = 500): Promise<Ui
 async function buildPieChart(partidas: Partida[]): Promise<Uint8Array | null> {
     const items = partidas.filter(p => n(p.presupuesto_propuesto) > 0);
     if (!items.length) return null;
-    return fetchChartPng({
-        type: "doughnut",
+    const labels = items.map(p => p.nombre);
+    const data = items.map(p => Number(n(p.presupuesto_propuesto).toFixed(2)));
+    const colors = items.map((_, i) => PALETTE[i % PALETTE.length]);
+    // Enviamos el chart como expresión JS para que QuickChart evalúe el formatter
+    const chartJs = `({
+        type: 'doughnut',
         data: {
-            labels: items.map(p => p.nombre),
+            labels: ${JSON.stringify(labels)},
             datasets: [{
-                data: items.map(p => Number(n(p.presupuesto_propuesto).toFixed(2))),
-                backgroundColor: items.map((_, i) => PALETTE[i % PALETTE.length]),
-                borderColor: "#ffffff",
-                borderWidth: 2,
-            }],
+                data: ${JSON.stringify(data)},
+                backgroundColor: ${JSON.stringify(colors)},
+                borderColor: '#ffffff',
+                borderWidth: 0.5
+            }]
         },
         options: {
-            plugins: {
-                title: { display: true, text: "Distribución del presupuesto propuesto", font: { size: 18, weight: "bold" } },
-                legend: { position: "right", labels: { boxWidth: 14, font: { size: 12 } } },
-                datalabels: {
-                    color: "#fff",
-                    font: { weight: "bold", size: 11 },
-                    formatter: (value: number, ctx: any) => {
-                        const total = ctx.dataset.data.reduce((a: number, b: number) => a + b, 0);
-                        const pct = total ? (value / total) * 100 : 0;
-                        return pct < 4 ? "" : pct.toFixed(1) + "%";
-                    },
-                },
+            layout: { padding: { top: 50, bottom: 50, left: 20, right: 20 } },
+            legend: {
+                display: true,
+                position: 'right',
+                align: 'center',
+                labels: {
+                    boxWidth: 14,
+                    fontSize: 11,
+                    padding: 8,
+                    generateLabels: function(chart) {
+                        var data = chart.data;
+                        if (!data.labels || !data.datasets.length) return [];
+                        var ds = data.datasets[0];
+                        var total = ds.data.reduce(function(a,b){return a+b;}, 0);
+                        return data.labels.map(function(label, i) {
+                            var v = ds.data[i];
+                            var p = total ? (v/total)*100 : 0;
+                            return {
+                                text: label + '  -  ' + p.toFixed(1) + '%',
+                                fillStyle: ds.backgroundColor[i],
+                                strokeStyle: ds.backgroundColor[i],
+                                lineWidth: 0,
+                                hidden: false,
+                                index: i
+                            };
+                        });
+                    }
+                }
             },
-        },
-    }, 900, 520);
+            title: { display: false },
+            plugins: {
+                datalabels: {
+                    color: function(ctx) {
+                        var d = ctx.chart.data.datasets[0].data;
+                        var total = d.reduce(function(a,b){return a+b;}, 0);
+                        var v = d[ctx.dataIndex];
+                        if (!total) return '#fff';
+                        var p = v/total;
+                        // >3% blanco dentro; 1-3% color fuera; <1% color dentro del hueco
+                        if (p >= 0.03) return '#fff';
+                        return ctx.chart.data.datasets[0].backgroundColor[ctx.dataIndex];
+                    },
+                    font: { weight: 'bold', size: 11 },
+                    anchor: function(ctx) {
+                        var d = ctx.chart.data.datasets[0].data;
+                        var total = d.reduce(function(a,b){return a+b;}, 0);
+                        var v = d[ctx.dataIndex];
+                        if (!total) return 'center';
+                        var p = v/total;
+                        if (p >= 0.03) return 'center';     // dentro del gajo
+                        if (p >= 0.01) return 'end';        // fuera
+                        return 'start';                     // dentro del hueco central
+                    },
+                    align: function(ctx) {
+                        var d = ctx.chart.data.datasets[0].data;
+                        var total = d.reduce(function(a,b){return a+b;}, 0);
+                        var v = d[ctx.dataIndex];
+                        if (!total) return 'center';
+                        var p = v/total;
+                        if (p >= 0.03) return 'center';
+                        if (p >= 0.01) return 'end';
+                        return 'start';
+                    },
+                    offset: function(ctx) {
+                        var d = ctx.chart.data.datasets[0].data;
+                        var total = d.reduce(function(a,b){return a+b;}, 0);
+                        var v = d[ctx.dataIndex];
+                        if (!total || (v/total) >= 0.03) return 0;
+                        return 14;
+                    },
+                    clamp: true,
+                    clip: false,
+                    padding: { top: 2, bottom: 2, left: 4, right: 4 },
+                    formatter: function(value, ctx) {
+                        var d = ctx.chart.data.datasets[0].data;
+                        var total = d.reduce(function(a,b){return a+b;}, 0);
+                        var p = total ? (value/total)*100 : 0;
+                        return p.toFixed(1) + '%';
+                    }
+                }
+            }
+        }
+    })`;
+    return fetchChartPng(chartJs, 1100, 600);
 }
 
 async function buildBarChart(partidas: Partida[]): Promise<Uint8Array | null> {
@@ -384,8 +457,8 @@ async function buildPdf(
     // Tabla 1: Gastos
     drawTable({
         title: "1. Presupuesto de gastos ordinarios",
-        headers: ["Partida", "Gasto ejercicio anterior", "Presupuesto propuesto", "Variación €", "Variación %"],
-        widths: [200, 90, 90, 65, 60],
+        headers: ["Partida", "Gasto anterior", "Propuesto", "Variación €", "Variación %"],
+        widths: [185, 95, 90, 75, 60],
         aligns: ["left", "right", "right", "right", "right"],
         rows: a.partidas.map(p => [
             p.nombre,

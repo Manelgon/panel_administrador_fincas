@@ -12,7 +12,13 @@ import {
     ArrowLeft,
     X,
     CheckCircle2,
+    Pencil,
+    Save,
+    Plus,
+    Trash2,
+    AlertCircle,
 } from "lucide-react";
+import { createPortal } from "react-dom";
 import SearchableSelect from "@/components/SearchableSelect";
 import { createBrowserClient } from "@supabase/ssr";
 import { useGlobalLoading } from "@/lib/globalLoading";
@@ -73,9 +79,11 @@ const pct = (v: any) =>
 export default function PresupuestosForm({
     onSuccess,
     onCancel,
+    registerCloseGuard,
 }: {
     onSuccess?: () => void;
     onCancel?: () => void;
+    registerCloseGuard?: (fn: (() => boolean | Promise<boolean>) | null) => void;
 }) {
     const { withLoading } = useGlobalLoading();
     const [stage, setStage] = useState<Stage>("form");
@@ -86,6 +94,71 @@ export default function PresupuestosForm({
     const [analysis, setAnalysis] = useState<Analysis | null>(null);
     const [pdfUrl, setPdfUrl] = useState("");
     const [docxUrl, setDocxUrl] = useState("");
+    const [editing, setEditing] = useState(false);
+    const editSnapshotRef = useRef<Analysis | null>(null);
+
+    const [confirmState, setConfirmState] = useState<{
+        open: boolean;
+        title: string;
+        message: string;
+        confirmText: string;
+        resolve?: (v: boolean) => void;
+    }>({ open: false, title: "", message: "", confirmText: "Aceptar" });
+
+    const askConfirm = (title: string, message: string, confirmText = "Sí, continuar") =>
+        new Promise<boolean>((resolve) => {
+            setConfirmState({ open: true, title, message, confirmText, resolve });
+        });
+
+    const closeConfirm = (value: boolean) => {
+        confirmState.resolve?.(value);
+        setConfirmState((s) => ({ ...s, open: false, resolve: undefined }));
+    };
+
+    // Confirmación al cerrar el modal cuando hay datos sin descargar
+    useEffect(() => {
+        if (!registerCloseGuard) return;
+        const needsConfirm = (stage === "review" && analysis !== null) || editing;
+        if (needsConfirm) {
+            registerCloseGuard(() =>
+                askConfirm(
+                    editing ? "¿Descartar los cambios?" : "¿Cerrar sin descargar?",
+                    editing
+                        ? "Si cierras ahora se perderán los cambios sin guardar."
+                        : "Se perderá el presupuesto generado y tendrás que repetir el análisis.",
+                    editing ? "Sí, descartar" : "Sí, cerrar",
+                ),
+            );
+        } else {
+            registerCloseGuard(null);
+        }
+        return () => registerCloseGuard(null);
+    }, [stage, editing, analysis, registerCloseGuard]);
+
+    const handleEnterEdit = () => {
+        if (analysis) editSnapshotRef.current = structuredClone(analysis);
+        setEditing(true);
+    };
+
+    const handleCancelEdit = () => {
+        if (editSnapshotRef.current) {
+            setAnalysis(editSnapshotRef.current);
+            editSnapshotRef.current = null;
+        }
+        setEditing(false);
+    };
+
+    const handleCancelReview = async () => {
+        if (analysis) {
+            const ok = await askConfirm(
+                "¿Cerrar sin descargar?",
+                "Se perderá el presupuesto generado y tendrás que repetir el análisis.",
+                "Sí, cerrar",
+            );
+            if (!ok) return;
+        }
+        onCancel?.();
+    };
 
     const liquidacionRef = useRef<HTMLInputElement>(null);
     const cuotasRef = useRef<HTMLInputElement>(null);
@@ -152,6 +225,79 @@ export default function PresupuestosForm({
         }, "Analizando documentos con IA...");
     };
 
+    // ----- Edición + recálculo -----
+    const recompute = (a: Analysis): Analysis => {
+        const partidas = a.partidas.map((p) => {
+            const ga = Number(p.gasto_anterior) || 0;
+            const pp = Number(p.presupuesto_propuesto) || 0;
+            const variacion_eur = +(pp - ga).toFixed(2);
+            const variacion_pct = ga > 0 ? +(((pp - ga) / ga) * 100).toFixed(2) : 0;
+            return { ...p, gasto_anterior: ga, presupuesto_propuesto: pp, variacion_eur, variacion_pct };
+        });
+        const total_gasto_anterior = +partidas.reduce((s, p) => s + p.gasto_anterior, 0).toFixed(2);
+        const total_presupuesto_propuesto = +partidas.reduce((s, p) => s + p.presupuesto_propuesto, 0).toFixed(2);
+
+        const cuotas_actuales = a.cuotas_actuales.map((c) => {
+            const num_fincas = Number(c.num_fincas) || 0;
+            const cuota_mensual = Number(c.cuota_mensual) || 0;
+            const total_mensual = +(num_fincas * cuota_mensual).toFixed(2);
+            const total_anual = +(total_mensual * 12).toFixed(2);
+            return { ...c, num_fincas, cuota_mensual, total_mensual, total_anual };
+        });
+        const ingresos_previstos_anual = +cuotas_actuales.reduce((s, c) => s + c.total_anual, 0).toFixed(2);
+
+        const resultado_estimado = {
+            ingresos: ingresos_previstos_anual,
+            gastos: total_presupuesto_propuesto,
+            resultado: +(ingresos_previstos_anual - total_presupuesto_propuesto).toFixed(2),
+        };
+
+        const por_tipo = a.subida_propuesta.por_tipo.map((t) => {
+            const cuota_actual = Number(t.cuota_actual) || 0;
+            const cuota_nueva = Number(t.cuota_nueva) || 0;
+            const subida_eur = +(cuota_nueva - cuota_actual).toFixed(2);
+            const subida_pct = cuota_actual > 0 ? +(((cuota_nueva - cuota_actual) / cuota_actual) * 100).toFixed(2) : 0;
+            return { ...t, cuota_actual, cuota_nueva, subida_eur, subida_pct };
+        });
+
+        // % medio ponderado por nº de fincas del tipo (matching por nombre tipo_finca)
+        const fincasByTipo = new Map(cuotas_actuales.map((c) => [c.tipo_finca, c.num_fincas]));
+        const totFincas = por_tipo.reduce((s, t) => s + (fincasByTipo.get(t.tipo_finca) || 0), 0);
+        const pct_medio_ponderado =
+            totFincas > 0
+                ? +(
+                      por_tipo.reduce(
+                          (s, t) => s + (t.subida_pct * (fincasByTipo.get(t.tipo_finca) || 0)),
+                          0,
+                      ) / totFincas
+                  ).toFixed(2)
+                : por_tipo.length > 0
+                  ? +(por_tipo.reduce((s, t) => s + t.subida_pct, 0) / por_tipo.length).toFixed(2)
+                  : 0;
+
+        return {
+            ...a,
+            partidas,
+            total_gasto_anterior,
+            total_presupuesto_propuesto,
+            cuotas_actuales,
+            ingresos_previstos_anual,
+            resultado_estimado,
+            subida_propuesta: { pct_medio_ponderado, por_tipo },
+        };
+    };
+
+    const updateAnalysis = (mutator: (a: Analysis) => Analysis) => {
+        setAnalysis((prev) => (prev ? mutator(structuredClone(prev)) : prev));
+    };
+
+    const saveEdits = () => {
+        setAnalysis((prev) => (prev ? recompute(prev) : prev));
+        editSnapshotRef.current = null;
+        setEditing(false);
+        toast.success("Cambios guardados y totales recalculados");
+    };
+
     const generate = async () => {
         if (!analysis) return;
         await withLoading(async () => {
@@ -177,10 +323,22 @@ export default function PresupuestosForm({
         }, "Generando DOCX + PDF...");
     };
 
+    const confirmDialogEl = (
+        <ConfirmDialog
+            open={confirmState.open}
+            title={confirmState.title}
+            message={confirmState.message}
+            confirmText={confirmState.confirmText}
+            onConfirm={() => closeConfirm(true)}
+            onCancel={() => closeConfirm(false)}
+        />
+    );
+
     // =================== READY ===================
     if (stage === "ready") {
         return (
             <div className="flex flex-col h-full overflow-hidden">
+                {confirmDialogEl}
                 <div className="flex-grow overflow-y-auto custom-scrollbar p-8">
                     <div className="max-w-md mx-auto space-y-8 py-8 text-center">
                         <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
@@ -222,6 +380,7 @@ export default function PresupuestosForm({
                                     setAnalysis(null);
                                     setPdfUrl("");
                                     setDocxUrl("");
+                                    setEditing(false);
                                 }}
                                 className="w-full bg-white border border-slate-200 hover:bg-slate-50 h-12 rounded-xl font-bold transition"
                             >
@@ -245,6 +404,7 @@ export default function PresupuestosForm({
     if ((stage === "review" || stage === "generating") && analysis) {
         return (
             <div className="flex flex-col h-full overflow-hidden">
+                {confirmDialogEl}
                 <div className="flex-grow overflow-y-auto p-4 sm:px-5 sm:py-4 custom-scrollbar">
                     <div className="max-w-4xl mx-auto space-y-5">
                         {/* Cabecera */}
@@ -252,29 +412,79 @@ export default function PresupuestosForm({
                             <div className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
                                 Comunidad
                             </div>
-                            <h2 className="text-lg font-bold text-neutral-900">{analysis.comunidad || "—"}</h2>
-                            {analysis.ejercicio_analizado && (
-                                <p className="text-xs text-neutral-600 mt-1">
-                                    Ejercicio analizado: <strong>{analysis.ejercicio_analizado}</strong>
-                                </p>
-                            )}
-                            {analysis.introduccion && (
-                                <p className="text-sm text-neutral-700 mt-3 leading-relaxed">{analysis.introduccion}</p>
+                            {editing ? (
+                                <>
+                                    <input
+                                        className="w-full bg-white border border-yellow-300 rounded-md px-2 py-1 text-lg font-bold text-neutral-900"
+                                        value={analysis.comunidad || ""}
+                                        onChange={(e) =>
+                                            updateAnalysis((a) => ({ ...a, comunidad: e.target.value }))
+                                        }
+                                    />
+                                    <div className="mt-2">
+                                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                                            Ejercicio analizado
+                                        </label>
+                                        <input
+                                            className="w-full bg-white border border-yellow-300 rounded-md px-2 py-1 text-xs text-neutral-700"
+                                            value={analysis.ejercicio_analizado || ""}
+                                            onChange={(e) =>
+                                                updateAnalysis((a) => ({ ...a, ejercicio_analizado: e.target.value }))
+                                            }
+                                        />
+                                    </div>
+                                    <div className="mt-2">
+                                        <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                                            Introducción
+                                        </label>
+                                        <textarea
+                                            rows={3}
+                                            className="w-full bg-white border border-yellow-300 rounded-md px-2 py-1 text-sm text-neutral-700"
+                                            value={analysis.introduccion || ""}
+                                            onChange={(e) =>
+                                                updateAnalysis((a) => ({ ...a, introduccion: e.target.value }))
+                                            }
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <h2 className="text-lg font-bold text-neutral-900">{analysis.comunidad || "—"}</h2>
+                                    {analysis.ejercicio_analizado && (
+                                        <p className="text-xs text-neutral-600 mt-1">
+                                            Ejercicio analizado: <strong>{analysis.ejercicio_analizado}</strong>
+                                        </p>
+                                    )}
+                                    {analysis.introduccion && (
+                                        <p className="text-sm text-neutral-700 mt-3 leading-relaxed">{analysis.introduccion}</p>
+                                    )}
+                                </>
                             )}
                         </div>
 
                         {/* Advertencias */}
-                        {analysis.advertencias?.length > 0 && (
+                        {(analysis.advertencias?.length > 0 || editing) && (
                             <div className="bg-red-50 border border-red-200 rounded-xl p-4">
                                 <div className="flex items-center gap-2 text-red-700 font-bold text-sm mb-2">
                                     <AlertTriangle className="w-4 h-4" />
                                     Advertencias
                                 </div>
-                                <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
-                                    {analysis.advertencias.map((adv, i) => (
-                                        <li key={i}>{adv}</li>
-                                    ))}
-                                </ul>
+                                {editing ? (
+                                    <EditableList
+                                        items={analysis.advertencias || []}
+                                        onChange={(items) =>
+                                            updateAnalysis((a) => ({ ...a, advertencias: items }))
+                                        }
+                                        placeholder="Advertencia..."
+                                        tone="red"
+                                    />
+                                ) : (
+                                    <ul className="text-sm text-red-800 space-y-1 list-disc list-inside">
+                                        {analysis.advertencias.map((adv, i) => (
+                                            <li key={i}>{adv}</li>
+                                        ))}
+                                    </ul>
+                                )}
                             </div>
                         )}
 
@@ -294,13 +504,95 @@ export default function PresupuestosForm({
                                     <tbody className="divide-y divide-neutral-100">
                                         {analysis.partidas.map((p, i) => (
                                             <tr key={i}>
-                                                <td className="px-3 py-2">{p.nombre}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(p.gasto_anterior)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(p.presupuesto_propuesto)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(p.variacion_eur)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{pct(p.variacion_pct)}</td>
+                                                <td className="px-3 py-2">
+                                                    {editing ? (
+                                                        <input
+                                                            className="w-full bg-white border border-neutral-200 rounded px-2 py-1 text-sm"
+                                                            value={p.nombre}
+                                                            onChange={(e) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.partidas[i].nombre = e.target.value;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        p.nombre
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={p.gasto_anterior}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.partidas[i].gasto_anterior = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        money(p.gasto_anterior)
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={p.presupuesto_propuesto}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.partidas[i].presupuesto_propuesto = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        money(p.presupuesto_propuesto)
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{money(p.variacion_eur)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{pct(p.variacion_pct)}</td>
+                                                {editing && (
+                                                    <td className="px-1">
+                                                        <button
+                                                            onClick={() =>
+                                                                updateAnalysis((a) => {
+                                                                    a.partidas.splice(i, 1);
+                                                                    return a;
+                                                                })
+                                                            }
+                                                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                            title="Eliminar partida"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
+                                        {editing && (
+                                            <tr>
+                                                <td colSpan={6} className="px-3 py-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            updateAnalysis((a) => {
+                                                                a.partidas.push({
+                                                                    nombre: "Nueva partida",
+                                                                    gasto_anterior: 0,
+                                                                    presupuesto_propuesto: 0,
+                                                                    variacion_eur: 0,
+                                                                    variacion_pct: 0,
+                                                                });
+                                                                return a;
+                                                            })
+                                                        }
+                                                        className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" /> Añadir partida
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                     <tfoot className="bg-neutral-50 font-bold">
                                         <tr>
@@ -333,13 +625,96 @@ export default function PresupuestosForm({
                                     <tbody className="divide-y divide-neutral-100">
                                         {analysis.cuotas_actuales.map((c, i) => (
                                             <tr key={i}>
-                                                <td className="px-3 py-2">{c.tipo_finca}</td>
-                                                <td className="px-3 py-2 text-center tabular-nums">{c.num_fincas}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(c.cuota_mensual)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(c.total_mensual)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(c.total_anual)}</td>
+                                                <td className="px-3 py-2">
+                                                    {editing ? (
+                                                        <input
+                                                            className="w-full bg-white border border-neutral-200 rounded px-2 py-1 text-sm"
+                                                            value={c.tipo_finca}
+                                                            onChange={(e) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.cuotas_actuales[i].tipo_finca = e.target.value;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        c.tipo_finca
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-center tabular-nums">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={c.num_fincas}
+                                                            decimals={0}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.cuotas_actuales[i].num_fincas = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        c.num_fincas
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={c.cuota_mensual}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.cuotas_actuales[i].cuota_mensual = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        money(c.cuota_mensual)
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{money(c.total_mensual)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{money(c.total_anual)}</td>
+                                                {editing && (
+                                                    <td className="px-1">
+                                                        <button
+                                                            onClick={() =>
+                                                                updateAnalysis((a) => {
+                                                                    a.cuotas_actuales.splice(i, 1);
+                                                                    return a;
+                                                                })
+                                                            }
+                                                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                            title="Eliminar tipo"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
+                                        {editing && (
+                                            <tr>
+                                                <td colSpan={6} className="px-3 py-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            updateAnalysis((a) => {
+                                                                a.cuotas_actuales.push({
+                                                                    tipo_finca: "Nuevo tipo",
+                                                                    num_fincas: 0,
+                                                                    cuota_mensual: 0,
+                                                                    total_mensual: 0,
+                                                                    total_anual: 0,
+                                                                });
+                                                                return a;
+                                                            })
+                                                        }
+                                                        className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" /> Añadir tipo de finca
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                     <tfoot className="bg-neutral-50 font-bold">
                                         <tr>
@@ -384,37 +759,139 @@ export default function PresupuestosForm({
                                     <tbody className="divide-y divide-neutral-100">
                                         {analysis.subida_propuesta.por_tipo.map((t, i) => (
                                             <tr key={i}>
-                                                <td className="px-3 py-2">{t.tipo_finca}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(t.cuota_actual)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums font-semibold">{money(t.cuota_nueva)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{money(t.subida_eur)}</td>
-                                                <td className="px-3 py-2 text-right tabular-nums">{pct(t.subida_pct)}</td>
+                                                <td className="px-3 py-2">
+                                                    {editing ? (
+                                                        <input
+                                                            className="w-full bg-white border border-neutral-200 rounded px-2 py-1 text-sm"
+                                                            value={t.tipo_finca}
+                                                            onChange={(e) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.subida_propuesta.por_tipo[i].tipo_finca = e.target.value;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        t.tipo_finca
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={t.cuota_actual}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.subida_propuesta.por_tipo[i].cuota_actual = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        money(t.cuota_actual)
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums font-semibold">
+                                                    {editing ? (
+                                                        <NumberInput
+                                                            value={t.cuota_nueva}
+                                                            onChange={(v) =>
+                                                                updateAnalysis((a) => {
+                                                                    a.subida_propuesta.por_tipo[i].cuota_nueva = v;
+                                                                    return a;
+                                                                })
+                                                            }
+                                                        />
+                                                    ) : (
+                                                        money(t.cuota_nueva)
+                                                    )}
+                                                </td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{money(t.subida_eur)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{pct(t.subida_pct)}</td>
+                                                {editing && (
+                                                    <td className="px-1">
+                                                        <button
+                                                            onClick={() =>
+                                                                updateAnalysis((a) => {
+                                                                    a.subida_propuesta.por_tipo.splice(i, 1);
+                                                                    return a;
+                                                                })
+                                                            }
+                                                            className="p-1 text-red-500 hover:bg-red-50 rounded"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    </td>
+                                                )}
                                             </tr>
                                         ))}
+                                        {editing && (
+                                            <tr>
+                                                <td colSpan={6} className="px-3 py-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            updateAnalysis((a) => {
+                                                                a.subida_propuesta.por_tipo.push({
+                                                                    tipo_finca: "Nuevo tipo",
+                                                                    cuota_actual: 0,
+                                                                    cuota_nueva: 0,
+                                                                    subida_eur: 0,
+                                                                    subida_pct: 0,
+                                                                });
+                                                                return a;
+                                                            })
+                                                        }
+                                                        className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
+                                                    >
+                                                        <Plus className="w-3.5 h-3.5" /> Añadir tipo
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
                         </Section>
 
                         {/* Justificación */}
-                        {analysis.justificacion?.length > 0 && (
+                        {(analysis.justificacion?.length > 0 || editing) && (
                             <Section title="5. Justificación de la subida propuesta">
-                                <ul className="space-y-2 text-sm text-neutral-700 list-disc list-inside">
-                                    {analysis.justificacion.map((j, i) => (
-                                        <li key={i}>{j}</li>
-                                    ))}
-                                </ul>
+                                {editing ? (
+                                    <EditableList
+                                        items={analysis.justificacion || []}
+                                        onChange={(items) =>
+                                            updateAnalysis((a) => ({ ...a, justificacion: items }))
+                                        }
+                                        placeholder="Justificación..."
+                                    />
+                                ) : (
+                                    <ul className="space-y-2 text-sm text-neutral-700 list-disc list-inside">
+                                        {analysis.justificacion.map((j, i) => (
+                                            <li key={i}>{j}</li>
+                                        ))}
+                                    </ul>
+                                )}
                             </Section>
                         )}
 
                         {/* Observaciones */}
-                        {analysis.observaciones?.length > 0 && (
+                        {(analysis.observaciones?.length > 0 || editing) && (
                             <Section title="6. Observaciones finales">
-                                <ul className="space-y-2 text-sm text-neutral-700 list-disc list-inside">
-                                    {analysis.observaciones.map((o, i) => (
-                                        <li key={i}>{o}</li>
-                                    ))}
-                                </ul>
+                                {editing ? (
+                                    <EditableList
+                                        items={analysis.observaciones || []}
+                                        onChange={(items) =>
+                                            updateAnalysis((a) => ({ ...a, observaciones: items }))
+                                        }
+                                        placeholder="Observación..."
+                                    />
+                                ) : (
+                                    <ul className="space-y-2 text-sm text-neutral-700 list-disc list-inside">
+                                        {analysis.observaciones.map((o, i) => (
+                                            <li key={i}>{o}</li>
+                                        ))}
+                                    </ul>
+                                )}
                             </Section>
                         )}
                     </div>
@@ -422,22 +899,53 @@ export default function PresupuestosForm({
 
                 <div className="px-5 py-3 border-t border-neutral-100 bg-neutral-50/40 flex justify-between gap-2 flex-wrap shrink-0">
                     <button
-                        onClick={() => setStage("form")}
+                        onClick={() => {
+                            setEditing(false);
+                            setStage("form");
+                        }}
                         className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-xs font-bold transition flex items-center gap-2"
                     >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         Volver a los archivos
                     </button>
                     <div className="flex gap-2">
-                        <button
-                            onClick={onCancel}
-                            className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-xs font-bold transition"
-                        >
-                            Cancelar
-                        </button>
+                        {editing ? (
+                            <>
+                                <button
+                                    onClick={saveEdits}
+                                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-2 shadow-sm"
+                                >
+                                    <Save className="w-3.5 h-3.5" />
+                                    Guardar cambios
+                                </button>
+                                <button
+                                    onClick={handleCancelEdit}
+                                    className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-xs font-bold transition"
+                                >
+                                    Cancelar
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={handleEnterEdit}
+                                    className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 rounded-lg text-xs font-bold transition flex items-center gap-2"
+                                >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    Editar
+                                </button>
+                                <button
+                                    onClick={handleCancelReview}
+                                    className="px-4 py-2 bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-600 rounded-lg text-xs font-bold transition"
+                                >
+                                    Cancelar
+                                </button>
+                            </>
+                        )}
                         <button
                             onClick={generate}
-                            disabled={stage === "generating"}
+                            disabled={stage === "generating" || editing}
+                            title={editing ? "Guarda los cambios antes de generar" : undefined}
                             className="px-6 py-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center gap-2 shadow-sm"
                         >
                             {stage === "generating" ? (
@@ -576,6 +1084,143 @@ function Stat({ label, value, color }: { label: string; value: string; color?: "
         <div className={`rounded-lg border p-3 ${colorCls}`}>
             <div className="text-[10px] font-bold uppercase tracking-widest opacity-70 mb-1">{label}</div>
             <div className="text-base font-bold tabular-nums">{value}</div>
+        </div>
+    );
+}
+
+function ConfirmDialog({
+    open,
+    title,
+    message,
+    confirmText = "Aceptar",
+    onConfirm,
+    onCancel,
+}: {
+    open: boolean;
+    title: string;
+    message: string;
+    confirmText?: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+}) {
+    if (!open || typeof window === "undefined") return null;
+    return createPortal(
+        <div
+            className="fixed inset-0 bg-neutral-900/60 backdrop-blur-sm z-[100000] flex items-end sm:items-center sm:justify-center sm:p-4 animate-in fade-in duration-150"
+            onClick={onCancel}
+        >
+            <div
+                className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm p-6 flex flex-col items-center text-center animate-in slide-in-from-bottom sm:zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="w-14 h-14 bg-yellow-50 rounded-full flex items-center justify-center mb-4">
+                    <AlertCircle className="w-7 h-7 text-yellow-600" />
+                </div>
+                <h3 className="text-lg font-bold text-neutral-900 mb-1.5">{title}</h3>
+                <p className="text-sm text-neutral-500 mb-6">{message}</p>
+                <div className="flex gap-3 w-full">
+                    <button
+                        onClick={onCancel}
+                        className="flex-1 py-2.5 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-xl text-sm font-bold transition"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        className="flex-1 py-2.5 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-xl text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                    >
+                        {confirmText}
+                    </button>
+                </div>
+            </div>
+        </div>,
+        document.body,
+    );
+}
+
+function NumberInput({
+    value,
+    onChange,
+    decimals = 2,
+}: {
+    value: number;
+    onChange: (v: number) => void;
+    decimals?: number;
+}) {
+    const [raw, setRaw] = useState<string>(
+        Number.isFinite(value) ? String(value).replace(".", ",") : "0",
+    );
+    useEffect(() => {
+        setRaw(Number.isFinite(value) ? String(value).replace(".", ",") : "0");
+    }, [value]);
+    return (
+        <input
+            type="text"
+            inputMode="decimal"
+            className="w-full bg-white border border-neutral-200 rounded px-2 py-1 text-sm text-right tabular-nums"
+            value={raw}
+            onChange={(e) => {
+                const v = e.target.value;
+                setRaw(v);
+                const num = Number(v.replace(/\s/g, "").replace(",", "."));
+                if (Number.isFinite(num)) onChange(decimals === 0 ? Math.round(num) : num);
+            }}
+            onBlur={() => {
+                const num = Number(raw.replace(/\s/g, "").replace(",", "."));
+                if (!Number.isFinite(num)) {
+                    setRaw("0");
+                    onChange(0);
+                }
+            }}
+        />
+    );
+}
+
+function EditableList({
+    items,
+    onChange,
+    placeholder,
+    tone,
+}: {
+    items: string[];
+    onChange: (items: string[]) => void;
+    placeholder?: string;
+    tone?: "red";
+}) {
+    const inputCls =
+        tone === "red"
+            ? "w-full bg-white border border-red-200 rounded px-2 py-1 text-sm text-red-800"
+            : "w-full bg-white border border-neutral-200 rounded px-2 py-1 text-sm text-neutral-700";
+    return (
+        <div className="space-y-2">
+            {items.map((item, i) => (
+                <div key={i} className="flex items-start gap-2">
+                    <textarea
+                        rows={1}
+                        className={inputCls}
+                        value={item}
+                        placeholder={placeholder}
+                        onChange={(e) => {
+                            const next = [...items];
+                            next[i] = e.target.value;
+                            onChange(next);
+                        }}
+                    />
+                    <button
+                        onClick={() => onChange(items.filter((_, idx) => idx !== i))}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded shrink-0"
+                        title="Eliminar"
+                    >
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            ))}
+            <button
+                onClick={() => onChange([...items, ""])}
+                className="text-xs font-bold text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
+            >
+                <Plus className="w-3.5 h-3.5" /> Añadir
+            </button>
         </div>
     );
 }
