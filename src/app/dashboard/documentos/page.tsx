@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from 'next/link';
 import { FileText, Settings, X, ChevronRight, Loader2 } from 'lucide-react';
 import { createBrowserClient } from "@supabase/ssr";
@@ -19,6 +19,15 @@ export default function DocumentosPage() {
     const [entries, setEntries] = useState<any[]>([]);
     const [selectorOpen, setSelectorOpen] = useState(false);
     const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | "presupuesto_anual" | null>(null);
+    const presupuestoCloseGuard = useRef<(() => boolean | Promise<boolean>) | null>(null);
+
+    const tryCloseModal = async () => {
+        if (activeModal === "presupuesto_anual" && presupuestoCloseGuard.current) {
+            const ok = await presupuestoCloseGuard.current();
+            if (!ok) return;
+        }
+        setActiveModal(null);
+    };
 
     const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -200,7 +209,7 @@ export default function DocumentosPage() {
                 <ModalPortal>
                 <div
                     className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex justify-center items-end sm:items-center sm:p-6"
-                    onClick={() => setActiveModal(null)}
+                    onClick={tryCloseModal}
                 >
                     <div
                         className="bg-white w-full max-w-4xl rounded-t-2xl sm:rounded-xl shadow-2xl flex flex-col overflow-hidden max-h-[92dvh] sm:max-h-[90dvh] animate-in fade-in slide-in-from-bottom sm:zoom-in-95 duration-200"
@@ -215,7 +224,7 @@ export default function DocumentosPage() {
                                 {activeModal === "presupuesto_anual" && "Nuevo Presupuesto Anual"}
                             </h2>
                             <button
-                                onClick={() => setActiveModal(null)}
+                                onClick={tryCloseModal}
                                 className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
                             >
                                 <X className="w-5 h-5" />
@@ -227,7 +236,13 @@ export default function DocumentosPage() {
                             {activeModal === "suplidos" && <SuplidosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
                             {activeModal === "varios" && <VariosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
                             {activeModal === "certificado_renta" && <CertificadoForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
-                            {activeModal === "presupuesto_anual" && <PresupuestosForm onSuccess={() => setActiveModal(null)} onCancel={() => setActiveModal(null)} />}
+                            {activeModal === "presupuesto_anual" && (
+                                <PresupuestosForm
+                                    onSuccess={() => setActiveModal(null)}
+                                    onCancel={() => setActiveModal(null)}
+                                    registerCloseGuard={(fn) => { presupuestoCloseGuard.current = fn; }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>
