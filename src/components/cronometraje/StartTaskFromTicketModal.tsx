@@ -43,7 +43,9 @@ export default function StartTaskFromTicketModal({
         setFormErrors({});
 
         const finalTipo = tipoTarea === 'Otros' ? `Otros: ${otroTexto.trim()}` : tipoTarea;
-        const finalNota = nota.trim() || `Ticket #${incidenciaId}`;
+        const finalNota = nota.trim()
+            ? `Ticket #${incidenciaId} · ${nota.trim()}`
+            : `Ticket #${incidenciaId}`;
 
         await withLoading(async () => {
             setLoading(true);

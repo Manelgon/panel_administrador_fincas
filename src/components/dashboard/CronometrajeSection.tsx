@@ -195,7 +195,7 @@ export default function CronometrajeSection({ cronoStats, chartData, embedded = 
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#3b82f6]"></div><span className="text-[11px] text-neutral-500 font-medium">Documentación</span></div>
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#22c55e]"></div><span className="text-[11px] text-neutral-500 font-medium">Contabilidad</span></div>
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#ef4444]"></div><span className="text-[11px] text-neutral-500 font-medium">Incidencias</span></div>
-                        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#a855f7]"></div><span className="text-[11px] text-neutral-500 font-medium">Jurídico</span></div>
+                        <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#000000]"></div><span className="text-[11px] text-neutral-500 font-medium">Jurídico</span></div>
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#06b6d4]"></div><span className="text-[11px] text-neutral-500 font-medium">Reunión</span></div>
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#eab308]"></div><span className="text-[11px] text-neutral-500 font-medium">Contestar emails</span></div>
                         <div className="flex items-center gap-1.5"><div className="w-2 h-2 rounded-full bg-[#8b5cf6]"></div><span className="text-[11px] text-neutral-500 font-medium">Llamada</span></div>
@@ -240,7 +240,7 @@ export default function CronometrajeSection({ cronoStats, chartData, embedded = 
                                 <Bar dataKey="Documentación" stackId="a" fill="#3b82f6" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="Contabilidad" stackId="a" fill="#22c55e" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="Incidencias" stackId="a" fill="#ef4444" radius={[0, 0, 0, 0]} />
-                                <Bar dataKey="Jurídico" stackId="a" fill="#a855f7" radius={[0, 0, 0, 0]} />
+                                <Bar dataKey="Jurídico" stackId="a" fill="#000000" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="Reunión" stackId="a" fill="#06b6d4" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="Contestar emails" stackId="a" fill="#eab308" radius={[0, 0, 0, 0]} />
                                 <Bar dataKey="Llamada" stackId="a" fill="#8b5cf6" radius={[0, 0, 0, 0]} />
