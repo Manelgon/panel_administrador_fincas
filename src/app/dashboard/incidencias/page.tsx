@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Wrench } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench } from 'lucide-react';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -68,6 +68,31 @@ export default function IncidenciasPage() {
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<number | null>(null);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [isManualDate, setIsManualDate] = useState(false);
+    // Marca de inicio del cronometraje cuando se abre "Nuevo Ticket"
+    const creationStartRef = useRef<number | null>(null);
+    const [creationElapsed, setCreationElapsed] = useState(0);
+
+    // Tick del cronómetro visible mientras se crea el ticket
+    useEffect(() => {
+        if (!showForm || editingId || !creationStartRef.current) {
+            setCreationElapsed(0);
+            return;
+        }
+        const tick = () => {
+            const start = creationStartRef.current;
+            if (start) setCreationElapsed(Math.floor((Date.now() - start) / 1000));
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [showForm, editingId]);
+
+    const formatCreationElapsed = (s: number) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    };
 
     const resetForm = () => {
         setShowForm(false);
@@ -125,6 +150,109 @@ export default function IncidenciasPage() {
     const [selectedDetailIncidencia, setSelectedDetailIncidencia] = useState<Incidencia | null>(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
+
+    // Cronómetro de tarea activa vinculada al ticket abierto en el detalle
+    const [detailActiveTask, setDetailActiveTask] = useState<{ id: number; start_at: string; tipo_tarea: string | null; nota: string | null } | null>(null);
+    const [detailElapsed, setDetailElapsed] = useState(0);
+    const [stoppingDetailTask, setStoppingDetailTask] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetchActive = async () => {
+            if (!showDetailModal || !selectedDetailIncidencia) {
+                setDetailActiveTask(null);
+                setDetailElapsed(0);
+                return;
+            }
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: anyActive } = await supabase
+                .from('task_timers')
+                .select('id, start_at, tipo_tarea, nota, incidencia_id')
+                .eq('user_id', user.id)
+                .is('end_at', null)
+                .maybeSingle();
+            if (cancelled) return;
+
+            if (anyActive && anyActive.incidencia_id === selectedDetailIncidencia.id) {
+                setDetailActiveTask({
+                    id: anyActive.id,
+                    start_at: anyActive.start_at,
+                    tipo_tarea: anyActive.tipo_tarea,
+                    nota: anyActive.nota,
+                });
+                setDetailElapsed(Math.floor((Date.now() - new Date(anyActive.start_at).getTime()) / 1000));
+                return;
+            }
+
+            setDetailActiveTask(null);
+            setDetailElapsed(0);
+
+            if (anyActive) return;
+
+            const inc = selectedDetailIncidencia;
+            const estado = inc.estado || (inc.resuelto ? 'Resuelto' : 'Pendiente');
+            if (inc.resuelto || estado !== 'Pendiente') return;
+
+            try {
+                const { data: started, error: startErr } = await supabase.rpc('start_task_timer', {
+                    _comunidad_id: inc.comunidad_id ?? null,
+                    _nota: `Ticket #${inc.id}`,
+                    _tipo_tarea: 'Incidencias',
+                    _incidencia_id: inc.id,
+                });
+                if (cancelled) return;
+                if (startErr) return;
+                if (started) {
+                    setDetailActiveTask({
+                        id: started.id,
+                        start_at: started.start_at,
+                        tipo_tarea: started.tipo_tarea,
+                        nota: started.nota,
+                    });
+                    setDetailElapsed(0);
+                    window.dispatchEvent(new Event('taskTimerChanged'));
+                }
+            } catch {
+                // silent: no bloquear apertura del detalle si falla el auto-start
+            }
+        };
+        fetchActive();
+        const handler = () => fetchActive();
+        window.addEventListener('taskTimerChanged', handler);
+        return () => { cancelled = true; window.removeEventListener('taskTimerChanged', handler); };
+    }, [showDetailModal, selectedDetailIncidencia?.id]);
+
+    useEffect(() => {
+        if (!detailActiveTask) return;
+        const id = setInterval(() => {
+            setDetailElapsed(Math.floor((Date.now() - new Date(detailActiveTask.start_at).getTime()) / 1000));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [detailActiveTask?.id, detailActiveTask?.start_at]);
+
+    const stopDetailTask = async () => {
+        if (!detailActiveTask || stoppingDetailTask) return;
+        setStoppingDetailTask(true);
+        try {
+            const { error } = await supabase.rpc('stop_task_timer');
+            if (error) throw error;
+            toast.success(`Tarea finalizada · ${formatCreationElapsed(detailElapsed)}`);
+            window.dispatchEvent(new Event('taskTimerChanged'));
+        } catch (e: any) {
+            toast.error(e?.message || 'Error al parar la tarea');
+        } finally {
+            setStoppingDetailTask(false);
+            setDetailActiveTask(null);
+            setDetailElapsed(0);
+        }
+    };
+
+    const closeDetailModalWithChrono = async () => {
+        await stopDetailTask();
+        setShowDetailModal(false);
+    };
     const detailFileInputRef = useRef<HTMLInputElement>(null);
     const [importingPdf, setImportingPdf] = useState(false);
     const pdfImportInputRef = useRef<HTMLInputElement>(null);
@@ -395,6 +523,7 @@ export default function IncidenciasPage() {
         setIsManualDate(false);
         setEnviarAviso(false);
         setFiles([]);
+        creationStartRef.current = null;
         setShowForm(true);
     };
 
@@ -530,6 +659,33 @@ export default function IncidenciasPage() {
                 });
 
                 // Webhook disparado por Supabase nativo (INSERT en incidencias → trigger-new-ticket)
+
+                // Registrar el tiempo invertido en crear el ticket como tarea de cronometraje
+                if (creationStartRef.current && incidenciaId) {
+                    try {
+                        const startAt = new Date(creationStartRef.current);
+                        const endAt = new Date();
+                        const durationSeconds = Math.max(1, Math.round((endAt.getTime() - startAt.getTime()) / 1000));
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                            await supabase.from('task_timers').insert({
+                                user_id: user.id,
+                                comunidad_id: parseInt(formData.comunidad_id),
+                                nota: `Ticket #${incidenciaId} · Nuevo`,
+                                start_at: startAt.toISOString(),
+                                end_at: endAt.toISOString(),
+                                duration_seconds: durationSeconds,
+                                is_manual: false,
+                                tipo_tarea: 'Incidencias',
+                                incidencia_id: incidenciaId,
+                            });
+                            window.dispatchEvent(new Event('taskTimerChanged'));
+                        }
+                    } catch (err) {
+                        console.warn('No se pudo registrar el cronometraje de creación del ticket', err);
+                    }
+                    creationStartRef.current = null;
+                }
             }
 
             setShowForm(false);
@@ -1540,6 +1696,8 @@ export default function IncidenciasPage() {
                     setNotifProveedorNone(false);
                     setFiles([]);
                     setFormErrors({});
+                    const opening = !showForm;
+                    creationStartRef.current = opening ? Date.now() : null;
                     setShowForm(!showForm);
                 }}
                 newButtonLabel="Nuevo Ticket"
@@ -1606,8 +1764,8 @@ export default function IncidenciasPage() {
                         onClick={e => e.stopPropagation()}
                     >
                         {/* Header */}
-                        <div className="flex justify-between items-center px-5 py-4 border-b border-neutral-100 bg-neutral-50">
-                            <div>
+                        <div className="flex justify-between items-center px-5 py-4 border-b border-neutral-100 bg-neutral-50 gap-3">
+                            <div className="min-w-0">
                                 <h2 className="text-lg font-bold text-neutral-900 tracking-tight">
                                     {editingId ? 'Editar Ticket' : 'Nuevo Ticket'}
                                 </h2>
@@ -1615,12 +1773,25 @@ export default function IncidenciasPage() {
                                     Complete los datos de la incidencia
                                 </p>
                             </div>
-                            <button
-                                onClick={resetForm}
-                                className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {!editingId && creationStartRef.current && (
+                                    <div
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-50 border border-yellow-200"
+                                        title="Tiempo invertido en crear este ticket"
+                                    >
+                                        <Clock className="w-3.5 h-3.5 text-yellow-600" />
+                                        <span className="font-mono tabular-nums text-sm font-bold text-neutral-900">
+                                            {formatCreationElapsed(creationElapsed)}
+                                        </span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={resetForm}
+                                    className="p-2 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 rounded-lg transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Body */}
@@ -2310,12 +2481,26 @@ export default function IncidenciasPage() {
                                     })()}
                                 </div>
                             </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {detailActiveTask && (
+                                    <div
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-50 border border-yellow-200"
+                                        title={`Tarea en curso${detailActiveTask.tipo_tarea ? ' · ' + detailActiveTask.tipo_tarea : ''} — se finalizará al cerrar el ticket`}
+                                    >
+                                        <Clock className="w-3.5 h-3.5 text-yellow-600 animate-pulse" />
+                                        <span className="font-mono tabular-nums text-sm font-bold text-neutral-900">
+                                            {formatCreationElapsed(detailElapsed)}
+                                        </span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={closeDetailModalWithChrono}
+                                    disabled={stoppingDetailTask}
+                                    className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                                >
+                                    {stoppingDetailTask ? <Loader2 className="w-5 h-5 animate-spin" /> : <X className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
 
                         {/* File input hidden */}
@@ -2536,16 +2721,29 @@ export default function IncidenciasPage() {
                         {/* Footer */}
                         <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
                             <ModalActionsMenu actions={[
-                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); setShowDetailModal(false); }, variant: 'danger' },
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailIncidencia.id); closeDetailModalWithChrono(); }, variant: 'danger' },
                                 { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailIncidencia.id]), disabled: exporting },
                                 { label: 'Añadir nota', icon: <MessageSquarePlus className="w-4 h-4" />, onClick: () => { setNotaTexto(''); setShowAddNotaModal(true); } },
-                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' ? [
+                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' && !detailActiveTask ? [
                                     { label: 'Empezar tarea', icon: <Play className="w-4 h-4" />, onClick: () => { setStartTaskIncidencia(selectedDetailIncidencia); setShowStartTaskModal(true); }, variant: 'info' as const },
+                                    { label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const },
+                                ] : []),
+                                ...((selectedDetailIncidencia.estado || (selectedDetailIncidencia.resuelto ? 'Resuelto' : 'Pendiente')) === 'Pendiente' && detailActiveTask ? [
                                     { label: 'Aplazar', icon: <Pause className="w-4 h-4" />, onClick: () => openAplazarModal(selectedDetailIncidencia.id), variant: 'warning' as const },
                                 ] : []),
                             ]} />
                             <div className="flex items-center gap-2">
+                                {detailActiveTask && (
+                                    <button
+                                        onClick={stopDetailTask}
+                                        disabled={stoppingDetailTask}
+                                        className="px-5 py-2.5 text-sm font-black text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap disabled:opacity-60"
+                                    >
+                                        {stoppingDetailTask ? <Loader2 className="w-4 h-4 animate-spin" /> : <Square className="w-4 h-4 fill-current" />}
+                                        Parar tarea
+                                    </button>
+                                )}
                                 {selectedDetailIncidencia.estado === 'Aplazado' && (
                                     <div className="px-3 py-1.5 text-xs font-semibold text-orange-600 bg-orange-50 border border-orange-200 rounded-xl flex items-center gap-1.5">
                                         <CalendarClock className="w-3.5 h-3.5" />
@@ -2562,7 +2760,7 @@ export default function IncidenciasPage() {
                                     </button>
                                 ) : (
                                     <button
-                                        onClick={() => { toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto); setShowDetailModal(false); }}
+                                        onClick={() => { toggleResuelto(selectedDetailIncidencia.id, selectedDetailIncidencia.resuelto); closeDetailModalWithChrono(); }}
                                         className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <Check className="w-4 h-4" />
