@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
@@ -317,20 +316,18 @@ export default function IncidenciasPage() {
     }, []);
 
     // Auto-abrir detalle si llega ?id=<n> en la URL (desde avisos)
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const pathname = usePathname();
     useEffect(() => {
-        const idParam = searchParams.get('id');
-        if (!idParam || incidencias.length === 0) return;
+        if (typeof window === 'undefined' || incidencias.length === 0) return;
+        const idParam = new URLSearchParams(window.location.search).get('id');
+        if (!idParam) return;
         const id = Number(idParam);
         const target = incidencias.find(i => i.id === id);
         if (target) {
             setSelectedDetailIncidencia(target);
             setShowDetailModal(true);
-            router.replace(pathname);
+            window.history.replaceState(null, '', window.location.pathname);
         }
-    }, [searchParams, incidencias, router, pathname]);
+    }, [incidencias]);
 
     // Portal ready (client-only)
     const [portalReady, setPortalReady] = useState(false);
@@ -1836,7 +1833,7 @@ export default function IncidenciasPage() {
                                         </div>
                                         <div className="md:col-span-2">
                                             <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
-                                                Nombre Propietario <span className="text-red-500">*</span>
+                                                Nombre Propietario
                                             </label>
                                             <input
                                                 type="text"
@@ -2253,7 +2250,6 @@ export default function IncidenciasPage() {
                                 disabled={
                                     isSubmitting ||
                                     uploading ||
-                                    !formData.nombre_cliente ||
                                     !formData.comunidad_id ||
                                     !formData.mensaje ||
                                     !!(notifEmail && !formData.email) ||

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from 'next/link';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { FileText, Settings, X, ChevronRight, Loader2 } from 'lucide-react';
 import { createBrowserClient } from "@supabase/ssr";
 import ModalPortal from '@/components/ModalPortal';
@@ -21,16 +20,14 @@ export default function DocumentosPage() {
     const [selectorOpen, setSelectorOpen] = useState(false);
     const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | "presupuesto_anual" | null>(null);
     const presupuestoCloseGuard = useRef<(() => boolean | Promise<boolean>) | null>(null);
-    const searchParams = useSearchParams();
-    const router = useRouter();
-    const pathname = usePathname();
 
     useEffect(() => {
-        if (searchParams.get('new') === '1') {
+        if (typeof window === 'undefined') return;
+        if (new URLSearchParams(window.location.search).get('new') === '1') {
             setSelectorOpen(true);
-            router.replace(pathname);
+            window.history.replaceState(null, '', window.location.pathname);
         }
-    }, [searchParams, router, pathname]);
+    }, []);
 
     const tryCloseModal = async () => {
         if (activeModal === "presupuesto_anual" && presupuestoCloseGuard.current) {
