@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
@@ -114,6 +115,22 @@ export default function MorosidadPage() {
             supabase.removeChannel(channel);
         };
     }, []);
+
+    // Auto-abrir detalle si llega ?id=<n> en la URL (desde avisos)
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (!idParam || morosos.length === 0) return;
+        const id = Number(idParam);
+        const target = morosos.find(m => m.id === id);
+        if (target) {
+            setSelectedDetailMorosidad(target);
+            setShowDetailModal(true);
+            router.replace(pathname);
+        }
+    }, [searchParams, morosos, router, pathname]);
 
     // Portal ready (client-only)
     const [portalReady, setPortalReady] = useState(false);

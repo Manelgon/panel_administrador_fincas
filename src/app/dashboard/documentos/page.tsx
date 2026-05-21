@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from 'next/link';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { FileText, Settings, X, ChevronRight, Loader2 } from 'lucide-react';
 import { createBrowserClient } from "@supabase/ssr";
 import ModalPortal from '@/components/ModalPortal';
@@ -20,6 +21,16 @@ export default function DocumentosPage() {
     const [selectorOpen, setSelectorOpen] = useState(false);
     const [activeModal, setActiveModal] = useState<"suplidos" | "varios" | "certificado_renta" | "presupuesto_anual" | null>(null);
     const presupuestoCloseGuard = useRef<(() => boolean | Promise<boolean>) | null>(null);
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        if (searchParams.get('new') === '1') {
+            setSelectorOpen(true);
+            router.replace(pathname);
+        }
+    }, [searchParams, router, pathname]);
 
     const tryCloseModal = async () => {
         if (activeModal === "presupuesto_anual" && presupuestoCloseGuard.current) {
@@ -132,7 +143,7 @@ export default function DocumentosPage() {
                         onClick={() => setSelectorOpen(true)}
                         className="inline-flex items-center rounded-md bg-yellow-400 px-4 py-2 text-sm font-semibold text-neutral-950 hover:bg-yellow-500 transition shadow-sm hover:shadow"
                     >
-                        Crear documento
+                        + Nuevo documento
                     </button>
                     {isAdmin && (
                         <Link
@@ -166,7 +177,7 @@ export default function DocumentosPage() {
                         >
                             <div className="px-5 py-4 border-b border-neutral-100 flex justify-between items-center bg-neutral-50 shrink-0">
                                 <div>
-                                    <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Crear documento</h2>
+                                    <h2 className="text-lg font-bold text-neutral-900 tracking-tight">Nuevo documento</h2>
                                     <p className="text-sm text-neutral-500">Selecciona qué documento quieres generar.</p>
                                 </div>
                                 <button
@@ -177,7 +188,7 @@ export default function DocumentosPage() {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-5">
+                            <div className="flex flex-col divide-y divide-neutral-100">
                                 {documentTypes.map((doc) => (
                                     <button
                                         key={doc.key}
@@ -185,18 +196,16 @@ export default function DocumentosPage() {
                                             setSelectorOpen(false);
                                             setActiveModal(doc.key as any);
                                         }}
-                                        className="text-left rounded-xl border border-neutral-200 bg-white p-5 hover:border-yellow-400/50 hover:bg-yellow-50 transition"
+                                        className="flex items-center gap-4 text-left px-5 py-4 hover:bg-yellow-50 transition"
                                     >
-                                        <div className="flex items-start justify-between gap-3">
-                                            <div>
-                                                <div className="mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100 text-yellow-600">
-                                                    <FileText className="w-5 h-5" />
-                                                </div>
-                                                <h3 className="text-base font-semibold text-neutral-900">{doc.title}</h3>
-                                                <p className="mt-2 text-sm text-neutral-600">{doc.desc}</p>
-                                            </div>
-                                            <ChevronRight className="w-4 h-4 text-neutral-400 mt-1" />
+                                        <div className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-yellow-100 text-yellow-600">
+                                            <FileText className="w-5 h-5" />
                                         </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="text-base font-semibold text-neutral-900">{doc.title}</h3>
+                                            <p className="text-sm text-neutral-600">{doc.desc}</p>
+                                        </div>
+                                        <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
                                     </button>
                                 ))}
                             </div>

@@ -305,14 +305,14 @@ export default function Navbar() {
             <div className="hidden sm:flex items-center gap-4 md:gap-6 text-xs md:text-sm ml-auto md:ml-0">
                 <div className="flex items-center gap-1.5 text-neutral-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
-                    <span className="font-medium hidden md:inline">Comunidades:</span>
-                    <span className="font-medium md:hidden">Cdad:</span>
+                    <span className="font-medium hidden md:inline">Clientes:</span>
+                    <span className="font-medium md:hidden">Cli:</span>
                     <span className="font-bold text-neutral-900">{stats.comunidades}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-neutral-600">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0"></span>
-                    <span className="font-medium hidden md:inline">Tickets:</span>
-                    <span className="font-medium md:hidden">Tck:</span>
+                    <span className="font-medium hidden md:inline">Tareas:</span>
+                    <span className="font-medium md:hidden">Tar:</span>
                     <span className="font-bold text-neutral-900">{stats.incidencias}</span>
                 </div>
                 <div className="flex items-center gap-1.5 text-neutral-600">

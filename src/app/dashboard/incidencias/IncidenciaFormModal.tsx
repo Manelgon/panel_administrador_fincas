@@ -141,7 +141,7 @@ export default function IncidenciaFormModal({
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="block text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-1">
-                                        Nombre Propietario <span className="text-red-500">*</span>
+                                        Nombre Propietario
                                     </label>
                                     <input
                                         type="text"
@@ -517,7 +517,6 @@ export default function IncidenciaFormModal({
                         disabled={
                             isSubmitting ||
                             uploading ||
-                            !formData.nombre_cliente ||
                             !formData.comunidad_id ||
                             !formData.mensaje ||
                             !!(notifEmail && !formData.email) ||

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
@@ -315,6 +316,22 @@ export default function IncidenciasPage() {
         };
     }, []);
 
+    // Auto-abrir detalle si llega ?id=<n> en la URL (desde avisos)
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+    useEffect(() => {
+        const idParam = searchParams.get('id');
+        if (!idParam || incidencias.length === 0) return;
+        const id = Number(idParam);
+        const target = incidencias.find(i => i.id === id);
+        if (target) {
+            setSelectedDetailIncidencia(target);
+            setShowDetailModal(true);
+            router.replace(pathname);
+        }
+    }, [searchParams, incidencias, router, pathname]);
+
     // Portal ready (client-only)
     const [portalReady, setPortalReady] = useState(false);
     useEffect(() => setPortalReady(true), []);
@@ -534,7 +551,6 @@ export default function IncidenciasPage() {
         // Inline field validation
         const errors: Record<string, string> = {};
         if (!formData.comunidad_id) errors.comunidad_id = 'Debes seleccionar una comunidad para poder guardar';
-        if (!formData.nombre_cliente?.trim()) errors.nombre_cliente = 'El nombre del propietario es obligatorio';
         if (!formData.recibido_por) errors.recibido_por = 'Debes indicar quién recibió la incidencia';
         if (!formData.gestor_asignado) errors.gestor_asignado = 'Debes asignar un gestor para poder guardar el ticket';
         if (!formData.source) errors.source = 'Debes indicar la entrada del ticket';
@@ -1683,7 +1699,7 @@ export default function IncidenciasPage() {
                 }}
             />
             <PageHeader
-                title="Gestión de Tickets"
+                title="Gestión de Tareas"
                 showForm={showForm}
                 onToggleForm={() => {
                     setEditingId(null);
@@ -1701,8 +1717,8 @@ export default function IncidenciasPage() {
                     creationStartRef.current = opening ? Date.now() : null;
                     setShowForm(!showForm);
                 }}
-                newButtonLabel="Nuevo Ticket"
-                newButtonShortLabel="Ticket"
+                newButtonLabel="Nueva Tarea"
+                newButtonShortLabel="Tarea"
                 extraButtons={
                     <button
                         onClick={() => pdfImportInputRef.current?.click()}

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { CheckCheck, X, Paperclip, Loader2, Download } from 'lucide-react';
+import { CheckCheck, X, Paperclip, Loader2, Download, ArrowRight } from 'lucide-react';
 import DataTable, { Column } from '@/components/DataTable';
 import { logActivity } from '@/lib/logActivity';
 import { useGlobalLoading } from '@/lib/globalLoading';
@@ -22,6 +23,7 @@ interface Notification {
 
 export default function AvisosPage() {
     const { withLoading } = useGlobalLoading();
+    const router = useRouter();
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterState, setFilterState] = useState<'all' | 'unread' | 'read'>('unread');
@@ -47,7 +49,7 @@ export default function AvisosPage() {
             setLoadingEntity(true);
             try {
                 let query;
-                if (notification.entity_type === 'incidencia') {
+                if (notification.entity_type === 'incidencia' || notification.entity_type === 'incidencias') {
                     query = supabase
                         .from('incidencias')
                         .select(`
@@ -55,7 +57,8 @@ export default function AvisosPage() {
                             comunidades (nombre_cdad, codigo),
                             receptor:profiles!quien_lo_recibe (nombre),
                             gestor:profiles!gestor_asignado (nombre),
-                            resolver:profiles!resuelto_por (nombre)
+                            resolver:profiles!resuelto_por (nombre),
+                            proveedor:proveedores!proveedor_id (nombre)
                         `)
                         .eq('id', notification.entity_id)
                         .single();
@@ -306,36 +309,27 @@ export default function AvisosPage() {
                         {/* Body */}
                         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 custom-scrollbar">
 
-                            {/* Aviso Info */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Información del Aviso</h3>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="sm:col-span-2">
-                                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Asunto</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{selectedNotification.title}</div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Estado</label>
-                                        <div className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold ${selectedNotification.is_read ? 'border-neutral-200 bg-neutral-50 text-neutral-500' : 'border-yellow-200 bg-yellow-50 text-yellow-700'}`}>
-                                            {selectedNotification.is_read ? 'Leído' : 'Nuevo'}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Origen</label>
-                                        <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 capitalize">
-                                            {selectedNotification.entity_type} #{selectedNotification.entity_id}
-                                        </div>
-                                    </div>
-                                </div>
+                            {/* Meta del aviso */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${selectedNotification.is_read ? 'bg-neutral-100 text-neutral-600' : 'bg-yellow-100 text-yellow-800'}`}>
+                                    {selectedNotification.is_read ? 'Leído' : 'Nuevo'}
+                                </span>
+                                {selectedNotification.entity_type && (
+                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-neutral-100 text-neutral-700 capitalize">
+                                        {selectedNotification.entity_type}{selectedNotification.entity_id ? ` #${selectedNotification.entity_id}` : ''}
+                                    </span>
+                                )}
+                                <span className="text-xs text-neutral-500">
+                                    {new Date(selectedNotification.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                                </span>
                             </div>
 
                             {/* Mensaje */}
-                            <div>
-                                <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Mensaje</h3>
-                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap leading-relaxed min-h-[80px]">
+                            {selectedNotification.body && (
+                                <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-3 text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">
                                     {selectedNotification.body}
                                 </div>
-                            </div>
+                            )}
 
                             {/* Loading */}
                             {loadingEntity && (
@@ -346,116 +340,98 @@ export default function AvisosPage() {
                             )}
 
                             {/* Incidencia relacionada */}
-                            {!loadingEntity && entityData && selectedNotification.entity_type === 'incidencia' && (
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Incidencia Relacionada</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="sm:col-span-2">
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Comunidad</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">
-                                                {entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad || '—'}
+                            {!loadingEntity && entityData && (selectedNotification.entity_type === 'incidencia' || selectedNotification.entity_type === 'incidencias') && (
+                                <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                                    <div className="px-4 py-2.5 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+                                        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Detalle de la incidencia</h3>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${entityData.resuelto ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-800'}`}>
+                                            {entityData.resuelto ? 'Resuelto' : 'En trámite'}
+                                        </span>
+                                    </div>
+                                    <dl className="divide-y divide-neutral-100">
+                                        {([
+                                            ['Comunidad', entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad],
+                                            ['Cliente', entityData.nombre_cliente],
+                                            ['Teléfono', entityData.telefono],
+                                            ['Email', entityData.email],
+                                            ['Fecha de creación', entityData.created_at ? new Date(entityData.created_at).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : null],
+                                            ['Vía de entrada', entityData.source],
+                                            ['Clasificación', entityData.categoria],
+                                            ['Urgencia', entityData.urgencia],
+                                            ['Recepción inicial', entityData.receptor?.nombre],
+                                            ['Gestor asignado', entityData.gestor?.nombre],
+                                            ['Proveedor', entityData.proveedor?.nombre],
+                                            ['Motivo del ticket', entityData.motivo_ticket],
+                                        ] as [string, string | null | undefined][]).filter(([, v]) => v).map(([k, v]) => (
+                                            <div key={k} className="grid grid-cols-3 gap-3 px-4 py-2.5">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{k}</dt>
+                                                <dd className="col-span-2 text-sm text-neutral-900 break-words">{v}</dd>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Cliente</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.nombre_cliente || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Teléfono</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.telefono || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Urgencia</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.urgencia || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Estado</label>
-                                            <div className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold ${entityData.resuelto ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-yellow-200 bg-yellow-50 text-yellow-700'}`}>
-                                                {entityData.resuelto ? 'Resuelto' : 'En trámite'}
-                                            </div>
-                                        </div>
-                                        {entityData.gestor && (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Gestor Asignado</label>
-                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.gestor?.nombre || '—'}</div>
-                                            </div>
-                                        )}
+                                        ))}
                                         {entityData.mensaje && (
-                                            <div className="sm:col-span-2">
-                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Mensaje de la Incidencia</label>
-                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap leading-relaxed">{entityData.mensaje}</div>
+                                            <div className="px-4 py-3 bg-neutral-50/50">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">Mensaje</dt>
+                                                <dd className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">{entityData.mensaje}</dd>
                                             </div>
                                         )}
                                         {entityData.adjuntos && entityData.adjuntos.length > 0 && (
-                                            <div className="sm:col-span-2">
-                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Adjuntos</label>
-                                                <div className="flex flex-wrap gap-2">
+                                            <div className="px-4 py-3">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Adjuntos</dt>
+                                                <dd className="flex flex-wrap gap-2">
                                                     {entityData.adjuntos.map((url: string, i: number) => (
                                                         <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition">
                                                             <Paperclip className="w-3.5 h-3.5" />
                                                             Adjunto {i + 1}
                                                         </a>
                                                     ))}
-                                                </div>
+                                                </dd>
                                             </div>
                                         )}
-                                    </div>
+                                    </dl>
                                 </div>
                             )}
 
                             {/* Deuda relacionada */}
                             {!loadingEntity && entityData && selectedNotification.entity_type === 'morosidad' && (
-                                <div>
-                                    <h3 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-4 border-b border-yellow-400">Deuda Relacionada</h3>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div className="sm:col-span-2">
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Comunidad</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">
-                                                {entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad || '—'}
+                                <div className="rounded-xl border border-neutral-200 overflow-hidden">
+                                    <div className="px-4 py-2.5 bg-neutral-50 border-b border-neutral-200 flex items-center justify-between">
+                                        <h3 className="text-xs font-bold text-neutral-900 uppercase tracking-wide">Detalle de la deuda</h3>
+                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${entityData.estado === 'Pagado' ? 'bg-emerald-100 text-emerald-700' : 'bg-yellow-100 text-yellow-800'}`}>
+                                            {entityData.estado || '—'}
+                                        </span>
+                                    </div>
+                                    <dl className="divide-y divide-neutral-100">
+                                        {([
+                                            ['Comunidad', entityData.comunidades?.codigo ? `${entityData.comunidades.codigo} - ${entityData.comunidades.nombre_cdad}` : entityData.comunidades?.nombre_cdad],
+                                            ['Deudor', `${entityData.nombre_deudor || ''} ${entityData.apellidos || ''}`.trim()],
+                                            ['Teléfono', entityData.telefono_deudor],
+                                            ['Concepto', entityData.titulo_documento],
+                                            ['Importe', entityData.importe ? `${entityData.importe}€` : null],
+                                            ['Fecha de pago', entityData.fecha_pago ? new Date(entityData.fecha_pago).toLocaleDateString('es-ES') : null],
+                                        ] as [string, string | null | undefined][]).filter(([, v]) => v).map(([k, v]) => (
+                                            <div key={k} className="grid grid-cols-3 gap-3 px-4 py-2.5">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide">{k}</dt>
+                                                <dd className="col-span-2 text-sm text-neutral-900 break-words">{v}</dd>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Deudor</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{`${entityData.nombre_deudor || ''} ${entityData.apellidos || ''}`.trim() || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Teléfono</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.telefono_deudor || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Concepto</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.titulo_documento || '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Importe</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm font-semibold text-neutral-900">{entityData.importe ? `${entityData.importe}€` : '—'}</div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Estado</label>
-                                            <div className={`w-full rounded-lg border px-3 py-2.5 text-sm font-semibold ${entityData.estado === 'Pagado' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-yellow-200 bg-yellow-50 text-yellow-700'}`}>
-                                                {entityData.estado || '—'}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Fecha de Pago</label>
-                                            <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900">{entityData.fecha_pago ? new Date(entityData.fecha_pago).toLocaleDateString('es-ES') : '—'}</div>
-                                        </div>
+                                        ))}
                                         {entityData.observaciones && (
-                                            <div className="sm:col-span-2">
-                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Observaciones</label>
-                                                <div className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900 whitespace-pre-wrap">{entityData.observaciones}</div>
+                                            <div className="px-4 py-3 bg-neutral-50/50">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1.5">Observaciones</dt>
+                                                <dd className="text-sm text-neutral-800 whitespace-pre-wrap leading-relaxed">{entityData.observaciones}</dd>
                                             </div>
                                         )}
                                         {entityData.documento && (
-                                            <div className="sm:col-span-2">
-                                                <label className="block text-xs font-semibold text-neutral-700 mb-1.5">Documento Adjunto</label>
-                                                <a href={entityData.documento} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition">
-                                                    <Paperclip className="w-3.5 h-3.5" />
-                                                    Ver documento
-                                                </a>
+                                            <div className="px-4 py-3">
+                                                <dt className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-2">Documento adjunto</dt>
+                                                <dd>
+                                                    <a href={entityData.documento} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-neutral-50 border border-neutral-200 rounded-lg text-xs font-semibold text-neutral-700 hover:bg-neutral-100 transition">
+                                                        <Paperclip className="w-3.5 h-3.5" />
+                                                        Ver documento
+                                                    </a>
+                                                </dd>
                                             </div>
                                         )}
-                                    </div>
+                                    </dl>
                                 </div>
                             )}
 
@@ -472,6 +448,45 @@ export default function AvisosPage() {
                                 {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                 Descargar PDF
                             </button>
+                            {(selectedNotification.entity_type === 'incidencia' || selectedNotification.entity_type === 'incidencias') && selectedNotification.entity_id && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        router.push(`/dashboard/incidencias?id=${selectedNotification.entity_id}`);
+                                    }}
+                                    className="px-6 py-3 text-sm font-bold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    Ir a la tarea
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            )}
+                            {selectedNotification.entity_type === 'morosidad' && selectedNotification.entity_id && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        router.push(`/dashboard/deudas?id=${selectedNotification.entity_id}`);
+                                    }}
+                                    className="px-6 py-3 text-sm font-bold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    Ir a la deuda
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            )}
+                            {selectedNotification.entity_type === 'vacation' && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        router.push('/dashboard/fichaje/admin');
+                                    }}
+                                    className="px-6 py-3 text-sm font-bold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    Ir a vacaciones
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            )}
                             <button
                                 type="button"
                                 onClick={() => setShowDetailModal(false)}

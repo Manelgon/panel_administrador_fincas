@@ -200,10 +200,10 @@ export default function ComunidadesPage() {
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Gestión de Comunidades"
+                title="Gestión de Clientes"
                 showForm={crud.showForm}
                 onToggleForm={() => crud.showForm ? crud.closeForm() : crud.openNewForm()}
-                newButtonLabel="Nueva Comunidad"
+                newButtonLabel="Nuevo Cliente"
                 newButtonShortLabel="Nueva"
                 extraButtons={
                     <button
@@ -241,8 +241,8 @@ export default function ComunidadesPage() {
                 portalReady={crud.portalReady}
                 onClose={crud.closeForm}
                 onSubmit={handleFormSubmit}
-                title={crud.editingId ? 'Editar Comunidad' : 'Nueva Comunidad'}
-                subtitle="Complete los datos de la comunidad"
+                title={crud.editingId ? 'Editar Cliente' : 'Nuevo Cliente'}
+                subtitle="Complete los datos del cliente"
                 editingId={crud.editingId}
                 submitLabel={crud.editingId ? 'Guardar Cambios' : 'Guardar Comunidad'}
                 formId="comunidad-form"
@@ -263,7 +263,7 @@ export default function ComunidadesPage() {
                         <FormField label="CIF" className="sm:col-span-5 md:col-span-4">
                             <input type="text" placeholder="H12345678" className={inputClass()} value={crud.formData.cif} onChange={e => updateField('cif', e.target.value)} />
                         </FormField>
-                        <FormField label="Nombre Comunidad" required error={crud.formErrors.nombre_cdad} className="sm:col-span-12">
+                        <FormField label="Nombre" required error={crud.formErrors.nombre_cdad} className="sm:col-span-12">
                             <input required type="text" placeholder="Edificio Central" className={inputClass('nombre_cdad')} value={crud.formData.nombre_cdad} onChange={e => updateField('nombre_cdad', e.target.value)} />
                         </FormField>
                     </div>

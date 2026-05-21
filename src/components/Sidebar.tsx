@@ -20,9 +20,9 @@ const SECTIONS = [
         label: 'GESTIÓN',
         items: [
             { name: 'Dashboard', href: '/dashboard', icon: Home },
-            { name: 'Comunidades', href: '/dashboard/comunidades', icon: Building },
+            { name: 'Clientes', href: '/dashboard/comunidades', icon: Building },
             { name: 'Proveedores', href: '/dashboard/proveedores', icon: Users },
-            { name: 'Tickets', href: '/dashboard/incidencias', icon: AlertCircle },
+            { name: 'Tareas', href: '/dashboard/incidencias', icon: AlertCircle },
             { name: 'Deudas', href: '/dashboard/deudas', icon: Activity },
             { name: 'Crono. Tareas', href: '/dashboard/cronometraje', icon: Timer },
         ],

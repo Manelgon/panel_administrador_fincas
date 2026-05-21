@@ -198,7 +198,7 @@ export default function DashboardPage() {
                         iconColor="text-yellow-500"
                         href="/dashboard/comunidades"
                     />
-                    <KPICard title="Incid. Pendientes" value={stats.incidenciasPendientes} icon={AlertCircle} color="border-red-400" iconColor="text-red-500" href="/dashboard/incidencias" />
+                    <KPICard title="Pendientes" value={stats.incidenciasPendientes} icon={AlertCircle} color="border-red-400" iconColor="text-red-500" href="/dashboard/incidencias" />
                     <KPICard title="Aplazadas" value={stats.incidenciasAplazadas} icon={Pause} color="border-orange-400" iconColor="text-orange-500" href="/dashboard/incidencias" />
                     <KPICard title="Resueltas" value={stats.incidenciasResueltas} icon={CheckCircle} color="border-emerald-400" iconColor="text-emerald-500" href="/dashboard/incidencias" />
                     <KPICard title="Deuda Total" value={`${stats.totalDeuda.toLocaleString()}€`} icon={FileText} color="border-yellow-400" iconColor="text-yellow-600" href="/dashboard/deudas" />
