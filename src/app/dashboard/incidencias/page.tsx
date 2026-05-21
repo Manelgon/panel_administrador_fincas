@@ -201,13 +201,14 @@ export default function IncidenciasPage() {
                     _nota: `Ticket #${inc.id}`,
                     _tipo_tarea: 'Incidencias',
                     _incidencia_id: inc.id,
+                    _morosidad_id: null,
                 });
                 if (cancelled) return;
                 if (startErr) return;
                 if (started) {
                     setDetailActiveTask({
                         id: started.id,
-                        start_at: started.start_at,
+                        start_at: new Date().toISOString(),
                         tipo_tarea: started.tipo_tarea,
                         nota: started.nota,
                     });

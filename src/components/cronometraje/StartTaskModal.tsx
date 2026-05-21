@@ -59,6 +59,7 @@ export default function StartTaskModal({ onClose, onStarted }: StartTaskModalPro
                 _nota: nota || null,
                 _tipo_tarea: finalTipo,
                 _incidencia_id: null,
+                _morosidad_id: null,
             });
             if (error) throw error;
 

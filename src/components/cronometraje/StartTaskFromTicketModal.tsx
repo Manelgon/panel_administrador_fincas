@@ -55,6 +55,7 @@ export default function StartTaskFromTicketModal({
                     _nota: finalNota,
                     _tipo_tarea: finalTipo,
                     _incidencia_id: incidenciaId,
+                    _morosidad_id: null,
                 });
                 if (error) throw error;
 
