@@ -5,7 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, Pencil, Save, AlertCircle, AlertTriangle, Gavel, UserX } from 'lucide-react';
+import { Plus, FileText, Check, Trash2, X, RotateCcw, Paperclip, Download, Loader2, Users, Pencil, Save, AlertCircle, AlertTriangle, Gavel, UserX, Clock, Square } from 'lucide-react';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
@@ -46,6 +46,114 @@ export default function MorosidadPage() {
     const [files, setFiles] = useState<File[]>([]);
     const [isUpdatingRecord, setIsUpdatingRecord] = useState(false);
     const detailFileInputRef = useRef<HTMLInputElement>(null);
+
+    // Cronómetro automático en el detalle de deuda
+    const [detailActiveTask, setDetailActiveTask] = useState<{ id: number; start_at: string; tipo_tarea: string | null; nota: string | null } | null>(null);
+    const [detailElapsed, setDetailElapsed] = useState(0);
+    const [stoppingDetailTask, setStoppingDetailTask] = useState(false);
+
+    const formatCronoElapsed = (s: number) => {
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    };
+
+    useEffect(() => {
+        let cancelled = false;
+        const fetchActive = async () => {
+            if (!showDetailModal || !selectedDetailMorosidad) {
+                setDetailActiveTask(null);
+                setDetailElapsed(0);
+                return;
+            }
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { data: anyActive } = await supabase
+                .from('task_timers')
+                .select('id, start_at, tipo_tarea, nota, morosidad_id')
+                .eq('user_id', user.id)
+                .is('end_at', null)
+                .maybeSingle();
+            if (cancelled) return;
+
+            if (anyActive && anyActive.morosidad_id === selectedDetailMorosidad.id) {
+                setDetailActiveTask({
+                    id: anyActive.id,
+                    start_at: anyActive.start_at,
+                    tipo_tarea: anyActive.tipo_tarea,
+                    nota: anyActive.nota,
+                });
+                setDetailElapsed(Math.floor((Date.now() - new Date(anyActive.start_at).getTime()) / 1000));
+                return;
+            }
+
+            setDetailActiveTask(null);
+            setDetailElapsed(0);
+
+            if (anyActive) return;
+            if (selectedDetailMorosidad.estado === 'Pagado') return;
+
+            try {
+                const { data: started, error: startErr } = await supabase.rpc('start_task_timer', {
+                    _comunidad_id: selectedDetailMorosidad.comunidad_id ?? null,
+                    _nota: `Deuda #${selectedDetailMorosidad.id} · ${selectedDetailMorosidad.nombre_deudor || ''}`.trim(),
+                    _tipo_tarea: 'Jurídico',
+                    _incidencia_id: null,
+                    _morosidad_id: selectedDetailMorosidad.id,
+                });
+                if (cancelled) return;
+                if (startErr) return;
+                if (started) {
+                    setDetailActiveTask({
+                        id: started.id,
+                        start_at: new Date().toISOString(),
+                        tipo_tarea: started.tipo_tarea,
+                        nota: started.nota,
+                    });
+                    setDetailElapsed(0);
+                    window.dispatchEvent(new Event('taskTimerChanged'));
+                }
+            } catch {
+                // silent: no bloquear apertura si falla el auto-start
+            }
+        };
+        fetchActive();
+        const handler = () => fetchActive();
+        window.addEventListener('taskTimerChanged', handler);
+        return () => { cancelled = true; window.removeEventListener('taskTimerChanged', handler); };
+    }, [showDetailModal, selectedDetailMorosidad?.id]);
+
+    useEffect(() => {
+        if (!detailActiveTask) return;
+        const id = setInterval(() => {
+            setDetailElapsed(Math.floor((Date.now() - new Date(detailActiveTask.start_at).getTime()) / 1000));
+        }, 1000);
+        return () => clearInterval(id);
+    }, [detailActiveTask?.id, detailActiveTask?.start_at]);
+
+    const stopDetailTask = async () => {
+        if (!detailActiveTask || stoppingDetailTask) return;
+        setStoppingDetailTask(true);
+        try {
+            const { error } = await supabase.rpc('stop_task_timer');
+            if (error) throw error;
+            toast.success(`Tarea finalizada · ${formatCronoElapsed(detailElapsed)}`);
+            window.dispatchEvent(new Event('taskTimerChanged'));
+        } catch (e: any) {
+            toast.error(e?.message || 'Error al parar la tarea');
+        } finally {
+            setStoppingDetailTask(false);
+            setDetailActiveTask(null);
+            setDetailElapsed(0);
+        }
+    };
+
+    const closeDetailModalWithChrono = async () => {
+        await stopDetailTask();
+        setShowDetailModal(false);
+    };
 
     // PDF Notes Modal State
     const [showExportModal, setShowExportModal] = useState(false);
@@ -297,6 +405,35 @@ export default function MorosidadPage() {
                     });
 
                     // Webhook disparado por Supabase nativo (INSERT en morosidad → trigger-new-debt)
+
+                    // Auto-iniciar cronómetro (Jurídico) para la nueva deuda, si el usuario no tiene otra tarea activa
+                    try {
+                        const { data: { user } } = await supabase.auth.getUser();
+                        if (user) {
+                            const { data: anyActive } = await supabase
+                                .from('task_timers')
+                                .select('id')
+                                .eq('user_id', user.id)
+                                .is('end_at', null)
+                                .maybeSingle();
+                            if (!anyActive) {
+                                const nombreCompleto = `${formData.nombre_deudor || ''} ${formData.apellidos || ''}`.trim();
+                                const { error: startErr } = await supabase.rpc('start_task_timer', {
+                                    _comunidad_id: parseInt(formData.comunidad_id),
+                                    _nota: `Deuda #${newDebt.id} · ${nombreCompleto}`.trim(),
+                                    _tipo_tarea: 'Jurídico',
+                                    _incidencia_id: null,
+                                    _morosidad_id: newDebt.id,
+                                });
+                                if (!startErr) {
+                                    window.dispatchEvent(new Event('taskTimerChanged'));
+                                    toast.success('Cronómetro iniciado para esta deuda');
+                                }
+                            }
+                        }
+                    } catch {
+                        // silent: no bloquear el alta si falla el cronómetro
+                    }
 
                     setShowForm(false); setFormErrors({});
                     setFormData({ comunidad_id: '', nombre_deudor: '', apellidos: '', telefono_deudor: '', email_deudor: '', titulo_documento: '', fecha_notificacion: '', importe: '', observaciones: '', gestor: '', documento: '', aviso: null, id_email_deuda: '' });
@@ -1430,12 +1567,26 @@ export default function MorosidadPage() {
                                     )}
                                 </p>
                             </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                {detailActiveTask && (
+                                    <div
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-yellow-50 border border-yellow-200"
+                                        title={`Tarea en curso${detailActiveTask.tipo_tarea ? ' · ' + detailActiveTask.tipo_tarea : ''} — se finalizará al cerrar la deuda`}
+                                    >
+                                        <Clock className="w-3.5 h-3.5 text-yellow-600 animate-pulse" />
+                                        <span className="font-mono tabular-nums text-sm font-bold text-neutral-900">
+                                            {formatCronoElapsed(detailElapsed)}
+                                        </span>
+                                    </div>
+                                )}
+                                <button
+                                    onClick={closeDetailModalWithChrono}
+                                    disabled={stoppingDetailTask}
+                                    className="p-2 rounded-xl hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 transition-colors disabled:opacity-50"
+                                >
+                                    {stoppingDetailTask ? <Loader2 className="w-5 h-5 animate-spin" /> : <X className="w-5 h-5" />}
+                                </button>
+                            </div>
                         </div>
 
                         {/* Hidden file input */}
@@ -1559,7 +1710,7 @@ export default function MorosidadPage() {
                         {/* Footer */}
                         <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
                             <ModalActionsMenu actions={[
-                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailMorosidad.id); setShowDetailModal(false); }, variant: 'danger' },
+                                { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { handleDeleteClick(selectedDetailMorosidad.id); closeDetailModalWithChrono(); }, variant: 'danger' },
                                 { label: isUpdatingRecord ? 'Subiendo…' : 'Adjuntar', icon: isUpdatingRecord ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />, onClick: () => detailFileInputRef.current?.click(), disabled: isUpdatingRecord },
                                 { label: exporting ? 'Generando…' : 'PDF', icon: exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />, onClick: () => handleExport('pdf', [selectedDetailMorosidad.id]), disabled: exporting },
                             ]} />
@@ -1567,7 +1718,7 @@ export default function MorosidadPage() {
                                 <div className="flex flex-wrap items-center gap-2 justify-end">
                                     {!(selectedDetailMorosidad.estado === 'En disputa' && selectedDetailMorosidad.subtipo_disputa === 'No localizable') && (
                                         <button
-                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No localizable'); setShowDetailModal(false); }}
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No localizable'); closeDetailModalWithChrono(); }}
                                             className="px-3 py-2 text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
                                             title="Pasar a En disputa · No localizable"
                                         >
@@ -1577,7 +1728,7 @@ export default function MorosidadPage() {
                                     )}
                                     {!(selectedDetailMorosidad.estado === 'En disputa' && selectedDetailMorosidad.subtipo_disputa === 'No conforme') && (
                                         <button
-                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No conforme'); setShowDetailModal(false); }}
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'En disputa', 'No conforme'); closeDetailModalWithChrono(); }}
                                             className="px-3 py-2 text-xs font-bold text-orange-700 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
                                             title="Pasar a En disputa · No conforme"
                                         >
@@ -1587,7 +1738,7 @@ export default function MorosidadPage() {
                                     )}
                                     {selectedDetailMorosidad.estado !== 'Demanda' && (
                                         <button
-                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Demanda'); setShowDetailModal(false); }}
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Demanda'); closeDetailModalWithChrono(); }}
                                             className="px-3 py-2 text-xs font-bold text-red-700 bg-red-50 hover:bg-red-100 border border-red-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
                                             title="Pasar a Demanda"
                                         >
@@ -1597,7 +1748,7 @@ export default function MorosidadPage() {
                                     )}
                                     {selectedDetailMorosidad.estado !== 'Pendiente' && (
                                         <button
-                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Pendiente'); setShowDetailModal(false); }}
+                                            onClick={() => { changeEstado(selectedDetailMorosidad.id, 'Pendiente'); closeDetailModalWithChrono(); }}
                                             className="px-3 py-2 text-xs font-bold text-neutral-700 bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap"
                                             title="Volver a Pendiente"
                                         >
@@ -1606,7 +1757,7 @@ export default function MorosidadPage() {
                                         </button>
                                     )}
                                     <button
-                                        onClick={() => { markAsPaid(selectedDetailMorosidad.id); setShowDetailModal(false); }}
+                                        onClick={() => { markAsPaid(selectedDetailMorosidad.id); closeDetailModalWithChrono(); }}
                                         className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl transition-all shadow-sm flex items-center gap-2 whitespace-nowrap"
                                     >
                                         <Check className="w-4 h-4" />
@@ -1615,7 +1766,7 @@ export default function MorosidadPage() {
                                 </div>
                             ) : (
                                 <button
-                                    onClick={() => { reopenDebt(selectedDetailMorosidad.id); setShowDetailModal(false); }}
+                                    onClick={() => { reopenDebt(selectedDetailMorosidad.id); closeDetailModalWithChrono(); }}
                                     className="px-5 py-2.5 text-sm font-black text-neutral-600 border border-neutral-200 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap"
                                 >
                                     <RotateCcw className="w-4 h-4" />
