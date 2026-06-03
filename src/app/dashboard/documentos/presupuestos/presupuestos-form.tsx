@@ -31,6 +31,8 @@ interface Comunidad {
 
 type Stage = "form" | "analyzing" | "review" | "generating" | "ready";
 
+type GastosVariosModo = "mantener" | "subir_pct" | "importe_fijo" | "criterio_ia";
+
 interface Partida {
     nombre: string;
     gasto_anterior: number;
@@ -96,6 +98,11 @@ export default function PresupuestosForm({
     const [docxUrl, setDocxUrl] = useState("");
     const [editing, setEditing] = useState(false);
     const editSnapshotRef = useRef<Analysis | null>(null);
+
+    // Parámetros del análisis IA
+    const [pctSubidaGlobal, setPctSubidaGlobal] = useState<number>(0);
+    const [gastosVariosModo, setGastosVariosModo] = useState<GastosVariosModo>("criterio_ia");
+    const [gastosVariosValor, setGastosVariosValor] = useState<number>(0);
 
     const [confirmState, setConfirmState] = useState<{
         open: boolean;
@@ -206,6 +213,9 @@ export default function PresupuestosForm({
                 fd.append("liquidacion", liquidacionFile);
                 fd.append("cuotas", cuotasFile);
                 if (comunidadCodigo) fd.append("comunidad_codigo", comunidadCodigo);
+                fd.append("pct_subida_global", String(pctSubidaGlobal));
+                fd.append("gastos_varios_modo", gastosVariosModo);
+                fd.append("gastos_varios_valor", String(gastosVariosValor));
 
                 const res = await fetch("/api/documentos/presupuestos/analyze", {
                     method: "POST",
@@ -1020,6 +1030,72 @@ export default function PresupuestosForm({
                             onClear={() => setCuotasFile(null)}
                             inputRef={cuotasRef}
                         />
+                    </div>
+
+                    {/* Parámetros del análisis */}
+                    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-4 space-y-4">
+                        <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest">
+                            Parámetros del análisis
+                        </p>
+
+                        {/* % Subida global */}
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <label className="text-sm font-semibold text-neutral-700 sm:w-56 shrink-0">
+                                % Subida global
+                            </label>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={50}
+                                    step={0.1}
+                                    value={pctSubidaGlobal}
+                                    onChange={(e) => {
+                                        const v = Math.min(50, Math.max(0, Number(e.target.value)));
+                                        setPctSubidaGlobal(v);
+                                    }}
+                                    className="w-24 bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                />
+                                <span className="text-sm text-neutral-500">%</span>
+                                {pctSubidaGlobal === 0 && (
+                                    <span className="text-xs text-neutral-400 italic">La IA aplica su propio criterio</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Gastos varios */}
+                        <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                            <label className="text-sm font-semibold text-neutral-700 sm:w-56 shrink-0 sm:pt-2">
+                                Gastos varios
+                            </label>
+                            <div className="flex flex-col gap-2 flex-1">
+                                <select
+                                    value={gastosVariosModo}
+                                    onChange={(e) => setGastosVariosModo(e.target.value as GastosVariosModo)}
+                                    className="bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                >
+                                    <option value="criterio_ia">Dejar a criterio de la IA</option>
+                                    <option value="mantener">Mantener igual (mismo importe)</option>
+                                    <option value="subir_pct">Subir un % concreto</option>
+                                    <option value="importe_fijo">Fijar importe exacto (€)</option>
+                                </select>
+                                {(gastosVariosModo === "subir_pct" || gastosVariosModo === "importe_fijo") && (
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="number"
+                                            min={0}
+                                            step={gastosVariosModo === "subir_pct" ? 0.1 : 1}
+                                            value={gastosVariosValor}
+                                            onChange={(e) => setGastosVariosValor(Math.max(0, Number(e.target.value)))}
+                                            className="w-32 bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                        />
+                                        <span className="text-sm text-neutral-500">
+                                            {gastosVariosModo === "subir_pct" ? "%" : "€"}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
