@@ -32,6 +32,7 @@ interface Comunidad {
 type Stage = "form" | "analyzing" | "review" | "generating" | "ready";
 
 type GastosVariosModo = "mantener" | "subir_pct" | "importe_fijo" | "criterio_ia";
+type CuotasSubidaModo = "pct_cuota_actual" | "importe_fijo" | "criterio_ia";
 
 interface Partida {
     nombre: string;
@@ -103,6 +104,8 @@ export default function PresupuestosForm({
     const [pctSubidaGlobal, setPctSubidaGlobal] = useState<number>(0);
     const [gastosVariosModo, setGastosVariosModo] = useState<GastosVariosModo>("criterio_ia");
     const [gastosVariosValor, setGastosVariosValor] = useState<number>(0);
+    const [cuotasSubidaModo, setCuotasSubidaModo] = useState<CuotasSubidaModo>("criterio_ia");
+    const [cuotasSubidaValor, setCuotasSubidaValor] = useState<number>(0);
 
     const [confirmState, setConfirmState] = useState<{
         open: boolean;
@@ -216,6 +219,8 @@ export default function PresupuestosForm({
                 fd.append("pct_subida_global", String(pctSubidaGlobal));
                 fd.append("gastos_varios_modo", gastosVariosModo);
                 fd.append("gastos_varios_valor", String(gastosVariosValor));
+                fd.append("cuotas_subida_modo", cuotasSubidaModo);
+                fd.append("cuotas_subida_valor", String(cuotasSubidaValor));
 
                 const res = await fetch("/api/documentos/presupuestos/analyze", {
                     method: "POST",
@@ -1094,6 +1099,59 @@ export default function PresupuestosForm({
                                         </span>
                                     </div>
                                 )}
+                            </div>
+                        </div>
+
+                        {/* Separador */}
+                        <div className="border-t border-neutral-200 pt-4">
+                            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-widest mb-3">
+                                Subida de cuotas de propietarios
+                            </p>
+
+                            {/* Modalidad subida cuotas */}
+                            <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+                                <label className="text-sm font-semibold text-neutral-700 sm:w-56 shrink-0 sm:pt-2">
+                                    Modalidad de subida
+                                </label>
+                                <div className="flex flex-col gap-2 flex-1">
+                                    <select
+                                        value={cuotasSubidaModo}
+                                        onChange={(e) => setCuotasSubidaModo(e.target.value as CuotasSubidaModo)}
+                                        className="bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                    >
+                                        <option value="criterio_ia">Dejar a criterio de la IA</option>
+                                        <option value="pct_cuota_actual">% sobre cuota actual (por coeficiente)</option>
+                                        <option value="importe_fijo">Importe fijo igual para todos (+€/mes)</option>
+                                    </select>
+                                    {(cuotasSubidaModo === "pct_cuota_actual" || cuotasSubidaModo === "importe_fijo") && (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                min={0}
+                                                step={cuotasSubidaModo === "pct_cuota_actual" ? 0.1 : 0.01}
+                                                value={cuotasSubidaValor}
+                                                onChange={(e) => setCuotasSubidaValor(Math.max(0, Number(e.target.value)))}
+                                                className="w-32 bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                                            />
+                                            <span className="text-sm text-neutral-500">
+                                                {cuotasSubidaModo === "pct_cuota_actual" ? "%" : "€ / mes por finca"}
+                                            </span>
+                                        </div>
+                                    )}
+                                    {cuotasSubidaModo === "criterio_ia" && (
+                                        <p className="text-xs text-neutral-400 italic">
+                                            La IA propondrá la subida necesaria para equilibrar el presupuesto
+                                        </p>
+                                    )}
+                                    {cuotasSubidaModo !== "criterio_ia" && cuotasSubidaValor > 0 && (
+                                        <p className="text-xs text-neutral-500">
+                                            {cuotasSubidaModo === "pct_cuota_actual"
+                                                ? `Cada propietario pagará un ${cuotasSubidaValor}% más sobre su cuota actual`
+                                                : `Cada propietario pagará ${cuotasSubidaValor}€/mes más, independientemente de su coeficiente`
+                                            }
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

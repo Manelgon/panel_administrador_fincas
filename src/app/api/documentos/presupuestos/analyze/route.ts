@@ -10,6 +10,8 @@ interface AnalysisParams {
     pct_subida_global: number;
     gastos_varios_modo: "mantener" | "subir_pct" | "importe_fijo" | "criterio_ia";
     gastos_varios_valor: number;
+    cuotas_subida_modo: "pct_cuota_actual" | "importe_fijo" | "criterio_ia";
+    cuotas_subida_valor: number;
 }
 
 function buildSystemPrompt(params: AnalysisParams): string {
@@ -32,6 +34,16 @@ function buildSystemPrompt(params: AnalysisParams): string {
     } else if (params.gastos_varios_modo === "importe_fijo" && params.gastos_varios_valor > 0) {
         instruccionesParametros.push(
             `INSTRUCCIÓN OBLIGATORIA — GASTOS VARIOS: La partida "Gastos varios" (o equivalente) debe fijarse en exactamente ${params.gastos_varios_valor} € para el nuevo ejercicio.`
+        );
+    }
+
+    if (params.cuotas_subida_modo === "pct_cuota_actual" && params.cuotas_subida_valor > 0) {
+        instruccionesParametros.push(
+            `INSTRUCCIÓN OBLIGATORIA — SUBIDA DE CUOTAS (% POR COEFICIENTE): Aplica una subida del ${params.cuotas_subida_valor}% sobre la cuota mensual actual de cada tipo de finca. Calcula la cuota_nueva como cuota_actual × (1 + ${params.cuotas_subida_valor} / 100), redondeando a dos decimales. Esta modalidad respeta automáticamente la proporcionalidad entre tipos (coeficientes). Usa las cuotas_nueva de cada tipo para calcular resultado_estimado.ingresos (suma de cuota_nueva × num_fincas × 12 para todos los tipos). El campo ingresos_previstos_anual sigue usando las cuotas actuales sin modificar.`
+        );
+    } else if (params.cuotas_subida_modo === "importe_fijo" && params.cuotas_subida_valor > 0) {
+        instruccionesParametros.push(
+            `INSTRUCCIÓN OBLIGATORIA — SUBIDA DE CUOTAS (IMPORTE FIJO IGUAL PARA TODOS): Añade exactamente ${params.cuotas_subida_valor} € a la cuota mensual actual de cada tipo de finca (el mismo importe para todos los tipos, independientemente de su coeficiente). Usa las cuotas_nueva de cada tipo para calcular resultado_estimado.ingresos (suma de cuota_nueva × num_fincas × 12 para todos los tipos). El campo ingresos_previstos_anual sigue usando las cuotas actuales sin modificar.`
         );
     }
 
@@ -181,13 +193,21 @@ export async function POST(req: Request) {
         const pct_subida_global = Math.min(50, Math.max(0, Number(form.get("pct_subida_global")) || 0));
         const gastos_varios_modo = (form.get("gastos_varios_modo") as string) || "criterio_ia";
         const gastos_varios_valor = Math.max(0, Number(form.get("gastos_varios_valor")) || 0);
-        const validModos = ["mantener", "subir_pct", "importe_fijo", "criterio_ia"];
+        const cuotas_subida_modo = (form.get("cuotas_subida_modo") as string) || "criterio_ia";
+        const cuotas_subida_valor = Math.max(0, Number(form.get("cuotas_subida_valor")) || 0);
+
+        const validGastosModos = ["mantener", "subir_pct", "importe_fijo", "criterio_ia"];
+        const validCuotasModos = ["pct_cuota_actual", "importe_fijo", "criterio_ia"];
         const analysisParams: AnalysisParams = {
             pct_subida_global,
-            gastos_varios_modo: validModos.includes(gastos_varios_modo)
+            gastos_varios_modo: validGastosModos.includes(gastos_varios_modo)
                 ? (gastos_varios_modo as AnalysisParams["gastos_varios_modo"])
                 : "criterio_ia",
             gastos_varios_valor,
+            cuotas_subida_modo: validCuotasModos.includes(cuotas_subida_modo)
+                ? (cuotas_subida_modo as AnalysisParams["cuotas_subida_modo"])
+                : "criterio_ia",
+            cuotas_subida_valor,
         };
 
         if (!liquidacionFile || !cuotasFile) {
