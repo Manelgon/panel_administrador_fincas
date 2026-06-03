@@ -100,11 +100,11 @@ export default function PresupuestosForm({
     const [editing, setEditing] = useState(false);
     const editSnapshotRef = useRef<Analysis | null>(null);
 
-    // Parámetros del análisis IA
-    const [pctSubidaGlobal, setPctSubidaGlobal] = useState<number>(0);
-    const [gastosVariosModo, setGastosVariosModo] = useState<GastosVariosModo>("criterio_ia");
+    // Parámetros del análisis IA (vacíos por defecto = sin instrucción)
+    const [pctSubidaGlobal, setPctSubidaGlobal] = useState<string>("");
+    const [gastosVariosModo, setGastosVariosModo] = useState<GastosVariosModo | "">("");
     const [gastosVariosValor, setGastosVariosValor] = useState<number>(0);
-    const [cuotasSubidaModo, setCuotasSubidaModo] = useState<CuotasSubidaModo>("criterio_ia");
+    const [cuotasSubidaModo, setCuotasSubidaModo] = useState<CuotasSubidaModo | "">("");
     const [cuotasSubidaValor, setCuotasSubidaValor] = useState<number>(0);
 
     const [confirmState, setConfirmState] = useState<{
@@ -216,10 +216,10 @@ export default function PresupuestosForm({
                 fd.append("liquidacion", liquidacionFile);
                 fd.append("cuotas", cuotasFile);
                 if (comunidadCodigo) fd.append("comunidad_codigo", comunidadCodigo);
-                fd.append("pct_subida_global", String(pctSubidaGlobal));
-                fd.append("gastos_varios_modo", gastosVariosModo);
+                fd.append("pct_subida_global", String(pctSubidaGlobal === "" ? 0 : Number(pctSubidaGlobal)));
+                fd.append("gastos_varios_modo", gastosVariosModo || "criterio_ia");
                 fd.append("gastos_varios_valor", String(gastosVariosValor));
-                fd.append("cuotas_subida_modo", cuotasSubidaModo);
+                fd.append("cuotas_subida_modo", cuotasSubidaModo || "criterio_ia");
                 fd.append("cuotas_subida_valor", String(cuotasSubidaValor));
 
                 const res = await fetch("/api/documentos/presupuestos/analyze", {
@@ -1046,7 +1046,7 @@ export default function PresupuestosForm({
                         {/* % Subida global */}
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                             <label className="text-sm font-semibold text-neutral-700 sm:w-56 shrink-0">
-                                % Subida global
+                                % Subida global de gastos
                             </label>
                             <div className="flex items-center gap-2">
                                 <input
@@ -1055,16 +1055,16 @@ export default function PresupuestosForm({
                                     max={50}
                                     step={0.1}
                                     value={pctSubidaGlobal}
+                                    placeholder="ej. 3"
                                     onChange={(e) => {
-                                        const v = Math.min(50, Math.max(0, Number(e.target.value)));
-                                        setPctSubidaGlobal(v);
+                                        const raw = e.target.value;
+                                        if (raw === "") { setPctSubidaGlobal(""); return; }
+                                        const v = Math.min(50, Math.max(0, Number(raw)));
+                                        setPctSubidaGlobal(String(v));
                                     }}
                                     className="w-24 bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-yellow-400"
                                 />
                                 <span className="text-sm text-neutral-500">%</span>
-                                {pctSubidaGlobal === 0 && (
-                                    <span className="text-xs text-neutral-400 italic">La IA aplica su propio criterio</span>
-                                )}
                             </div>
                         </div>
 
@@ -1076,10 +1076,10 @@ export default function PresupuestosForm({
                             <div className="flex flex-col gap-2 flex-1">
                                 <select
                                     value={gastosVariosModo}
-                                    onChange={(e) => setGastosVariosModo(e.target.value as GastosVariosModo)}
+                                    onChange={(e) => setGastosVariosModo(e.target.value as GastosVariosModo | "")}
                                     className="bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
                                 >
-                                    <option value="criterio_ia">Dejar a criterio de la IA</option>
+                                    <option value="">Sin instrucción (la IA decide)</option>
                                     <option value="mantener">Mantener igual (mismo importe)</option>
                                     <option value="subir_pct">Subir un % concreto</option>
                                     <option value="importe_fijo">Fijar importe exacto (€)</option>
@@ -1116,10 +1116,10 @@ export default function PresupuestosForm({
                                 <div className="flex flex-col gap-2 flex-1">
                                     <select
                                         value={cuotasSubidaModo}
-                                        onChange={(e) => setCuotasSubidaModo(e.target.value as CuotasSubidaModo)}
+                                        onChange={(e) => setCuotasSubidaModo(e.target.value as CuotasSubidaModo | "")}
                                         className="bg-white border border-neutral-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
                                     >
-                                        <option value="criterio_ia">Dejar a criterio de la IA</option>
+                                        <option value="">Sin instrucción (la IA decide)</option>
                                         <option value="pct_cuota_actual">% sobre cuota actual (por coeficiente)</option>
                                         <option value="importe_fijo">Importe fijo igual para todos (+€/mes)</option>
                                     </select>
@@ -1138,12 +1138,7 @@ export default function PresupuestosForm({
                                             </span>
                                         </div>
                                     )}
-                                    {cuotasSubidaModo === "criterio_ia" && (
-                                        <p className="text-xs text-neutral-400 italic">
-                                            La IA propondrá la subida necesaria para equilibrar el presupuesto
-                                        </p>
-                                    )}
-                                    {cuotasSubidaModo !== "criterio_ia" && cuotasSubidaValor > 0 && (
+                                    {cuotasSubidaModo !== "" && cuotasSubidaModo !== "criterio_ia" && cuotasSubidaValor > 0 && (
                                         <p className="text-xs text-neutral-500">
                                             {cuotasSubidaModo === "pct_cuota_actual"
                                                 ? `Cada propietario pagará un ${cuotasSubidaValor}% más sobre su cuota actual`
