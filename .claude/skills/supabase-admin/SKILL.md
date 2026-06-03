@@ -64,7 +64,11 @@ search_docs("consulta aqui")   -- Buscar en docs oficiales
 
 ## Patrones
 
-### Crear Tabla con RLS
+### Crear Tabla con GRANT + RLS
+
+> **OBLIGATORIO desde 2026-04-28** (Supabase breaking change, enforced 2026-10-30):
+> Toda tabla nueva en `public` DEBE incluir `GRANT` explicitos o sera invisible para la Data API (supabase-js, PostgREST, GraphQL). Sin GRANT → error `42501: permission denied for table`.
+
 ```sql
 -- 1. Crear la tabla
 apply_migration(
@@ -80,13 +84,23 @@ apply_migration(
   "
 )
 
--- 2. Habilitar seguridad RLS
+-- 2. GRANTS explicitos (OBLIGATORIO en tablas nuevas)
+apply_migration(
+  name: "grant_profiles",
+  query: "
+    GRANT SELECT ON public.profiles TO anon;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO service_role;
+  "
+)
+
+-- 3. Habilitar seguridad RLS
 apply_migration(
   name: "enable_rls_profiles",
   query: "ALTER TABLE profiles ENABLE ROW LEVEL SECURITY"
 )
 
--- 3. Crear las politicas
+-- 4. Crear las politicas
 apply_migration(
   name: "profiles_select_own",
   query: "
@@ -103,9 +117,15 @@ apply_migration(
   "
 )
 
--- 4. Verificar seguridad
+-- 5. Verificar seguridad
 get_advisors(type: "security")
 ```
+
+**Notas sobre los GRANTS:**
+- `anon` (visitantes sin login): solo `SELECT` y solo si la tabla es publica. Si la tabla es privada, NO concedas grants a `anon`.
+- `authenticated` (usuarios logueados): los CRUD que necesite. RLS filtra que filas ven.
+- `service_role` (backend / server actions): full access; bypassa RLS.
+- Si usas secuencias propias (no `gen_random_uuid()`): `GRANT USAGE, SELECT ON SEQUENCE ... TO authenticated, service_role;`
 
 ### Patron de Claves Foraneas
 ```sql
@@ -147,23 +167,25 @@ apply_migration(
 
 ## Principios
 
-1. **RLS Siempre**: Toda tabla con datos de usuario debe tener RLS
-2. **Migraciones Nombradas**: Nombres descriptivos para tracking
-3. **execute_sql para DML**: SELECT, INSERT, UPDATE, DELETE
-4. **apply_migration para DDL**: CREATE, ALTER, DROP
-5. **Verificar Siempre**: `get_advisors` despues de crear tablas
+1. **GRANT Explicito Siempre**: Toda tabla nueva en `public` necesita `GRANT` para `anon`/`authenticated`/`service_role` segun corresponda (Supabase breaking change 2026-10-30).
+2. **RLS Siempre**: Toda tabla con datos de usuario debe tener RLS
+3. **Migraciones Nombradas**: Nombres descriptivos para tracking
+4. **execute_sql para DML**: SELECT, INSERT, UPDATE, DELETE
+5. **apply_migration para DDL**: CREATE, ALTER, DROP, GRANT
+6. **Verificar Siempre**: `get_advisors` despues de crear tablas
 
 ## Flujo de Trabajo
 
 ```
 1. list_tables              -> Ver estado actual
 2. Disenar esquema          -> Pensar antes de crear
-3. apply_migration          -> Crear estructura
-4. apply_migration (RLS)    -> Habilitar seguridad
-5. apply_migration (Policy) -> Crear politicas
-6. get_advisors             -> Verificar seguridad
-7. execute_sql              -> Insertar datos de prueba
-8. get_logs                 -> Depurar si hay problemas
+3. apply_migration          -> Crear estructura (CREATE TABLE)
+4. apply_migration (GRANT)  -> Conceder acceso a la Data API
+5. apply_migration (RLS)    -> Habilitar seguridad
+6. apply_migration (Policy) -> Crear politicas
+7. get_advisors             -> Verificar seguridad
+8. execute_sql              -> Insertar datos de prueba
+9. get_logs                 -> Depurar si hay problemas
 ```
 
 ## Formato de Salida

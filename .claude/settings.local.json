@@ -6,7 +6,11 @@
       "Bash(grep -r documentos_administrativos 'c:/Users/manel/.000.Proyectos.DEV/003. Panel Maria Jose Martos de Dios' --include=*.ts --include=*.tsx --include=*.js)",
       "Bash(find 'c:/Users/manel/.000.Proyectos.DEV/003. Panel Maria Jose Martos de Dios' -name *.sql -exec grep -l \"CREATE\\\\|INSERT\" {})",
       "Bash(2)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(ls \"C:\\\\Users\\\\manel\\\\.claude\\\\skills\\\\supabase-admin\\\\\" 2>nul; ls \".claude\\\\skills\\\\supabase-admin\\\\\" 2>nul)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\manel\\.000.Proyectos.DEV\\003. Panel gestion de Fincas - Serincosol"
     ]
   }
 }

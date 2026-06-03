@@ -330,6 +330,23 @@ npm run lint         # ESLint
 - **Fix**: Siempre usar `npm run dev` (auto-detecta puerto)
 - **Aplicar en**: Todos los proyectos
 
+### 2026-05-27: GRANT explicito obligatorio en tablas nuevas de `public`
+- **Contexto**: Supabase breaking change. Desde 2026-04-28 (opt-in) y enforced 2026-10-30 en proyectos existentes, las tablas nuevas en `public` NO se exponen automaticamente a la Data API (supabase-js, PostgREST, GraphQL). Sin GRANT explicito → error `42501: permission denied for table`.
+- **Fix**: Toda migracion que cree una tabla nueva en `public` DEBE incluir, en este orden:
+  1. `CREATE TABLE public.x (...)`
+  2. Grants explicitos:
+     - `GRANT SELECT ON public.x TO anon;` (solo si la tabla debe ser publica)
+     - `GRANT SELECT, INSERT, UPDATE, DELETE ON public.x TO authenticated;`
+     - `GRANT SELECT, INSERT, UPDATE, DELETE ON public.x TO service_role;`
+  3. `ALTER TABLE public.x ENABLE ROW LEVEL SECURITY;`
+  4. `CREATE POLICY ...`
+- **Aplicar en**: TODAS las migraciones nuevas. Las tablas existentes mantienen sus grants y no requieren accion.
+- **Roles**:
+  - `anon` = visitante sin login → solo lectura y solo si la tabla debe ser publica
+  - `authenticated` = usuario logueado → CRUD segun necesidad (RLS filtra filas)
+  - `service_role` = backend/Server Actions → full access (bypassa RLS)
+- **Ref**: https://github.com/orgs/supabase/discussions/45329
+
 ---
 
 *V4: Todo es un Skill. Agent-First. El usuario habla, tu construyes.*
