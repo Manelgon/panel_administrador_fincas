@@ -257,14 +257,21 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
             { label: "Total", value: doc.payload?.["Suma final"] ? parseFloat(doc.payload["Suma final"]).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
             { label: "Fecha Emisión", value: doc.payload?.["Fecha emisión"] ? new Date(doc.payload["Fecha emisión"]).toLocaleDateString("es-ES") : new Date(doc.created_at).toLocaleDateString("es-ES") },
         ];
-        if (effectiveType === "presupuesto-anual") return [
-            { label: "Comunidad", value: doc.payload?.nombre_comunidad || doc.payload?.comunidad || "-" },
-            { label: "Ejercicio analizado", value: doc.payload?.ejercicio_analizado || "-" },
-            { label: "Gasto presupuestado", value: doc.payload?.total_presupuesto_propuesto != null ? Number(doc.payload.total_presupuesto_propuesto).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
-            { label: "Ingresos previstos", value: doc.payload?.ingresos_previstos_anual != null ? Number(doc.payload.ingresos_previstos_anual).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
-            { label: "Subida media ponderada", value: doc.payload?.subida_propuesta?.pct_medio_ponderado != null ? `${Number(doc.payload.subida_propuesta.pct_medio_ponderado).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : "-" },
-            { label: "Fecha", value: new Date(doc.created_at).toLocaleDateString("es-ES") },
-        ];
+        if (effectiveType === "presupuesto-anual") {
+            const resultado = doc.payload?.resultado_estimado?.resultado;
+            const resultadoColor = resultado == null ? "" : resultado >= 0 ? "text-emerald-700" : "text-red-700";
+            return [
+                { label: "Comunidad", value: doc.payload?.nombre_comunidad || doc.payload?.comunidad || "-" },
+                { label: "Ejercicio analizado", value: doc.payload?.ejercicio_analizado || "-" },
+                { label: "Gasto anterior", value: doc.payload?.total_gasto_anterior != null ? Number(doc.payload.total_gasto_anterior).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+                { label: "Gasto presupuestado", value: doc.payload?.total_presupuesto_propuesto != null ? Number(doc.payload.total_presupuesto_propuesto).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+                { label: "Ingresos previstos (cuotas actuales)", value: doc.payload?.ingresos_previstos_anual != null ? Number(doc.payload.ingresos_previstos_anual).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+                { label: "Ingresos con cuotas nuevas", value: doc.payload?.resultado_estimado?.ingresos != null ? Number(doc.payload.resultado_estimado.ingresos).toLocaleString("es-ES", { style: "currency", currency: "EUR" }) : "-" },
+                { label: "Resultado estimado (remanente)", value: resultado != null ? <span className={`font-bold ${resultadoColor}`}>{Number(resultado).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</span> : "-" },
+                { label: "Subida media ponderada", value: doc.payload?.subida_propuesta?.pct_medio_ponderado != null ? `${Number(doc.payload.subida_propuesta.pct_medio_ponderado).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : "-" },
+                { label: "Fecha", value: new Date(doc.created_at).toLocaleDateString("es-ES") },
+            ];
+        }
         if (effectiveType === "certificado-renta") return [
             { label: "Código", value: doc.payload?.["Código"] || doc.payload?.codigo || "-" },
             { label: "Comunidad", value: doc.payload?.["Nombre Comunidad"] || doc.payload?.nombre_comunidad || "-" },
@@ -711,6 +718,60 @@ export default function ClientHistoryTable({ entries, type }: ClientHistoryTable
                                         </div>
                                     ))}
                                 </dl>
+
+                                {/* Cuotas nuevas por tipo — solo presupuesto-anual */}
+                                {getDocType(selectedDoc) === "presupuesto-anual" && (() => {
+                                    const porTipo: any[] = selectedDoc.payload?.subida_propuesta?.por_tipo || [];
+                                    const advertencias: string[] = selectedDoc.payload?.advertencias || [];
+                                    if (porTipo.length === 0 && advertencias.length === 0) return null;
+                                    return (
+                                        <div className="mt-5 space-y-4">
+                                            {porTipo.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[10px] font-bold text-neutral-900 uppercase tracking-widest pb-2 mb-3 border-b border-yellow-400">
+                                                        Cuotas nuevas propuestas
+                                                    </h4>
+                                                    <div className="overflow-x-auto border border-neutral-200 rounded-lg">
+                                                        <table className="w-full text-xs">
+                                                            <thead className="bg-neutral-50 text-[10px] font-bold uppercase tracking-widest text-neutral-500">
+                                                                <tr>
+                                                                    <th className="px-3 py-2 text-left">Tipo</th>
+                                                                    <th className="px-3 py-2 text-right">Cuota actual</th>
+                                                                    <th className="px-3 py-2 text-right">Cuota nueva</th>
+                                                                    <th className="px-3 py-2 text-right">Subida</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-neutral-100">
+                                                                {porTipo.map((t: any, i: number) => (
+                                                                    <tr key={i}>
+                                                                        <td className="px-3 py-2 text-neutral-700">{t.tipo_finca || "-"}</td>
+                                                                        <td className="px-3 py-2 text-right tabular-nums text-neutral-500">{Number(t.cuota_actual || 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</td>
+                                                                        <td className="px-3 py-2 text-right tabular-nums font-semibold text-neutral-900">{Number(t.cuota_nueva || 0).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</td>
+                                                                        <td className="px-3 py-2 text-right tabular-nums text-emerald-700 font-medium">+{Number(t.subida_pct || 0).toLocaleString("es-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {advertencias.length > 0 && (
+                                                <div>
+                                                    <h4 className="text-[10px] font-bold text-red-700 uppercase tracking-widest pb-2 mb-3 border-b border-red-200">
+                                                        Advertencias
+                                                    </h4>
+                                                    <ul className="space-y-1">
+                                                        {advertencias.map((adv: string, i: number) => (
+                                                            <li key={i} className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                                                                {adv}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
                             </div>
 
                             {/* Footer */}
