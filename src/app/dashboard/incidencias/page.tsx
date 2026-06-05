@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
 import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench } from 'lucide-react';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
+import AddTimeFromIncidenciaModal from '@/components/cronometraje/AddTimeFromIncidenciaModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import DataTable, { Column } from '@/components/DataTable';
@@ -285,6 +286,8 @@ export default function IncidenciasPage() {
     // Start Task (Cronometraje) Modal State
     const [showStartTaskModal, setShowStartTaskModal] = useState(false);
     const [startTaskIncidencia, setStartTaskIncidencia] = useState<Incidencia | null>(null);
+    const [showAddTimeModal, setShowAddTimeModal] = useState(false);
+    const [addTimeIncidencia, setAddTimeIncidencia] = useState<Incidencia | null>(null);
 
     const { withLoading } = useGlobalLoading();
 
@@ -2389,6 +2392,12 @@ export default function IncidenciasPage() {
                             variant: 'info',
                         },
                         {
+                            label: 'Añadir tiempo',
+                            icon: <Clock className="w-4 h-4" />,
+                            onClick: (r) => { setAddTimeIncidencia(r); setShowAddTimeModal(true); },
+                            variant: 'yellow',
+                        },
+                        {
                             label: 'Aplazar',
                             icon: <Pause className="w-4 h-4" />,
                             onClick: (r) => openAplazarModal(r.id),
@@ -2798,6 +2807,21 @@ export default function IncidenciasPage() {
                     }
                     ticketLabel={`${startTaskIncidencia.nombre_cliente || 'Sin nombre'} · Ticket #${startTaskIncidencia.id}`}
                     onClose={() => { setShowStartTaskModal(false); setStartTaskIncidencia(null); }}
+                />
+            )}
+
+            {/* Add Time From Incidencia Modal */}
+            {showAddTimeModal && addTimeIncidencia && (
+                <AddTimeFromIncidenciaModal
+                    incidenciaId={addTimeIncidencia.id}
+                    comunidadId={addTimeIncidencia.comunidad_id ?? null}
+                    comunidadLabel={
+                        addTimeIncidencia.comunidades
+                            ? `${addTimeIncidencia.comunidades.codigo ? addTimeIncidencia.comunidades.codigo + ' - ' : ''}${addTimeIncidencia.comunidades.nombre_cdad}`
+                            : (addTimeIncidencia.comunidad || undefined)
+                    }
+                    ticketLabel={`${addTimeIncidencia.nombre_cliente || 'Sin nombre'} · Ticket #${addTimeIncidencia.id}`}
+                    onClose={() => { setShowAddTimeModal(false); setAddTimeIncidencia(null); }}
                 />
             )}
 

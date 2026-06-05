@@ -1,10 +1,11 @@
 {
-  "permissions": {
-    "allow": [
-      "Bash(find c:/Users/manel/.000.Proyectos.DEV -type f -name *.tsx)"
-    ]
-  },
   "env": {
     "SUPABASE_ACCESS_TOKEN": "sbp_0d4a69eaab8c6a6e8421d5f4b242c3e0bdce62e4"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(find c:/Users/manel/.000.Proyectos.DEV -type f -name *.tsx)",
+      "Bash(Select-String -Pattern \"AddTime|addTime|add-time\")"
+    ]
   }
 }
