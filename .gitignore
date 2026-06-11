@@ -36,6 +36,9 @@ yarn-error.log*
 debug-*.js
 debug-*.json
 debug-*.txt
+diagnostic_*.js
+check_counts*.js
+/tmp/
 *.log
 diff_*.txt
 git_status.txt
