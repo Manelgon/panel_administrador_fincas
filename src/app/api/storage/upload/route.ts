@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PDFDocument } from "pdf-lib";
 import sharp from "sharp";
 import crypto from "crypto";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_BUCKETS = ["documentos", "FACTURAS"];
 const ALLOWED_TYPES = [
     "application/pdf",
     "image/jpeg",
@@ -40,6 +43,45 @@ const ALLOWED_EXTENSIONS = [
 
 export async function POST(req: Request) {
     try {
+        // 0. Verify Authentication (session cookie or Bearer token)
+        const cookieStore = await cookies();
+        const authHeader = req.headers.get('Authorization');
+        const token = authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null;
+
+        const supabase = createServerClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            {
+                cookies: {
+                    get(name: string) {
+                        return cookieStore.get(name)?.value;
+                    },
+                    set(name: string, value: string, options: CookieOptions) {
+                        cookieStore.set({ name, value, ...options });
+                    },
+                    remove(name: string, options: CookieOptions) {
+                        cookieStore.set({ name, value: '', ...options });
+                    },
+                },
+            }
+        );
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser(token || undefined);
+
+        if (userError || !user) {
+            return NextResponse.json({ error: "Unauthorized: No session" }, { status: 401 });
+        }
+
+        const { data: profile } = await supabaseAdmin
+            .from('profiles')
+            .select('activo')
+            .eq('user_id', user.id)
+            .single();
+
+        if (!profile || profile.activo === false) {
+            return NextResponse.json({ error: "Forbidden: Inactive account" }, { status: 403 });
+        }
+
         const formData = await req.formData();
         const file = formData.get("file") as File;
         const path = formData.get("path") as string;
@@ -47,6 +89,14 @@ export async function POST(req: Request) {
 
         if (!file || !path) {
             return NextResponse.json({ error: "Archivo y ruta requeridos" }, { status: 400 });
+        }
+
+        if (!ALLOWED_BUCKETS.includes(bucket)) {
+            return NextResponse.json({ error: "Bucket no permitido" }, { status: 400 });
+        }
+
+        if (path.includes("..")) {
+            return NextResponse.json({ error: "Ruta no válida" }, { status: 400 });
         }
 
         // --- SECURITY VALIDATION ---
