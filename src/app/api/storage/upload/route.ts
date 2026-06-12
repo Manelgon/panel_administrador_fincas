@@ -33,12 +33,14 @@ const ALLOWED_TYPES = [
     "text/plain",
     "text/csv",
     "application/csv",
+    // Outlook email
+    "application/vnd.ms-outlook",
 ];
 const ALLOWED_EXTENSIONS = [
     "pdf", "jpg", "jpeg", "png", "webp",
     "doc", "docx", "xls", "xlsx", "ppt", "pptx",
     "odt", "ods", "odp",
-    "txt", "csv"
+    "txt", "csv", "msg"
 ];
 
 export async function POST(req: Request) {

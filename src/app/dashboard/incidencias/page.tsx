@@ -5,7 +5,8 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench, Mail } from 'lucide-react';
+import MsgImportModal from './MsgImportModal';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import AddTimeFromIncidenciaModal from '@/components/cronometraje/AddTimeFromIncidenciaModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
@@ -46,6 +47,7 @@ export default function IncidenciasPage() {
     const [comunidades, setComunidades] = useState<ComunidadOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
+    const [showMsgImport, setShowMsgImport] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [filterEstado, setFilterEstado] = useState('pendiente');
     const [filterGestor, setFilterGestor] = useState('all');
@@ -1720,15 +1722,25 @@ export default function IncidenciasPage() {
                 newButtonLabel="Nueva Tarea"
                 newButtonShortLabel="Tarea"
                 extraButtons={
-                    <button
-                        onClick={() => pdfImportInputRef.current?.click()}
-                        disabled={importingPdf}
-                        className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm disabled:opacity-50"
-                    >
-                        {importingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 flex-shrink-0" />}
-                        <span className="hidden sm:inline">Importar desde PDF</span>
-                        <span className="sm:hidden">Importar</span>
-                    </button>
+                    <>
+                        <button
+                            onClick={() => setShowMsgImport(true)}
+                            className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm"
+                        >
+                            <Mail className="w-4 h-4 flex-shrink-0" />
+                            <span className="hidden sm:inline">Nueva tarea desde .msg</span>
+                            <span className="sm:hidden">.msg</span>
+                        </button>
+                        <button
+                            onClick={() => pdfImportInputRef.current?.click()}
+                            disabled={importingPdf}
+                            className="bg-neutral-200 hover:bg-neutral-300 text-neutral-800 px-3 py-2 rounded-md flex items-center gap-1.5 transition font-semibold text-sm disabled:opacity-50"
+                        >
+                            {importingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4 flex-shrink-0" />}
+                            <span className="hidden sm:inline">Importar desde PDF</span>
+                            <span className="sm:hidden">Importar</span>
+                        </button>
+                    </>
                 }
             />
 
@@ -1770,6 +1782,16 @@ export default function IncidenciasPage() {
                     </div>
                 )}
             </div>
+
+            {/* Modal: Nueva tarea desde .msg */}
+            {showMsgImport && (
+                <MsgImportModal
+                    comunidades={comunidades}
+                    profiles={profiles}
+                    onClose={() => setShowMsgImport(false)}
+                    onCreated={fetchIncidencias}
+                />
+            )}
 
             {/* Form Modal */}
             {portalReady && showForm && createPortal(
