@@ -77,7 +77,7 @@ export default function ConfirmarReunionTicketsModal({ reunion, onClose, onConfi
                 const validTickets = tickets.filter(t => {
                     const meta = TICKET_TYPES.find(tt => tt.value === t.tipo);
                     if (!meta) return false;
-                    if (meta.kind === 'check') return t.portada === 'si';
+                    if (meta.kind === 'check') return false; // portadas no generan incidencia
                     return !!t.gestor_id;
                 });
 
