@@ -132,35 +132,51 @@ export default function ComunidadesPage() {
         }
     }, [deleteTarget, crud, withLoading]);
 
+    const getNextCodigo = () => {
+        const numericCodes = crud.data.map(c => parseInt(c.codigo, 10)).filter(n => !isNaN(n));
+        return numericCodes.length > 0 ? (Math.max(...numericCodes) + 1).toString() : '1';
+    };
+
+    const isCodigoDuplicado = (codigo: string, excludeId?: number) => {
+        const normalized = codigo.trim().toLowerCase();
+        return crud.data.some(c => c.codigo.trim().toLowerCase() === normalized && c.id !== excludeId);
+    };
+
+    const handleOpenNew = () => {
+        if (crud.showForm) {
+            crud.closeForm();
+        } else {
+            crud.openNewForm();
+            crud.setFormData({ ...defaultFormData, codigo: getNextCodigo() });
+        }
+    };
+
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        const finalCodigo = crud.formData.codigo.trim();
 
-        let finalCodigo = crud.formData.codigo.trim();
-
-        if (!crud.editingId) {
-            const numericCodes = crud.data
-                .map(c => parseInt(c.codigo, 10))
-                .filter(n => !isNaN(n));
-            finalCodigo = numericCodes.length > 0
-                ? (Math.max(...numericCodes) + 1).toString()
-                : '1';
-        } else if (/^\d+$/.test(finalCodigo)) {
-            finalCodigo = parseInt(finalCodigo, 10).toString();
-        }
-
-        const dataToSubmit = { ...crud.formData, codigo: finalCodigo };
-
-        await crud.handleSubmit(dataToSubmit, () => {
+        await crud.handleSubmit({ ...crud.formData, codigo: finalCodigo }, () => {
             const errors: Record<string, string> = {};
-            if (!dataToSubmit.codigo?.trim()) errors.codigo = 'El código de la comunidad es obligatorio';
-            if (!dataToSubmit.nombre_cdad?.trim()) errors.nombre_cdad = 'El nombre de la comunidad es obligatorio';
+            if (!finalCodigo) errors.codigo = 'El código de la comunidad es obligatorio';
+            else if (isCodigoDuplicado(finalCodigo, crud.editingId ?? undefined)) errors.codigo = 'Ya existe una comunidad con ese código';
+            if (!crud.formData.nombre_cdad?.trim()) errors.nombre_cdad = 'El nombre de la comunidad es obligatorio';
             return errors;
         });
     };
 
     const updateField = (field: keyof FormData, value: string) => {
         crud.setFormData({ ...crud.formData, [field]: value });
-        crud.setFormErrors(prev => ({ ...prev, [field]: '' }));
+        if (field === 'codigo') {
+            if (!value.trim()) {
+                crud.setFormErrors(prev => ({ ...prev, codigo: 'El código es obligatorio' }));
+            } else if (isCodigoDuplicado(value, crud.editingId ?? undefined)) {
+                crud.setFormErrors(prev => ({ ...prev, codigo: 'Ya existe una comunidad con ese código' }));
+            } else {
+                crud.setFormErrors(prev => ({ ...prev, codigo: '' }));
+            }
+        } else {
+            crud.setFormErrors(prev => ({ ...prev, [field]: '' }));
+        }
     };
 
     const inputClass = (field?: string) =>
@@ -202,7 +218,7 @@ export default function ComunidadesPage() {
             <PageHeader
                 title="Gestión de Clientes"
                 showForm={crud.showForm}
-                onToggleForm={() => crud.showForm ? crud.closeForm() : crud.openNewForm()}
+                onToggleForm={handleOpenNew}
                 newButtonLabel="Nuevo Cliente"
                 newButtonShortLabel="Nueva"
                 extraButtons={
@@ -249,7 +265,16 @@ export default function ComunidadesPage() {
             >
                 <FormSection title="Identificación">
                     <div className="grid grid-cols-1 sm:grid-cols-12 gap-x-4 gap-y-3">
-                        <FormField label="Tipo" required className="sm:col-span-7 md:col-span-8">
+                        <FormField label="Código" required error={crud.formErrors.codigo} className="sm:col-span-3">
+                            <input
+                                type="text"
+                                placeholder="1"
+                                className={inputClass('codigo')}
+                                value={crud.formData.codigo}
+                                onChange={e => updateField('codigo', e.target.value)}
+                            />
+                        </FormField>
+                        <FormField label="Tipo" required className="sm:col-span-9">
                             <SearchableSelect
                                 value={crud.formData.tipo}
                                 onChange={(val) => crud.setFormData({ ...crud.formData, tipo: String(val) })}
