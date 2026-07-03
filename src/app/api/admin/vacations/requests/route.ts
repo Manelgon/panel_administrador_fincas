@@ -2,30 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { validateRequest } from '@/lib/api/validateRequest';
 import { vacationRequestActionSchema } from '@/lib/schemas';
-
-// Helper to check admin role
-async function isAdmin(userId: string) {
-    const { data, error } = await supabaseAdmin
-        .from('profiles')
-        .select('rol')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (error) {
-        console.error('isAdmin check error:', error);
-        return false;
-    }
-    return data?.rol === 'admin';
-}
+import { requireAdmin } from '@/lib/api/requireAuth';
 
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const adminId = searchParams.get('adminId');
-
-        if (!adminId || !(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if (!auth.success) return auth.response;
 
         // 1) Fetch requests
         const { data: requests, error: reqError } = await supabaseAdmin
@@ -64,15 +46,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    const auth = await requireAdmin();
+    if (!auth.success) return auth.response;
+
     const validation = await validateRequest(request, vacationRequestActionSchema);
     if (!validation.success) return validation.response;
-    const { adminId, requestId, status, commentAdmin } = validation.data;
+    const { requestId, status, commentAdmin } = validation.data;
 
     try {
-        if (!(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
-
         // 1) Fetch current request and associated balance
         const { data: vReq, error: fetchError } = await supabaseAdmin
             .from('vacation_requests')
@@ -136,7 +117,7 @@ export async function POST(request: Request) {
             .update({
                 status,
                 comment_admin: commentAdmin,
-                admin_id: adminId,
+                admin_id: auth.userId,
                 updated_at: new Date().toISOString()
             })
             .eq('id', requestId)
@@ -154,15 +135,14 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
+        const auth = await requireAdmin();
+        if (!auth.success) return auth.response;
+
         const body = await request.json();
-        const { adminId, requestId, type, date_from, date_to, days_count, status, comment_admin } = body;
+        const { requestId, type, date_from, date_to, days_count, status, comment_admin } = body;
 
-        if (!adminId || !requestId) {
+        if (!requestId) {
             return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
-        }
-
-        if (!(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 
         // 1) Fetch current request
@@ -234,7 +214,7 @@ export async function PATCH(request: Request) {
         // 3) Update request fields
         const updateData: Record<string, unknown> = {
             updated_at: new Date().toISOString(),
-            admin_id: adminId,
+            admin_id: auth.userId,
         };
         if (type) updateData.type = type;
         if (date_from) updateData.date_from = date_from;

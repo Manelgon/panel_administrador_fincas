@@ -2,20 +2,12 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { validateRequest } from '@/lib/api/validateRequest';
 import { vacationSettingsActionSchema } from '@/lib/schemas';
-
-async function isAdmin(userId: string) {
-    const { data } = await supabaseAdmin.from('profiles').select('rol').eq('user_id', userId).maybeSingle();
-    return data?.rol === 'admin';
-}
+import { requireAdmin } from '@/lib/api/requireAuth';
 
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const adminId = searchParams.get('adminId');
-
-        if (!adminId || !(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
+        const auth = await requireAdmin();
+        if (!auth.success) return auth.response;
 
         const [policyRes, blockedRes] = await Promise.all([
             supabaseAdmin.from('vacation_policies').select('*').eq('is_active', true).maybeSingle(),
@@ -32,15 +24,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+    const auth = await requireAdmin();
+    if (!auth.success) return auth.response;
+
     const validation = await validateRequest(request, vacationSettingsActionSchema);
     if (!validation.success) return validation.response;
-    const { adminId, action, data } = validation.data;
+    const { action, data } = validation.data;
 
     try {
-        if (!(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
-
         if (action === 'update_policy') {
             const { error } = await supabaseAdmin
                 .from('vacation_policies')

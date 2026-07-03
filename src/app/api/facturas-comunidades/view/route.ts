@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAuth } from "@/lib/api/requireAuth";
 
 export async function GET(req: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const url = new URL(req.url);
         const filePath = url.searchParams.get("path");
 

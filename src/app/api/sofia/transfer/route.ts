@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
-import { supabaseRouteClient } from '@/lib/supabase/route';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/api/requireAuth';
 
 // Primary Admin Client for cross-table operations
 export async function POST(request: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const { sofiaId, gestorId, comunidadId } = await request.json();
 
         if (!sofiaId || !gestorId || !comunidadId) {

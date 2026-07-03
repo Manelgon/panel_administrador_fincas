@@ -1,13 +1,21 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/api/requireAuth';
 
 export async function GET(request: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
 
         if (!userId) {
             return NextResponse.json({ error: 'Falta userId' }, { status: 400 });
+        }
+
+        if (userId !== auth.userId && auth.rol !== 'admin') {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 
         const { data, error } = await supabaseAdmin
@@ -26,11 +34,18 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const body = await request.json();
         const { userId, type, dateFrom, dateTo, daysCount, commentUser } = body;
 
         if (!userId || !type || !dateFrom || !dateTo || !daysCount) {
             return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 });
+        }
+
+        if (userId !== auth.userId && auth.rol !== 'admin') {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 
         // 1) Overlap Check

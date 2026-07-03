@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { createClient } from '@supabase/supabase-js';
+import { requireAuth } from '@/lib/api/requireAuth';
 
 // Use the service role key to bypass RLS for admin import operations
 interface ImportRow {
@@ -11,6 +11,9 @@ interface ImportRow {
 
 export async function POST(req: NextRequest) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const { rows }: { rows: ImportRow[] } = await req.json();
 
         if (!rows || rows.length === 0) {

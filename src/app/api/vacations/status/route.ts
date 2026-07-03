@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { requireAuth } from '@/lib/api/requireAuth';
 
 export async function GET(request: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('userId');
         const year = searchParams.get('year') || new Date().getFullYear().toString();
 
         if (!userId) {
             return NextResponse.json({ error: 'Falta userId' }, { status: 400 });
+        }
+
+        // Un usuario solo puede consultar su propia bolsa; los admin, cualquiera
+        if (userId !== auth.userId && auth.rol !== 'admin') {
+            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
         }
 
         // 1) Fetch Balance

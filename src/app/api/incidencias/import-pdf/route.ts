@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { requireAuth } from '@/lib/api/requireAuth'
 
 const SOURCE_MAP: Record<string, string> = {
   'whatsapp': 'Whatsapp',
@@ -232,6 +233,9 @@ function parseNetFincasPdf(text: string): ParsedIncident[] {
 
 export async function POST(req: NextRequest) {
   try {
+    const auth = await requireAuth()
+    if (!auth.success) return auth.response
+
     const dryRun = req.nextUrl.searchParams.get('dryRun') === 'true'
 
     const formData = await req.formData()

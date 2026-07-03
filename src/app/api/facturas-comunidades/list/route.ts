@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAuth } from "@/lib/api/requireAuth";
 
 export async function GET(req: Request) {
+    const auth = await requireAuth();
+    if (!auth.success) return auth.response;
+
     const supabase = supabaseAdmin;
 
     const url = new URL(req.url);

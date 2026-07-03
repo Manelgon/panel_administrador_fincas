@@ -2,30 +2,15 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { validateRequest } from '@/lib/api/validateRequest';
 import { vacationBalancePatchSchema } from '@/lib/schemas';
-
-async function isAdmin(userId: string) {
-    const { data, error } = await supabaseAdmin
-        .from('profiles')
-        .select('rol')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-    if (error) {
-        console.error('isAdmin check error (balances):', error);
-        return false;
-    }
-    return data?.rol === 'admin';
-}
+import { requireAdmin } from '@/lib/api/requireAuth';
 
 export async function GET(request: Request) {
     try {
-        const { searchParams } = new URL(request.url);
-        const adminId = searchParams.get('adminId');
-        const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
+        const auth = await requireAdmin();
+        if (!auth.success) return auth.response;
 
-        if (!adminId || !(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
+        const { searchParams } = new URL(request.url);
+        const year = parseInt(searchParams.get('year') || new Date().getFullYear().toString());
 
         // 1) Fetch all profiles
         const { data: profiles, error: profilesError } = await supabaseAdmin
@@ -65,15 +50,14 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+    const auth = await requireAdmin();
+    if (!auth.success) return auth.response;
+
     const validation = await validateRequest(request, vacationBalancePatchSchema);
     if (!validation.success) return validation.response;
-    const { adminId, userId, year, balances } = validation.data;
+    const { userId, year, balances } = validation.data;
 
     try {
-        if (!(await isAdmin(adminId))) {
-            return NextResponse.json({ error: 'No autorizado' }, { status: 403 });
-        }
-
         const { error } = await supabaseAdmin
             .from('vacation_balances')
             .upsert({

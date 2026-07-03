@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAuth } from "@/lib/api/requireAuth";
 
 export async function POST(req: Request) {
     try {
+        const auth = await requireAuth();
+        if (!auth.success) return auth.response;
+
         const { bucket, path } = await req.json();
 
         if (!bucket || !path) {
