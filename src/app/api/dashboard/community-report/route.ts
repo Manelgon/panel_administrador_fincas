@@ -865,9 +865,15 @@ export async function POST(req: Request) {
             currentY = drawSectionTitle(page, "GESTIÓN DE COMUNICACIONES (IA)", marginX, currentY, contentW, bold);
 
             try {
-                const n8nRes = await fetch('https://serinwebhook.afcademia.com/webhook/135d1aad-2cd5-42b6-b51e-4307a4be5444', {
+                const emailsWebhookUrl = process.env.COMMUNITY_REPORT_EMAIL_WEBHOOK
+                    || 'https://serinwebhook.afcademia.com/webhook/135d1aad-2cd5-42b6-b51e-4307a4be5444';
+
+                const n8nRes = await fetch(emailsWebhookUrl, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Envio_documentacion_Panel_serincosol: process.env.N8N_WEBHOOK_SECRET || '',
+                    },
                     body: JSON.stringify({
                         comunidad_nombre: communityName,
                         comunidad_id: inputId, // Still use OneDrive ID for n8n
