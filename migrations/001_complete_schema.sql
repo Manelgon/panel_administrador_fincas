@@ -164,9 +164,11 @@ create index if not exists task_timers_start_idx on public.task_timers(start_at 
 create index if not exists task_timers_incidencia_idx on public.task_timers(incidencia_id);
 
 -- 2.8 Time Entries (fichaje)
+-- user_id: ON DELETE RESTRICT — el control horario (art. 34.9 ET) obliga a
+-- conservar los fichajes 4 años; no deben borrarse al eliminar el empleado.
 create table if not exists public.time_entries (
   id bigserial primary key,
-  user_id uuid not null references public.profiles(user_id) on delete cascade,
+  user_id uuid not null references public.profiles(user_id) on delete restrict,
   start_at timestamptz not null default now(),
   end_at timestamptz,
   note text,

@@ -212,6 +212,17 @@ export async function POST(request: Request) {
             if (id === verifiedUser.id) {
                 return NextResponse.json({ error: 'No puedes eliminar tu propia cuenta mientras estás logueado' }, { status: 400 });
             }
+            // Protección legal: el control horario (art. 34.9 ET) obliga a conservar
+            // los fichajes 4 años. Si el empleado tiene registros, no se borra: se desactiva.
+            const { count: fichajesCount } = await supabaseAdmin
+                .from('time_entries')
+                .select('id', { count: 'exact', head: true })
+                .eq('user_id', String(id));
+            if (fichajesCount && fichajesCount > 0) {
+                return NextResponse.json({
+                    error: 'Este empleado tiene fichajes que la ley obliga a conservar durante 4 años. Desactívalo (botón Activo/Inactivo) en lugar de eliminarlo; así se le retira el acceso pero se conserva el registro horario.'
+                }, { status: 409 });
+            }
             const { error } = await supabaseAdmin.auth.admin.deleteUser(String(id));
             deleteError = error;
         } else if (type === 'document') {

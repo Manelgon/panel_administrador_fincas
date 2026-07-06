@@ -59,6 +59,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
         }
 
+        // Protección legal: el control horario (art. 34.9 ET) obliga a conservar
+        // los fichajes 4 años. Si el empleado tiene registros, no se borra: se desactiva.
+        const { count: fichajesCount } = await supabaseAdmin
+            .from('time_entries')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', userId);
+        if (fichajesCount && fichajesCount > 0) {
+            return NextResponse.json({
+                error: 'Este empleado tiene fichajes que la ley obliga a conservar durante 4 años. Desactívalo en lugar de eliminarlo.'
+            }, { status: 409 });
+        }
+
         // 3. Delete User from Supabase Auth (Cascades to Profiles)
         const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
 
