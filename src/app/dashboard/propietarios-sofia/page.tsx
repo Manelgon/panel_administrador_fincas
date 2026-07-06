@@ -128,6 +128,31 @@ export default function PropietariosSofiaPage() {
         }, 'Actualizando estado...');
     };
 
+    // Derecho de supresión (art. 17 RGPD): anonimiza los datos personales del
+    // propietario (nombre, apellidos, email, teléfono, dirección) conservando la fila.
+    const handleAnonymize = async (row: Propietario) => {
+        const nombre = [row.nombre_cliente, row.apellid_cliente].filter(Boolean).join(' ') || `Propietario #${row.id}`;
+        if (!window.confirm(`¿Anonimizar los datos de "${nombre}"?\n\nSe borrarán nombre, apellidos, email, teléfono y dirección de forma irreversible (derecho de supresión RGPD). La fila se conserva sin datos personales.`)) return;
+
+        await withLoading(async () => {
+            try {
+                const res = await fetch('/api/admin/universal-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: row.id, type: 'propietario' }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Error al anonimizar');
+                toast.success('Datos del propietario anonimizados');
+                setPropietarios(prev => prev.map(p => p.id === row.id
+                    ? { ...p, nombre_cliente: '', apellid_cliente: '', mail: '', telefono: '', direccion_postal: '' }
+                    : p));
+            } catch (error: any) {
+                toast.error(error.message);
+            }
+        }, 'Anonimizando propietario...');
+    };
+
     const columns: Column<Propietario>[] = [
         { key: 'id', label: 'ID' },
         {
@@ -509,6 +534,12 @@ export default function PropietariosSofiaPage() {
                             hidden: isTrue || isFalse,
                             disabled: isUpdatingStatus === row.id,
                             variant: 'success',
+                        },
+                        {
+                            label: 'Anonimizar (RGPD)',
+                            icon: <AlertCircle className="w-4 h-4" />,
+                            onClick: (r) => handleAnonymize(r),
+                            variant: 'danger',
                         },
                     ];
                 }}

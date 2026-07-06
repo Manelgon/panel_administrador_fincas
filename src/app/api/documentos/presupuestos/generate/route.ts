@@ -602,6 +602,17 @@ async function buildPdf(
         }
     }
 
+    // Marca de contenido generado con IA (art. 50.2 EU AI Act)
+    {
+        const aiNote = "Documento elaborado con asistencia de inteligencia artificial. Revíselo antes de su uso.";
+        ensure(24);
+        y -= 8;
+        for (const ln of wrap(winAnsiSafe(aiNote), font, 8, contentW)) {
+            page.drawText(ln, { x: margin, y: y - 10, size: 8, font, color: GREY });
+            y -= 11;
+        }
+    }
+
     // Footer global
     const footerText = winAnsiSafe(`${emisor?.nombre || "Serincosol"} · administracion@serincosol.com`);
     const footerSize = 8;

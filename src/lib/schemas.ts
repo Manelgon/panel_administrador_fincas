@@ -315,6 +315,7 @@ export const universalDeleteApiSchema = z.object({
     'document',
     'proveedor',
     'task_timer',
+    'propietario',
   ]),
   email: z.email('Email no válido').optional(),
   password: z.string().optional(),

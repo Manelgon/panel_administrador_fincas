@@ -864,6 +864,12 @@ export async function POST(req: Request) {
             if (currentY < 150) { page = pdfDoc.addPage([A4.w, A4.h]); currentY = A4.h - 50; }
             currentY = drawSectionTitle(page, "GESTIÓN DE COMUNICACIONES (IA)", marginX, currentY, contentW, bold);
 
+            // Marca de contenido generado con IA (art. 50.2 EU AI Act)
+            page.drawText("Resúmenes generados automáticamente con inteligencia artificial; verifique el original.", {
+                x: marginX + 5, y: currentY, size: 7, font, color: GRAY
+            });
+            currentY -= 14;
+
             try {
                 const emailsWebhookUrl = process.env.COMMUNITY_REPORT_EMAIL_WEBHOOK
                     || 'https://serinwebhook.afcademia.com/webhook/135d1aad-2cd5-42b6-b51e-4307a4be5444';

@@ -193,6 +193,9 @@ export async function POST(request: Request) {
             entityName = (data?.comunidades as any)?.nombre_cdad
                 ? `Tarea de ${(data?.comunidades as any).nombre_cdad}`
                 : 'Tarea (Todas las comunidades)';
+        } else if (type === 'propietario') {
+            const { data } = await supabaseAdmin.from('propietarios').select('nombre_cliente, apellid_cliente').eq('id', id).single();
+            entityName = [data?.nombre_cliente, data?.apellid_cliente].filter(Boolean).join(' ') || `Propietario #${id}`;
         }
 
         // 4. Delete the main record
@@ -233,6 +236,21 @@ export async function POST(request: Request) {
             deleteError = error;
         } else if (type === 'task_timer') {
             const { error } = await supabaseAdmin.from('task_timers').delete().eq('id', id);
+            deleteError = error;
+        } else if (type === 'propietario') {
+            // Derecho de supresión (art. 17 RGPD): se anonimiza en vez de borrar la
+            // fila, para no romper referencias históricas. Los datos personales se
+            // ponen a null; el registro queda sin identificar a ninguna persona.
+            const { error } = await supabaseAdmin
+                .from('propietarios')
+                .update({
+                    nombre_cliente: null,
+                    apellid_cliente: null,
+                    direccion_postal: null,
+                    mail: null,
+                    telefono: null,
+                })
+                .eq('id', id);
             deleteError = error;
         } else {
             return NextResponse.json({ error: 'Tipo de entidad no válido' }, { status: 400 });
