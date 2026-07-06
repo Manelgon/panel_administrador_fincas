@@ -287,6 +287,11 @@ function LoginForm() {
                         Contacta con soporte
                     </span>
                 </p>
+                <p className="mt-3 text-center text-xs text-gray-400">
+                    <a href="/legal/privacidad" className="underline hover:text-gray-300">Política de privacidad</a>
+                    <span className="mx-2 text-gray-600">·</span>
+                    <a href="/legal/aviso-legal" className="underline hover:text-gray-300">Aviso legal</a>
+                </p>
             </div>
         </>
     );
