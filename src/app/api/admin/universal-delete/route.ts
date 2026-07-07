@@ -155,8 +155,8 @@ export async function POST(request: Request) {
             }
 
         } else if (type === 'morosidad') {
-            const { data } = await supabaseAdmin.from('morosidad').select('nombre_cliente, titulo').eq('id', id).single();
-            entityName = data?.titulo || data?.nombre_cliente || `Morosidad #${id}`;
+            const { data } = await supabaseAdmin.from('morosidad').select('nombre_deudor, titulo_documento').eq('id', id).single();
+            entityName = data?.titulo_documento || data?.nombre_deudor || `Morosidad #${id}`;
 
             // Delete timeline messages for morosidad too
             await supabaseAdmin
@@ -186,8 +186,8 @@ export async function POST(request: Request) {
                 cliente: data?.payload?.['Nombre Cliente'] || data?.payload?.['Nombre']
             };
         } else if (type === 'proveedor') {
-            const { data } = await supabaseAdmin.from('proveedores').select('nombre_proveedor').eq('id', id).single();
-            entityName = data?.nombre_proveedor || `Proveedor #${id}`;
+            const { data } = await supabaseAdmin.from('proveedores').select('nombre').eq('id', id).single();
+            entityName = data?.nombre || `Proveedor #${id}`;
         } else if (type === 'task_timer') {
             const { data } = await supabaseAdmin.from('task_timers').select('comunidades(nombre_cdad)').eq('id', id).single();
             entityName = (data?.comunidades as any)?.nombre_cdad
