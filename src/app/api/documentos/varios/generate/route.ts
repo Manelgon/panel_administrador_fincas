@@ -6,35 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 import { formatDateEU } from "@/lib/format";
 
-// Helper: Service Role Client to bypass RLS for assets
-/**
- * Helper to download asset as Uint8Array (Buffer)
- */
-async function downloadAssetPng(path: string): Promise<Uint8Array> {
-    // Reuse admin client pattern from other route
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets") // Correct bucket name
-        .download(path);
-
-    if (error || !data) {
-        // Fallback logic just in case
-        if (path.includes('/')) {
-            const rootPath = path.split('/').pop()!;
-            const retry = await supabaseAdmin.storage
-                .from("doc-assets")
-                .download(rootPath);
-            if (!retry.error) {
-                data = retry.data;
-                error = null;
-            }
-        }
-    }
-
-    if (error || !data) {
-        throw new Error(`Error downloading asset ${path}: ${error?.message}`);
-    }
-    return new Uint8Array(await data.arrayBuffer());
-}
+import { downloadAssetOrThrow as downloadAssetPng } from "@/lib/pdf/shared";
 
 // --- CONSTANTS & HELPERS FOR INVOICE ---
 const A4 = { w: 595.28, h: 841.89 };

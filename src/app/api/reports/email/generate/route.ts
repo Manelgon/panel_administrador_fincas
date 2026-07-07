@@ -27,17 +27,7 @@ function formatToEuropeanDate(dateStr: string | null | undefined): string {
     }
 }
 
-async function downloadAssetPng(path: string): Promise<Uint8Array> {
-    try {
-        const { data, error } = await supabaseAdmin.storage
-            .from("doc-assets")
-            .download(path);
-        if (error || !data) throw new Error(error?.message || "Sin datos");
-        return new Uint8Array(await data.arrayBuffer());
-    } catch (e: any) {
-        throw new Error(`Error descargando asset [${path}]: ${e.message}`);
-    }
-}
+import { downloadAssetOrThrow as downloadAssetPng } from "@/lib/pdf/shared";
 
 export async function POST(req: Request) {
     try {

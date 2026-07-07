@@ -1,7 +1,6 @@
 
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -49,34 +48,7 @@ function v(val: any) {
     return String(val ?? "").trim();
 }
 
-// Nueva función de descarga desde Supabase Storage (usando Admin)
-async function downloadAssetPng(filePath: string) {
-    // Try primary path
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets")
-        .download(filePath);
-
-    // Fallback: try root if not found in folder
-    if (error && filePath.includes('/')) {
-        const rootPath = filePath.split('/').pop()!;
-        const retry = await supabaseAdmin.storage
-            .from("doc-assets")
-            .download(rootPath);
-
-        if (!retry.error) {
-            data = retry.data;
-            error = null;
-        }
-    }
-
-    if (error || !data) {
-        console.warn(`Asset ${filePath} not found (even with admin):`, error?.message);
-        return null;
-    }
-
-    const ab = await data.arrayBuffer();
-    return Buffer.from(ab);
-}
+import { downloadAsset as downloadAssetPng } from "@/lib/pdf/shared";
 
 // Builder actualizado para recibir Buffers
 export async function buildRentaCertificatePdf(

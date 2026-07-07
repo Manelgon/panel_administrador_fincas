@@ -23,11 +23,7 @@ const TABLE_HEADER_BG = rgb(0.09, 0.09, 0.11); // neutral-900
 const ALT_ROW_BG = rgb(0.98, 0.98, 0.98);     // neutral-100
 const ACCENT_TEXT = rgb(0.56, 0.49, 0.02);     // yellow-800
 
-async function downloadAssetPng(storagePath: string): Promise<Uint8Array> {
-    const { data, error } = await supabaseAdmin.storage.from("doc-assets").download(storagePath);
-    if (error || !data) throw new Error(`Error downloading ${storagePath}: ${error?.message}`);
-    return new Uint8Array(await data.arrayBuffer());
-}
+import { downloadAssetOrThrow as downloadAssetPng } from "@/lib/pdf/shared";
 
 function formatDate(dateStr: string | null | undefined): string {
     if (!dateStr) return "-";

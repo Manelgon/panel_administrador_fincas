@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 import { formatDateEU } from "@/lib/format";
 
@@ -14,33 +13,7 @@ const YELLOW = rgb(0.98, 0.84, 0.40);
 const BORDER = rgb(0.82, 0.82, 0.82);
 const BLACK = rgb(0, 0, 0);
 
-// Helper: Service Role Client to bypass RLS for assets
-/**
- * Helper to download asset as Uint8Array (Buffer)
- */
-async function downloadAssetPng(path: string): Promise<Uint8Array> {
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets")
-        .download(path);
-
-    if (error || !data) {
-        if (path.includes('/')) {
-            const rootPath = path.split('/').pop()!;
-            const retry = await supabaseAdmin.storage
-                .from("doc-assets")
-                .download(rootPath);
-            if (!retry.error) {
-                data = retry.data;
-                error = null;
-            }
-        }
-    }
-
-    if (error || !data) {
-        throw new Error(`Error downloading asset ${path}: ${error?.message}`);
-    }
-    return new Uint8Array(await data.arrayBuffer());
-}
+import { downloadAssetOrThrow as downloadAssetPng } from "@/lib/pdf/shared";
 
 function txt(v: any) { return String(v ?? "").trim(); }
 function n(v: any) {

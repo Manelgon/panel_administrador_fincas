@@ -13,29 +13,7 @@ const BLACK = rgb(0, 0, 0);
 
 // EMISOR se carga dinámicamente desde company_settings en el handler POST
 
-async function downloadAssetPng(path: string): Promise<Uint8Array> {
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets")
-        .download(path);
-
-    if (error || !data) {
-        if (path.includes('/')) {
-            const rootPath = path.split('/').pop()!;
-            const retry = await supabaseAdmin.storage
-                .from("doc-assets")
-                .download(rootPath);
-            if (!retry.error) {
-                data = retry.data;
-                error = null;
-            }
-        }
-    }
-
-    if (error || !data) {
-        throw new Error(`Error downloading asset ${path}: ${error?.message}`);
-    }
-    return new Uint8Array(await data.arrayBuffer());
-}
+import { downloadAssetOrThrow as downloadAssetPng } from "@/lib/pdf/shared";
 
 function drawYellowBlock(params: {
     page: any;
