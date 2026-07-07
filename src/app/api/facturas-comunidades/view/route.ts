@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAuth } from "@/lib/api/requireAuth";
+import { safeApiError } from "@/lib/errorMessage";
 
 export async function GET(req: Request) {
     try {
@@ -40,7 +41,7 @@ export async function GET(req: Request) {
     } catch (error) {
         console.error("Error in PDF view proxy:", error);
         return NextResponse.json(
-            { error: error instanceof Error ? error.message : "Error interno" },
+            { error: safeApiError(error, "facturas-view") },
             { status: 500 }
         );
     }

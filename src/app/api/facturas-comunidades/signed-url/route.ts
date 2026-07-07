@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { safeApiError } from "@/lib/errorMessage";
 
 export async function GET(req: Request) {
     try {
@@ -43,6 +44,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ url: data.signedUrl });
     } catch (error) {
         console.error("Error generating signed URL:", error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : "Error interno" }, { status: 500 });
+        return NextResponse.json({ error: safeApiError(error, "facturas-signed-url") }, { status: 500 });
     }
 }

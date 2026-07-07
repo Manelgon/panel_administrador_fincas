@@ -454,8 +454,7 @@ export async function POST(req: NextRequest) {
       error_details: errors.slice(0, 10),
     })
   } catch (error) {
-    const msg = error instanceof Error ? error.message : String(error)
-    console.error('Error importando PDF:', msg)
-    return NextResponse.json({ error: `Error procesando el PDF: ${msg}` }, { status: 500 })
+    console.error('Error importando PDF:', error instanceof Error ? error.message : String(error))
+    return NextResponse.json({ error: 'Error procesando el PDF' }, { status: 500 })
   }
 }

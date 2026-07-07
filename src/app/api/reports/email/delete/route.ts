@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
             if (storageError) {
                 console.error("Storage delete error:", storageError);
-                return NextResponse.json({ error: `No se pudo eliminar el archivo PDF del almacenamiento: ${storageError.message}` }, { status: 500 });
+                return NextResponse.json({ error: "No se pudo eliminar el archivo PDF del almacenamiento" }, { status: 500 });
             }
         }
 

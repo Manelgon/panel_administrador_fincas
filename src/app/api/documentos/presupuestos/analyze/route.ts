@@ -266,6 +266,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true, analysis: parsed });
     } catch (err: any) {
         console.error("Presupuestos analyze error:", err);
-        return NextResponse.json({ error: err?.message || "Error interno del servidor" }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }

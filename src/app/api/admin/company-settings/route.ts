@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { supabaseRouteClient } from "@/lib/supabase/route";
+import { safeApiError } from "@/lib/errorMessage";
 import sharp from "sharp";
 
 export const dynamic = "force-dynamic";
@@ -53,8 +54,7 @@ export async function GET(req: Request) {
 
         return NextResponse.json({ ok: true, settings, urls });
     } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error desconocido";
-        return NextResponse.json({ error: msg }, { status: 500 });
+        return NextResponse.json({ error: safeApiError(err, "company-settings") }, { status: 500 });
     }
 }
 
@@ -147,7 +147,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ok: true });
     } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Error desconocido";
-        return NextResponse.json({ error: msg }, { status: 500 });
+        return NextResponse.json({ error: safeApiError(err, "company-settings") }, { status: 500 });
     }
 }

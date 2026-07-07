@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { requireAuth } from '@/lib/api/requireAuth';
+import { safeApiError } from '@/lib/errorMessage';
 
 interface ImportRow {
     comunidad_id: number;
@@ -82,6 +83,6 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ results });
     } catch (err: unknown) {
-        return NextResponse.json({ error: err instanceof Error ? err.message : 'Server error' }, { status: 500 });
+        return NextResponse.json({ error: safeApiError(err, 'reuniones-import') }, { status: 500 });
     }
 }

@@ -64,9 +64,7 @@ export async function POST(request: Request) {
         if (insertError) {
             console.error('Insert error details:', insertError);
             return NextResponse.json({
-                error: 'Error al crear el ticket en la base principal',
-                details: insertError.message,
-                code: insertError.code
+                error: 'Error al crear el ticket en la base principal'
             }, { status: 500 });
         }
 

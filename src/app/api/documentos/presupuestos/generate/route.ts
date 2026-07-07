@@ -1000,6 +1000,6 @@ export async function POST(req: Request) {
         });
     } catch (err: any) {
         console.error("Presupuestos generate error:", err);
-        return NextResponse.json({ error: err?.message || "Error interno del servidor" }, { status: 500 });
+        return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
     }
 }
