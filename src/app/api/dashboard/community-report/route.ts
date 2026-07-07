@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { promises as fs } from "fs";
 import path from "path";

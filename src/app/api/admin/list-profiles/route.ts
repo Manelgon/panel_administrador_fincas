@@ -1,5 +1,5 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
@@ -25,17 +25,6 @@ export async function GET(request: Request) {
     if (userError || !user) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!serviceRoleKey) {
-        return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
-    }
-
-    const supabaseAdmin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        serviceRoleKey,
-        { auth: { autoRefreshToken: false, persistSession: false } }
-    );
 
     // Verify caller is admin
     const { data: callerProfile } = await supabaseAdmin

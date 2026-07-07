@@ -2,9 +2,9 @@
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
+import { formatDateEU } from "@/lib/format";
 
 // Helper: Service Role Client to bypass RLS for assets
 /**
@@ -45,23 +45,6 @@ const BLACK = rgb(0, 0, 0);
 // EMISOR se carga dinámicamente desde company_settings en el handler POST
 
 // --- HELPER: DATE FORMAT EU ---
-function formatDateEU(v: any) {
-    const s = String(v ?? "").trim();
-    if (!s) return "";
-    // Try YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-        const [y, m, d] = s.split("-");
-        return `${d}-${m}-${y}`;
-    }
-    // Try ISO with T
-    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-        const [datePart] = s.split("T");
-        const [y, m, d] = datePart.split("-");
-        return `${d}-${m}-${y}`;
-    }
-    return s;
-}
-
 function txt(v: any) { return String(v ?? "").trim(); }
 function n(v: any) {
     const x = typeof v === "number" ? v : Number(String(v ?? "").replace(",", "."));

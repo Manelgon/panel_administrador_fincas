@@ -1,12 +1,12 @@
 
 import { NextResponse } from "next/server";
 import { supabaseRouteClient } from "@/lib/supabase/route";
-import { createClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { getEmisor } from "@/lib/getEmisor";
+import { formatDateEU } from "@/lib/format";
 
 // Helper: Service Role Client to bypass RLS for assets
 // ---------- helpers ----------
@@ -152,22 +152,6 @@ export async function buildRentaCertificatePdf(
     const declarado = v(data["Declarado"]);
 
     // --- HELPER: DATE FORMAT EU ---
-    function formatDateEU(v: any) {
-        const s = String(v ?? "").trim();
-        if (!s) return "";
-        // Try YYYY-MM-DD
-        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
-            const [y, m, d] = s.split("-");
-            return `${d}-${m}-${y}`;
-        }
-        // Try ISO with T
-        if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
-            const [datePart] = s.split("T");
-            const [y, m, d] = datePart.split("-");
-            return `${d}-${m}-${y}`;
-        }
-        return s;
-    }
 
     const fechaEmision = formatDateEU(data["Fecha emisión"]);
 
