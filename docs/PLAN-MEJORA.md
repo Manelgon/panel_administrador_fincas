@@ -31,7 +31,14 @@ Extraer a helpers compartidos lo que hoy está copiado a mano.
 - [ ] **Cliente admin único:** sustituir las creaciones inline de `createClient(...SERVICE_ROLE...)` (en `admin/delete-incident`, `admin/universal-delete`, `admin/list-profiles`, `reports/email/delete`…) por el import del singleton `src/lib/supabase/admin.ts`.
 - [ ] **Un solo motor de PDF:** portar los 2 usos de `jspdf`/`jspdf-autotable` (`cronometraje/page.tsx`, `reuniones/lib/generarPortadasPdf.ts`) a `pdf-lib` (ya en 17 ficheros) y eliminar esas 2 dependencias.
 - [ ] **Factories para rutas gemelas:** las 5 rutas `signed-url` y las 3 `send` de documentos son casi idénticas → `createSignedUrlHandler(bucket)` y `createSendHandler(config)`. Elimina ~5 ficheros.
-- [ ] **Un solo modal de borrado:** `DeleteComunidadModal` y `DeleteConfirmationModal` son casi iguales → uno parametrizable.
+- [x] ~~**Un solo modal de borrado.**~~ **DESCARTADO tras revisar el código:** no son duplicados. `DeleteConfirmationModal` (genérico) ya se reutiliza en 8 pantallas; `DeleteComunidadModal` es especializado (protección de comunidad activa, datos asociados, desactivar vs borrar) y se usa solo en Clientes. Unirlos empeoraría el código.
+
+### Estado (jul 2026)
+Hechos y desplegados: Bloque 0 completo; 1.1 (format.ts), 1.2 (pdf/shared.ts +
+dedup de 14 copias de downloadAssetPng), 1.3 (cliente admin único). Descartado el
+modal único. Pendientes: quitar `jspdf` (1 usos → pdf-lib, requiere comparar PDFs) y
+factories de rutas `signed-url`/`send`. Las constantes A4/colores siguen duplicadas
+en las 6 rutas (bajo valor, tocar arriesga el layout).
 
 ---
 
