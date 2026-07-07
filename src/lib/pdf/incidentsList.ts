@@ -1,34 +1,7 @@
+import { downloadAsset as downloadAssetPng } from "./shared";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { createClient } from "@supabase/supabase-js";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 
-// Helper for Service Role (bypassing RLS for assets)
-// Helper: Download Asset with Admin Client
-async function downloadAssetPng(filePath: string) {
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets")
-        .download(filePath);
-
-    if (error && filePath.includes('/')) {
-        const rootPath = filePath.split('/').pop()!;
-        const retry = await supabaseAdmin.storage
-            .from("doc-assets")
-            .download(rootPath);
-        if (!retry.error) {
-            data = retry.data;
-            error = null;
-        }
-    }
-
-    if (error || !data) {
-        console.warn(`Asset ${filePath} not found:`, error?.message);
-        return null;
-    }
-
-    const ab = await data.arrayBuffer();
-    return Buffer.from(ab);
-}
 
 // Helper to wrap text
 function wrapText(text: string, maxWidth: number, font: any, size: number): string[] {

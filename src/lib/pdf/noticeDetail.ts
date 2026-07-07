@@ -1,31 +1,7 @@
+import { downloadAsset as downloadAssetPng } from "./shared";
 import { PDFDocument, rgb, StandardFonts, PDFFont } from "pdf-lib";
-import { createClient } from "@supabase/supabase-js";
-import { supabaseAdmin } from "@/lib/supabase/admin";
 import { getEmisor } from "@/lib/getEmisor";
 
-async function downloadAssetPng(filePath: string) {
-    let { data, error } = await supabaseAdmin.storage
-        .from("doc-assets")
-        .download(filePath);
-
-    if (error && filePath.includes('/')) {
-        const rootPath = filePath.split('/').pop()!;
-        const retry = await supabaseAdmin.storage
-            .from("doc-assets")
-            .download(rootPath);
-        if (!retry.error) {
-            data = retry.data;
-            error = null;
-        }
-    }
-
-    if (error || !data) {
-        return null;
-    }
-
-    const ab = await data.arrayBuffer();
-    return Buffer.from(ab);
-}
 
 function wrapText(text: string, maxWidth: number, font: PDFFont, size: number): string[] {
     if (!text) return [];
