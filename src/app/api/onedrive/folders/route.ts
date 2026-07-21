@@ -6,8 +6,10 @@ export async function GET() {
         const auth = await requireAuth();
         if (!auth.success) return auth.response;
 
-        const webhookUrl = process.env.ONEDRIVE_FOLDERS_WEBHOOK
-            || 'https://serinwebhook.afcademia.com/webhook/6f428d72-971d-4bfe-8c34-4a8adae7b133';
+        const webhookUrl = process.env.ONEDRIVE_FOLDERS_WEBHOOK;
+        if (!webhookUrl) {
+            return NextResponse.json({ error: 'Webhook no configurado' }, { status: 500 });
+        }
 
         const response = await fetch(webhookUrl, {
             method: 'GET',

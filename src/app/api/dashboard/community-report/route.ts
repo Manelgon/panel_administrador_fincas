@@ -866,8 +866,10 @@ export async function POST(req: Request) {
             currentY -= 14;
 
             try {
-                const emailsWebhookUrl = process.env.COMMUNITY_REPORT_EMAIL_WEBHOOK
-                    || 'https://serinwebhook.afcademia.com/webhook/135d1aad-2cd5-42b6-b51e-4307a4be5444';
+                const emailsWebhookUrl = process.env.COMMUNITY_REPORT_EMAIL_WEBHOOK;
+                if (!emailsWebhookUrl) {
+                    throw new Error("COMMUNITY_REPORT_EMAIL_WEBHOOK no configurado");
+                }
 
                 const n8nRes = await fetch(emailsWebhookUrl, {
                     method: 'POST',
