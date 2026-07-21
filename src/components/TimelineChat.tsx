@@ -26,6 +26,7 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
     const [sending, setSending] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -121,8 +122,8 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
         }
     };
 
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSendMessage = async (e?: React.FormEvent) => {
+        e?.preventDefault();
         if (!newMessage.trim()) return;
 
         setSending(true);
@@ -141,12 +142,38 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
 
             if (error) throw error;
             setNewMessage('');
+            if (inputRef.current) inputRef.current.style.height = 'auto';
         } catch (error) {
             console.error('Error sending message:', error);
             toast.error('Error al enviar mensaje');
         } finally {
             setSending(false);
         }
+    };
+
+    // Enter envia; Ctrl+Enter (o Shift+Enter) inserta un salto de linea
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key !== 'Enter') return;
+        if (e.ctrlKey) {
+            e.preventDefault();
+            const ta = e.currentTarget;
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            setNewMessage(prev => prev.slice(0, start) + '\n' + prev.slice(end));
+            requestAnimationFrame(() => {
+                ta.selectionStart = ta.selectionEnd = start + 1;
+                autoResize(ta);
+            });
+            return;
+        }
+        if (e.shiftKey) return; // salto de linea nativo
+        e.preventDefault();
+        handleSendMessage();
+    };
+
+    const autoResize = (ta: HTMLTextAreaElement) => {
+        ta.style.height = 'auto';
+        ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`;
     };
 
     return (
@@ -225,25 +252,27 @@ export default function TimelineChat({ entityType, entityId }: TimelineChatProps
 
                     {/* Input Area */}
                     <form onSubmit={handleSendMessage} className="p-4 bg-white">
-                        <div className="relative flex items-center gap-2">
-                            <input
-                                type="text"
+                        <div className="relative flex items-end gap-2">
+                            <textarea
+                                ref={inputRef}
+                                rows={1}
                                 placeholder="Escribe una nota interna..."
-                                className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-full text-sm focus:ring-2 focus:ring-yellow-400 focus:bg-white focus:outline-none transition group"
+                                className="w-full pl-4 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-sm focus:ring-2 focus:ring-yellow-400 focus:bg-white focus:outline-none transition resize-none custom-scrollbar"
                                 value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
+                                onChange={(e) => { setNewMessage(e.target.value); autoResize(e.target); }}
+                                onKeyDown={handleKeyDown}
                                 disabled={sending}
                             />
                             <button
                                 type="submit"
                                 disabled={sending || !newMessage.trim()}
-                                className="absolute right-1.5 p-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-full transition shadow-sm disabled:opacity-50"
+                                className="absolute right-1.5 bottom-1.5 p-2 bg-yellow-400 hover:bg-yellow-500 text-neutral-950 rounded-full transition shadow-sm disabled:opacity-50"
                             >
                                 {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                             </button>
                         </div>
                         <p className="text-[10px] text-gray-400 mt-2 px-2">
-                            💡 Las notas son visibles para todos los gestores en tiempo real.
+                            💡 Enter envía · Ctrl+Enter añade un párrafo. Las notas son visibles para todos los gestores en tiempo real.
                         </p>
                     </form>
                 </div>
