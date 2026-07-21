@@ -102,7 +102,25 @@ export default function CronometrajePage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const [{ data: active }, { data: hist }, { data: comms }] = await Promise.all([
+        // Supabase limita cada request; se pagina para traer el historial completo
+        const fetchAllHistory = async () => {
+            const pageSize = 1000;
+            let all: any[] = [];
+            for (let from = 0; ; from += pageSize) {
+                const { data } = await supabase
+                    .from('task_timers')
+                    .select('*, tipo_tarea, comunidades(nombre_cdad, codigo), profiles(nombre)')
+                    .not('end_at', 'is', null)
+                    .order('start_at', { ascending: false })
+                    .range(from, from + pageSize - 1);
+                if (!data || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < pageSize) break;
+            }
+            return all;
+        };
+
+        const [{ data: active }, hist, { data: comms }] = await Promise.all([
             supabase
                 .from('task_timers')
                 .select('*, comunidades(nombre_cdad, codigo), profiles(nombre)')
@@ -111,12 +129,7 @@ export default function CronometrajePage() {
                 .order('start_at', { ascending: false })
                 .maybeSingle(),
 
-            supabase
-                .from('task_timers')
-                .select('*, tipo_tarea, comunidades(nombre_cdad, codigo), profiles(nombre)')
-                .not('end_at', 'is', null)
-                .order('start_at', { ascending: false })
-                .limit(5000),
+            fetchAllHistory(),
 
             supabase
                 .from('comunidades')

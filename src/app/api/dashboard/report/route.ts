@@ -214,17 +214,24 @@ export async function POST(req: Request) {
     }
 
     if (sections.includes('cronometraje')) {
-        let q = supabaseAdmin
-            .from('task_timers')
-            .select('nota, start_at, duration_seconds, tipo_tarea, comunidades(nombre_cdad), profiles:user_id(nombre)')
-            .not('duration_seconds', 'is', null)
-            .order('start_at', { ascending: false });
-        if (communityFilter) q = q.eq('comunidad_id', communityFilter);
-        if (startIso) q = q.gte('start_at', startIso);
-        if (endIso) q = q.lte('start_at', endIso);
-        const { data, error } = await q;
-        if (error) console.error('[Report] task_timers error:', error.message);
-        detailTareas = data || [];
+        // Paginado: sin esto el servidor capa la respuesta y el detalle queda incompleto
+        const pageSize = 1000;
+        detailTareas = [];
+        for (let from = 0; ; from += pageSize) {
+            let q = supabaseAdmin
+                .from('task_timers')
+                .select('nota, start_at, duration_seconds, tipo_tarea, comunidades(nombre_cdad), profiles:user_id(nombre)')
+                .not('duration_seconds', 'is', null)
+                .order('start_at', { ascending: false });
+            if (communityFilter) q = q.eq('comunidad_id', communityFilter);
+            if (startIso) q = q.gte('start_at', startIso);
+            if (endIso) q = q.lte('start_at', endIso);
+            const { data, error } = await q.range(from, from + pageSize - 1);
+            if (error) { console.error('[Report] task_timers error:', error.message); break; }
+            if (!data || data.length === 0) break;
+            detailTareas = detailTareas.concat(data);
+            if (data.length < pageSize) break;
+        }
         console.log(`[Report] tareas fetched: ${detailTareas.length}`);
     }
 

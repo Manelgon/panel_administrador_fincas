@@ -138,12 +138,24 @@ export function useDashboardData() {
             if (dateFilter) pendingChartQuery = pendingChartQuery.gte('created_at', dateFilter);
             if (selectedCommunity !== 'all') pendingChartQuery = pendingChartQuery.eq('comunidad_id', selectedCommunity);
 
-            // ── Build cronometraje query ────────────────────────────────────────
-            let cronoQuery = supabase.from('task_timers')
-                .select('id, user_id, comunidad_id, start_at, duration_seconds, tipo_tarea, comunidades(nombre_cdad, codigo), profiles(nombre)')
-                .not('duration_seconds', 'is', null);
-            if (dateFilter) cronoQuery = cronoQuery.gte('start_at', dateFilter);
-            if (selectedCommunity !== 'all') cronoQuery = cronoQuery.eq('comunidad_id', selectedCommunity);
+            // ── Build cronometraje query (paginada para no capar el total) ──────
+            const fetchAllCrono = async () => {
+                const pageSize = 1000;
+                let all: any[] = [];
+                for (let from = 0; ; from += pageSize) {
+                    let q = supabase.from('task_timers')
+                        .select('id, user_id, comunidad_id, start_at, duration_seconds, tipo_tarea, comunidades(nombre_cdad, codigo), profiles(nombre)')
+                        .not('duration_seconds', 'is', null)
+                        .order('start_at', { ascending: false });
+                    if (dateFilter) q = q.gte('start_at', dateFilter);
+                    if (selectedCommunity !== 'all') q = q.eq('comunidad_id', selectedCommunity);
+                    const { data } = await q.range(from, from + pageSize - 1);
+                    if (!data || data.length === 0) break;
+                    all = all.concat(data);
+                    if (data.length < pageSize) break;
+                }
+                return all;
+            };
 
             // ── Fire all independent queries in parallel ────────────────────────
             const [
@@ -154,7 +166,7 @@ export function useDashboardData() {
                 { count: countPendientes },
                 { count: countAplazadas },
                 { data: pendingTickets },
-                { data: taskTimers },
+                taskTimers,
                 { data: allCommunities },
                 { count: countComunidades },
             ] = await Promise.all([
@@ -165,7 +177,7 @@ export function useDashboardData() {
                 pendientesQuery,
                 aplazadasQuery,
                 pendingChartQuery,
-                cronoQuery.limit(2000),
+                fetchAllCrono(),
                 supabase.from('comunidades').select('id, nombre_cdad, codigo').order('codigo', { ascending: true }),
                 supabase.from('comunidades').select('*', { count: 'exact', head: true }),
             ]);
