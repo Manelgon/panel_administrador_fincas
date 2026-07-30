@@ -314,6 +314,7 @@ export const universalDeleteApiSchema = z.object({
     'perfil',
     'document',
     'proveedor',
+    'contrato',
     'task_timer',
     'propietario',
   ]),

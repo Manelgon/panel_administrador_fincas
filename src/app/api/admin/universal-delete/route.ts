@@ -188,6 +188,11 @@ export async function POST(request: Request) {
         } else if (type === 'proveedor') {
             const { data } = await supabaseAdmin.from('proveedores').select('nombre').eq('id', id).single();
             entityName = data?.nombre || `Proveedor #${id}`;
+        } else if (type === 'contrato') {
+            const { data } = await supabaseAdmin.from('contratos').select('tipo_servicio, proveedores(nombre)').eq('id', id).single();
+            entityName = data
+                ? `${data.tipo_servicio || 'Contrato'} - ${(data.proveedores as unknown as { nombre: string } | null)?.nombre || `#${id}`}`
+                : `Contrato #${id}`;
         } else if (type === 'task_timer') {
             const { data } = await supabaseAdmin.from('task_timers').select('comunidades(nombre_cdad)').eq('id', id).single();
             entityName = (data?.comunidades as any)?.nombre_cdad
@@ -233,6 +238,9 @@ export async function POST(request: Request) {
             deleteError = error;
         } else if (type === 'proveedor') {
             const { error } = await supabaseAdmin.from('proveedores').delete().eq('id', id);
+            deleteError = error;
+        } else if (type === 'contrato') {
+            const { error } = await supabaseAdmin.from('contratos').delete().eq('id', id);
             deleteError = error;
         } else if (type === 'task_timer') {
             const { error } = await supabaseAdmin.from('task_timers').delete().eq('id', id);

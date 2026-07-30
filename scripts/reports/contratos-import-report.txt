@@ -1,0 +1,14 @@
+REPORTE DE IMPORTACIÓN DE CONTRATOS — EJECUCIÓN REAL
+Fecha: 2026-07-29T11:57:16.315Z
+Contratos parseados del Excel:      438
+Contratos preparados para insertar: 438
+Contratos insertados:               41
+Duplicados omitidos (ya en BD):     397
+Contratos omitidos (comunidad sin match): 0
+--- COMUNIDADES NO MATCHEADAS (0) — revisar manualmente ---
+--- PROVEEDORES CREADOS (0) ---
+--- TIPOS DE SERVICIO SIN MAPEO → 'Otro' (4) ---
+    1 contrato(s) · "MOVILIDAD GARAJE"
+    1 contrato(s) · "ADMINISTRADOR"
+    1 contrato(s) · "BUZONES"
+    2 contrato(s) · "INSPECCIÓN ELÉCTRICA.¡"

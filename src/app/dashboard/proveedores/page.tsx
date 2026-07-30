@@ -1,8 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Phone, Mail, Trash2, X, Edit2, Plus, Check } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useCRUDPage } from '@/hooks/useCRUDPage';
+import { useContratosActivosCount } from '@/hooks/useContratosActivosCount';
+import ContratosTab, { ContratosPreselect } from './ContratosTab';
+import ContratosReadonlyList from '@/components/ContratosReadonlyList';
 import DataTable, { Column } from '@/components/DataTable';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import ModalActionsMenu from '@/components/ModalActionsMenu';
@@ -39,6 +43,26 @@ const defaultFormData = {
 type FormData = typeof defaultFormData;
 
 export default function ProveedoresPage() {
+    const [activeTab, setActiveTab] = useState<'proveedores' | 'contratos'>('proveedores');
+    const [contratosPreselect, setContratosPreselect] = useState<ContratosPreselect | undefined>();
+
+    // Deep-link desde las fichas de Comunidad/Proveedor:
+    // /dashboard/proveedores?tab=contratos&comunidad_id=X (&new=1)
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('tab') === 'contratos') {
+            const comunidadId = params.get('comunidad_id');
+            const proveedorId = params.get('proveedor_id');
+            setContratosPreselect({
+                comunidadId: comunidadId ? Number(comunidadId) : undefined,
+                proveedorId: proveedorId ? Number(proveedorId) : undefined,
+                openForm: params.get('new') === '1',
+            });
+            setActiveTab('contratos');
+        }
+    }, []);
+
+    const contratosCount = useContratosActivosCount('proveedor_id');
     const crud = useCRUDPage<Proveedor, FormData>({
         entityType: 'proveedor',
         entityLabel: 'proveedor',
@@ -69,7 +93,11 @@ export default function ProveedoresPage() {
     const inputClass = (field?: string) =>
         `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${field && crud.formErrors[field] ? 'border-red-400' : 'border-neutral-200'}`;
 
-    const columns: Column<Proveedor>[] = [
+    // El nº de contratos se inyecta como campo de la fila para que la columna
+    // sea ordenable por el DataTable (ordena por row[key]).
+    const dataConContratos = crud.filteredData.map(r => ({ ...r, contratos: contratosCount.get(r.id) || 0 }));
+
+    const columns: Column<Proveedor & { contratos: number }>[] = [
         {
             key: 'id',
             label: 'ID',
@@ -108,6 +136,18 @@ export default function ProveedoresPage() {
         { key: 'cif', label: 'CIF' },
         { key: 'ciudad', label: 'Ciudad' },
         {
+            key: 'contratos',
+            label: 'Contratos',
+            render: (row) => {
+                const n = row.contratos;
+                return n > 0 ? (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-neutral-100 text-neutral-700">{n}</span>
+                ) : (
+                    <span className="text-neutral-300">—</span>
+                );
+            },
+        },
+        {
             key: 'activo',
             label: 'Estado',
             render: (row) => (
@@ -120,8 +160,22 @@ export default function ProveedoresPage() {
 
     const readonlyClass = "w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900";
 
+    const tabClass = (tab: 'proveedores' | 'contratos') =>
+        `px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${activeTab === tab
+            ? 'border-yellow-400 text-neutral-900'
+            : 'border-transparent text-neutral-400 hover:text-neutral-700'}`;
+
     return (
         <div className="space-y-6">
+            <div className="flex gap-1 border-b border-neutral-200">
+                <button className={tabClass('proveedores')} onClick={() => setActiveTab('proveedores')}>Proveedores</button>
+                <button className={tabClass('contratos')} onClick={() => setActiveTab('contratos')}>Contratos</button>
+            </div>
+
+            {activeTab === 'contratos' ? (
+                <ContratosTab preselect={contratosPreselect} />
+            ) : (
+            <>
             <PageHeader
                 title="Gestión de Proveedores"
                 showForm={crud.showForm}
@@ -188,7 +242,7 @@ export default function ProveedoresPage() {
             </FormModal>
 
             <DataTable
-                data={crud.filteredData}
+                data={dataConContratos}
                 columns={columns}
                 keyExtractor={(row) => row.id}
                 storageKey="proveedores"
@@ -279,6 +333,17 @@ export default function ProveedoresPage() {
                                     </div>
                                 </div>
                             </FormSection>
+
+                            <FormSection title="Contratos">
+                                <ContratosReadonlyList
+                                    proveedorId={crud.selectedDetail.id}
+                                    onNuevoContrato={() => {
+                                        setContratosPreselect({ proveedorId: crud.selectedDetail!.id, openForm: true });
+                                        crud.closeDetail();
+                                        setActiveTab('contratos');
+                                    }}
+                                />
+                            </FormSection>
                         </div>
 
                         <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
@@ -305,6 +370,8 @@ export default function ProveedoresPage() {
                 itemType="proveedor"
                 isDeleting={crud.isDeleting}
             />
+            </>
+            )}
         </div>
     );
 }

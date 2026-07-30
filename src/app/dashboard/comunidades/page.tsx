@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Trash2, X, Edit2, Plus, Check, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useCRUDPage } from '@/hooks/useCRUDPage';
+import { useContratosActivosCount } from '@/hooks/useContratosActivosCount';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import DataTable, { Column } from '@/components/DataTable';
 import DeleteComunidadModal, { ComunidadSummary } from '@/components/DeleteComunidadModal';
@@ -11,6 +12,7 @@ import PageHeader from '@/components/PageHeader';
 import FilterBar from '@/components/FilterBar';
 import FormModal from '@/components/FormModal';
 import FormSection from '@/components/FormSection';
+import ContratosReadonlyList from '@/components/ContratosReadonlyList';
 import FormField from '@/components/FormField';
 import ImportComunidadesModal from '@/components/ImportComunidadesModal';
 import SearchableSelect from '@/components/SearchableSelect';
@@ -42,6 +44,7 @@ export default function ComunidadesPage() {
     const [showImportModal, setShowImportModal] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
 
+    const contratosCount = useContratosActivosCount('comunidad_id');
     const crud = useCRUDPage<Comunidad, FormData>({
         entityType: 'comunidad',
         entityLabel: 'comunidad',
@@ -182,7 +185,11 @@ export default function ComunidadesPage() {
     const inputClass = (field?: string) =>
         `w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-300 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white transition ${field && crud.formErrors[field] ? 'border-red-400' : 'border-neutral-200'}`;
 
-    const columns: Column<Comunidad>[] = [
+    // El nº de contratos se inyecta como campo de la fila para que la columna
+    // sea ordenable por el DataTable (ordena por row[key]).
+    const dataConContratos = crud.filteredData.map(r => ({ ...r, contratos: contratosCount.get(r.id) || 0 }));
+
+    const columns: Column<Comunidad & { contratos: number }>[] = [
         {
             key: 'codigo',
             label: 'Código',
@@ -200,6 +207,18 @@ export default function ComunidadesPage() {
         { key: 'ciudad', label: 'Ciudad' },
         { key: 'provincia', label: 'Provincia', defaultVisible: false },
         { key: 'cif', label: 'CIF' },
+        {
+            key: 'contratos',
+            label: 'Contratos',
+            render: (row) => {
+                const n = row.contratos;
+                return n > 0 ? (
+                    <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-neutral-100 text-neutral-700">{n}</span>
+                ) : (
+                    <span className="text-neutral-300">—</span>
+                );
+            },
+        },
         {
             key: 'activo',
             label: 'Estado',
@@ -313,7 +332,7 @@ export default function ComunidadesPage() {
             </FormModal>
 
             <DataTable
-                data={crud.filteredData}
+                data={dataConContratos}
                 columns={columns}
                 keyExtractor={(row) => row.id}
                 storageKey="comunidades"
@@ -400,6 +419,15 @@ export default function ComunidadesPage() {
                                         <div className={readonlyClass}>{crud.selectedDetail.provincia || '—'}</div>
                                     </div>
                                 </div>
+                            </FormSection>
+
+                            <FormSection title="Contratos">
+                                <ContratosReadonlyList
+                                    comunidadId={crud.selectedDetail.id}
+                                    onNuevoContrato={() => {
+                                        window.location.href = `/dashboard/proveedores?tab=contratos&comunidad_id=${crud.selectedDetail!.id}&new=1`;
+                                    }}
+                                />
                             </FormSection>
                         </div>
 

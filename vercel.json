@@ -3,6 +3,10 @@
         {
             "path": "/api/cron/fichaje-autoclose",
             "schedule": "0 17 * * *"
+        },
+        {
+            "path": "/api/cron/contratos-preaviso",
+            "schedule": "0 6 * * *"
         }
     ],
     "headers": [
