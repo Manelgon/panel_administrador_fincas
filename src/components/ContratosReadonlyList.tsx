@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, FileText } from 'lucide-react';
+import { Plus, FileText, Paperclip } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { getSecureUrl } from '@/lib/storage';
 import ContratoPreavisoBadge from '@/components/ContratoPreavisoBadge';
 
 interface ContratoRow {
@@ -10,10 +11,12 @@ interface ContratoRow {
     tipo_servicio: string | null;
     num_poliza: string | null;
     descripcion: string | null;
+    archivo_url: string | null;
+    archivo_nombre: string | null;
     fecha_vencimiento: string | null;
     fecha_preaviso: string | null;
     activo: boolean;
-    comunidades: { nombre_cdad: string } | null;
+    comunidades: { nombre_cdad: string; codigo: string | null } | null;
     proveedores: { nombre: string } | null;
 }
 
@@ -34,7 +37,7 @@ export default function ContratosReadonlyList({ comunidadId, proveedorId, onNuev
         const fetchContratos = async () => {
             let query = supabase
                 .from('contratos')
-                .select('id, tipo_servicio, num_poliza, descripcion, fecha_vencimiento, fecha_preaviso, activo, comunidades(nombre_cdad), proveedores(nombre)')
+                .select('id, tipo_servicio, num_poliza, descripcion, archivo_url, archivo_nombre, fecha_vencimiento, fecha_preaviso, activo, comunidades(nombre_cdad, codigo), proveedores(nombre)')
                 .order('fecha_vencimiento', { ascending: true });
             if (comunidadId) query = query.eq('comunidad_id', comunidadId);
             if (proveedorId) query = query.eq('proveedor_id', proveedorId);
@@ -83,7 +86,11 @@ export default function ContratosReadonlyList({ comunidadId, proveedorId, onNuev
                                         {c.tipo_servicio || 'Sin tipo'}
                                         <span className="font-normal text-neutral-500">
                                             {' · '}
-                                            {comunidadId ? c.proveedores?.nombre || '—' : c.comunidades?.nombre_cdad || '—'}
+                                            {comunidadId
+                                                ? c.proveedores?.nombre || '—'
+                                                : c.comunidades
+                                                    ? `${c.comunidades.codigo ? c.comunidades.codigo + ' - ' : ''}${c.comunidades.nombre_cdad}`
+                                                    : '—'}
                                         </span>
                                     </p>
                                     <p className="text-xs text-neutral-500 truncate">
@@ -94,6 +101,15 @@ export default function ContratosReadonlyList({ comunidadId, proveedorId, onNuev
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                                 {c.activo && <ContratoPreavisoBadge fechaPreaviso={c.fecha_preaviso} />}
+                                {c.archivo_url && (
+                                    <a
+                                        href={`${getSecureUrl(c.archivo_url)}&download=${encodeURIComponent(c.archivo_nombre || 'contrato.pdf')}`}
+                                        title={`Descargar ${c.archivo_nombre || 'documento'}`}
+                                        className="text-neutral-400 hover:text-yellow-600"
+                                    >
+                                        <Paperclip className="w-4 h-4" />
+                                    </a>
+                                )}
                             </div>
                         </div>
                     ))}

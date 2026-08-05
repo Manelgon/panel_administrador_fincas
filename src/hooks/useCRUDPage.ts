@@ -14,7 +14,7 @@ interface UseCRUDPageOptions<T, F> {
     orderBy?: { column: string; ascending?: boolean };
     selectQuery?: string;
     nameField?: keyof T; // campo que contiene el "nombre" de la entidad
-    onAfterSave?: () => void; // callback tras crear/actualizar (ej: dispatchEvent)
+    onAfterSave?: (creado?: T) => void; // callback tras crear/actualizar; recibe el registro solo al CREAR
     onAfterDelete?: () => void;
 }
 
@@ -146,6 +146,7 @@ export function useCRUDPage<T extends { id: number; activo?: boolean }, F extend
             : `Creando ${entityLabel}...`;
 
         let success = false;
+        let creado: T | undefined;
         await withLoading(async () => {
             try {
                 if (editingId) {
@@ -162,11 +163,12 @@ export function useCRUDPage<T extends { id: number; activo?: boolean }, F extend
                         entityName: String(dataToSubmit[nameField as string] || ''),
                     });
                 } else {
-                    const { error } = await supabase
+                    const { data: insertado, error } = await supabase
                         .from(tableName)
                         .insert([{ ...dataToSubmit, activo: true }])
                         .select();
                     if (error) throw error;
+                    creado = insertado?.[0] as T | undefined;
                     toast.success(`${capitalize(entityLabel)} creado correctamente`);
                     await logActivity({
                         action: 'create',
@@ -176,7 +178,7 @@ export function useCRUDPage<T extends { id: number; activo?: boolean }, F extend
                 }
                 closeForm();
                 fetchData();
-                onAfterSave?.();
+                onAfterSave?.(creado);
                 success = true;
             } catch (error: unknown) {
                 const msg = error instanceof Error ? error.message : 'Error desconocido';

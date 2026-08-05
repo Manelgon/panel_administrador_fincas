@@ -189,10 +189,15 @@ export async function POST(request: Request) {
             const { data } = await supabaseAdmin.from('proveedores').select('nombre').eq('id', id).single();
             entityName = data?.nombre || `Proveedor #${id}`;
         } else if (type === 'contrato') {
-            const { data } = await supabaseAdmin.from('contratos').select('tipo_servicio, proveedores(nombre)').eq('id', id).single();
+            const { data } = await supabaseAdmin.from('contratos').select('tipo_servicio, archivo_url, proveedores(nombre)').eq('id', id).single();
             entityName = data
                 ? `${data.tipo_servicio || 'Contrato'} - ${(data.proveedores as unknown as { nombre: string } | null)?.nombre || `#${id}`}`
                 : `Contrato #${id}`;
+
+            // El PDF adjunto no se borra solo: hay que quitarlo de Storage
+            if (data?.archivo_url) {
+                await deleteAdjuntosFromStorage([data.archivo_url]);
+            }
         } else if (type === 'task_timer') {
             const { data } = await supabaseAdmin.from('task_timers').select('comunidades(nombre_cdad)').eq('id', id).single();
             entityName = (data?.comunidades as any)?.nombre_cdad

@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Building2, Check, Edit2, Trash2, Truck, X } from 'lucide-react';
+import { Building2, Check, Download, Edit2, FileText, Paperclip, Trash2, Truck, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { toast } from 'react-hot-toast';
 import { supabase } from '@/lib/supabaseClient';
+import { getSecureUrl } from '@/lib/storage';
 import { useCRUDPage } from '@/hooks/useCRUDPage';
 import DataTable, { Column } from '@/components/DataTable';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -15,7 +17,8 @@ import FormSection from '@/components/FormSection';
 import FormField from '@/components/FormField';
 import SearchableSelect from '@/components/SearchableSelect';
 import ContratoPreavisoBadge from '@/components/ContratoPreavisoBadge';
-import { TIPOS_SERVICIO_CONTRATO } from '@/lib/tiposServicioContrato';
+import NuevoProveedorModal from './NuevoProveedorModal';
+import { useTiposServicio } from '@/hooks/useTiposServicio';
 
 interface Contrato {
     id: number;
@@ -24,13 +27,19 @@ interface Contrato {
     tipo_servicio: string | null;
     num_poliza: string | null;
     descripcion: string | null;
+    archivo_url: string | null;
+    archivo_nombre: string | null;
     fecha_alta: string | null;
     fecha_vencimiento: string | null;
     fecha_preaviso: string | null;
     activo: boolean;
-    comunidades: { nombre_cdad: string } | null;
+    comunidades: { nombre_cdad: string; codigo: string | null } | null;
     proveedores: { nombre: string } | null;
 }
+
+// Fila con los datos anidados aplanados: el DataTable ordena por row[key],
+// así que sin esto las cabeceras Comunidad/Proveedor/Preaviso no ordenarían.
+type ContratoFila = Contrato & { comunidad: string; proveedor: string; preaviso: string };
 
 const defaultFormData = {
     comunidad_id: '' as string | number,
@@ -56,9 +65,20 @@ interface OpcionRef {
     nombre: string;
 }
 
+// Las comunidades se identifican por "código - nombre" en todo el panel
+function etiquetaComunidad(codigo: string | null, nombre: string): string {
+    return codigo ? `${codigo} - ${nombre}` : nombre;
+}
+
 function formatFecha(fecha: string | null): string {
     if (!fecha) return '—';
     return new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES');
+}
+
+// El objeto se guarda con un UUID; `download` hace que el navegador lo baje
+// con el nombre original del archivo.
+function urlDescarga(url: string, nombre: string): string {
+    return `${getSecureUrl(url)}&download=${encodeURIComponent(nombre)}`;
 }
 
 export default function ContratosTab({ preselect }: { preselect?: ContratosPreselect }) {
@@ -68,21 +88,34 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
         tableName: 'contratos',
         defaultFormData,
         orderBy: { column: 'fecha_vencimiento', ascending: true },
-        selectQuery: '*, comunidades(nombre_cdad), proveedores(nombre)',
+        selectQuery: '*, comunidades(nombre_cdad, codigo), proveedores(nombre)',
         nameField: 'tipo_servicio',
     });
 
     // Catálogos para selects y filtros
     const [comunidades, setComunidades] = useState<OpcionRef[]>([]);
     const [proveedores, setProveedores] = useState<OpcionRef[]>([]);
+    const { tipos, crearTipo } = useTiposServicio();
+
+    // Alta de un tipo de servicio nuevo sin salir del formulario
+    const [creandoTipo, setCreandoTipo] = useState(false);
+    const [nuevoTipo, setNuevoTipo] = useState('');
+
+    // Alta rápida de proveedor sin abandonar el contrato
+    const [creandoProveedor, setCreandoProveedor] = useState(false);
+
+    // PDF del contrato: se sube al guardar, no al seleccionarlo
+    const [archivo, setArchivo] = useState<File | null>(null);
+    const [subiendo, setSubiendo] = useState(false);
+    const [archivoActual, setArchivoActual] = useState<{ url: string; nombre: string } | null>(null);
 
     useEffect(() => {
         const fetchRefs = async () => {
             const [com, prov] = await Promise.all([
-                supabase.from('comunidades').select('id, nombre_cdad').eq('activo', true).order('nombre_cdad'),
+                supabase.from('comunidades').select('id, nombre_cdad, codigo').eq('activo', true).order('codigo'),
                 supabase.from('proveedores').select('id, nombre').eq('activo', true).order('nombre'),
             ]);
-            setComunidades((com.data || []).map(c => ({ id: c.id, nombre: c.nombre_cdad })));
+            setComunidades((com.data || []).map(c => ({ id: c.id, nombre: etiquetaComunidad(c.codigo, c.nombre_cdad) })));
             setProveedores((prov.data || []).map(p => ({ id: p.id, nombre: p.nombre })));
         };
         fetchRefs();
@@ -109,17 +142,111 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
         setPreselectApplied(true);
     }, [preselect, preselectApplied, crud]);
 
-    const filteredData = useMemo(() => {
-        return crud.filteredData.filter(c => {
-            if (filterComunidad !== '' && c.comunidad_id !== filterComunidad) return false;
-            if (filterProveedor !== '' && c.proveedor_id !== filterProveedor) return false;
-            return true;
-        });
+    const filteredData: ContratoFila[] = useMemo(() => {
+        return crud.filteredData
+            .filter(c => {
+                if (filterComunidad !== '' && c.comunidad_id !== filterComunidad) return false;
+                if (filterProveedor !== '' && c.proveedor_id !== filterProveedor) return false;
+                return true;
+            })
+            .map(c => ({
+                ...c,
+                comunidad: c.comunidades ? etiquetaComunidad(c.comunidades.codigo, c.comunidades.nombre_cdad) : '',
+                proveedor: c.proveedores?.nombre || '',
+                preaviso: c.fecha_preaviso || '',
+            }));
     }, [crud.filteredData, filterComunidad, filterProveedor]);
+
+    // Los servicios que ese proveedor ya presta van primero: un proveedor
+    // multiservicio puede tener contratos de tipos muy distintos.
+    const opcionesTipo = useMemo(() => {
+        const activos = tipos.filter(t => t.activo).map(t => t.nombre);
+        const proveedorId = crud.formData.proveedor_id;
+        if (proveedorId === '') return activos.map(t => ({ value: t, label: t }));
+
+        const habituales = new Set(
+            crud.data
+                .filter(c => c.proveedor_id === Number(proveedorId) && c.tipo_servicio)
+                .map(c => c.tipo_servicio as string)
+        );
+        return [
+            ...activos.filter(t => habituales.has(t)).map(t => ({ value: t, label: `${t}  ·  habitual` })),
+            ...activos.filter(t => !habituales.has(t)).map(t => ({ value: t, label: t })),
+        ];
+    }, [tipos, crud.formData.proveedor_id, crud.data]);
+
+    const guardarNuevoTipo = async () => {
+        const resultado = await crearTipo(nuevoTipo);
+        if (!resultado) {
+            toast.error('No se pudo crear el tipo de servicio');
+            return;
+        }
+        updateField('tipo_servicio', resultado.nombre);
+        setNuevoTipo('');
+        setCreandoTipo(false);
+        toast.success(resultado.yaExistia
+            ? `Ya existía como "${resultado.nombre}", se ha seleccionado`
+            : `Tipo "${resultado.nombre}" creado`);
+    };
+
+    // El formulario no gestiona el archivo con formData (es un File, no texto):
+    // se lleva aparte y se sincroniza al abrir el formulario.
+    const abrirNuevoContrato = () => {
+        setArchivo(null);
+        setArchivoActual(null);
+        crud.openNewForm();
+    };
+
+    const editarContrato = (row: Contrato) => {
+        setArchivo(null);
+        setArchivoActual(row.archivo_url ? { url: row.archivo_url, nombre: row.archivo_nombre || 'contrato.pdf' } : null);
+        crud.handleEdit(row);
+    };
+
+    const cerrarFormulario = () => {
+        setArchivo(null);
+        setArchivoActual(null);
+        setCreandoTipo(false);
+        setNuevoTipo('');
+        crud.closeForm();
+    };
+
+    // Sube el PDF por el proxy del proyecto (valida tipo, tamaño y sesión)
+    const subirArchivo = async (): Promise<{ url: string; nombre: string } | null> => {
+        if (!archivo) return null;
+        setSubiendo(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', archivo);
+            formData.append('path', `contratos/${Date.now()}`);
+            formData.append('bucket', 'documentos');
+            const res = await fetch('/api/storage/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (!res.ok || !data.publicUrl) {
+                toast.error(data.error || 'No se pudo subir el archivo');
+                return null;
+            }
+            return { url: data.publicUrl, nombre: data.originalName || archivo.name };
+        } catch {
+            toast.error('No se pudo subir el archivo');
+            return null;
+        } finally {
+            setSubiendo(false);
+        }
+    };
 
     const handleFormSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const f = crud.formData;
+
+        // Si hay archivo nuevo se sube antes de guardar; si falla, no se guarda
+        let archivoData = archivoActual;
+        if (archivo) {
+            const subido = await subirArchivo();
+            if (!subido) return;
+            archivoData = subido;
+        }
+
         const dataToSubmit = {
             comunidad_id: f.comunidad_id === '' ? null : Number(f.comunidad_id),
             proveedor_id: f.proveedor_id === '' ? null : Number(f.proveedor_id),
@@ -129,6 +256,8 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
             fecha_alta: f.fecha_alta || null,
             fecha_vencimiento: f.fecha_vencimiento || null,
             fecha_preaviso: f.fecha_preaviso || null,
+            archivo_url: archivoData?.url || null,
+            archivo_nombre: archivoData?.nombre || null,
         };
         await crud.handleSubmit(dataToSubmit, () => {
             const errors: Record<string, string> = {};
@@ -153,24 +282,55 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
     const inputClass = (field?: string) =>
         `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-yellow-400/30 focus:border-yellow-400 transition-all ${field && crud.formErrors[field] ? 'border-red-400' : 'border-neutral-200'}`;
 
-    const columns: Column<Contrato>[] = [
+    const columns: Column<ContratoFila>[] = [
         {
             key: 'comunidad',
             label: 'Comunidad',
+            // El DataTable solo busca en columnas visibles. Esta columna siempre lo
+            // está, así que aquí se concentra el texto de todo el contrato para que
+            // el buscador encuentre también por descripción o nº de póliza.
+            hideable: false,
+            getSearchValue: (row) => [
+                row.comunidad,
+                row.proveedor,
+                row.tipo_servicio,
+                row.num_poliza,
+                row.descripcion,
+                row.fecha_alta,
+                row.fecha_vencimiento,
+                row.fecha_preaviso,
+            ].filter(Boolean).join(' '),
             render: (row) => (
                 <div className="flex items-start gap-3">
                     <span className="mt-1 h-3.5 w-1.5 rounded-full bg-yellow-400" />
-                    <span className="font-semibold">{row.comunidades?.nombre_cdad || '—'}</span>
+                    <span className="font-semibold">{row.comunidad || '—'}</span>
                 </div>
             ),
         },
         {
             key: 'proveedor',
             label: 'Proveedor',
-            render: (row) => <span>{row.proveedores?.nombre || '—'}</span>,
+            render: (row) => <span>{row.proveedor || '—'}</span>,
         },
         { key: 'tipo_servicio', label: 'Servicio', render: (row) => row.tipo_servicio || '—' },
         { key: 'num_poliza', label: 'Nº Póliza', defaultVisible: false, render: (row) => row.num_poliza || '—' },
+        {
+            key: 'archivo_url',
+            label: 'PDF',
+            sortable: false,
+            render: (row) => row.archivo_url ? (
+                <a
+                    href={urlDescarga(row.archivo_url, row.archivo_nombre || 'contrato.pdf')}
+                    onClick={e => e.stopPropagation()}
+                    title={`Descargar ${row.archivo_nombre || 'documento'}`}
+                    className="inline-flex items-center text-neutral-500 hover:text-yellow-600"
+                >
+                    <Paperclip className="w-4 h-4" />
+                </a>
+            ) : (
+                <span className="text-neutral-300">—</span>
+            ),
+        },
         { key: 'fecha_alta', label: 'Alta', render: (row) => formatFecha(row.fecha_alta) },
         { key: 'fecha_vencimiento', label: 'Vencimiento', render: (row) => formatFecha(row.fecha_vencimiento) },
         {
@@ -201,7 +361,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
             <PageHeader
                 title="Contratos con Proveedores"
                 showForm={crud.showForm}
-                onToggleForm={() => crud.showForm ? crud.closeForm() : crud.openNewForm()}
+                onToggleForm={() => crud.showForm ? cerrarFormulario() : abrirNuevoContrato()}
                 newButtonLabel="Nuevo Contrato"
                 newButtonShortLabel="Nuevo"
             />
@@ -234,12 +394,12 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
             <FormModal
                 isOpen={crud.showForm}
                 portalReady={crud.portalReady}
-                onClose={crud.closeForm}
+                onClose={cerrarFormulario}
                 onSubmit={handleFormSubmit}
                 title={crud.editingId ? 'Editar Contrato' : 'Nuevo Contrato'}
                 subtitle={crud.editingId ? 'Modifique los datos del contrato' : 'Complete los datos para registrar un nuevo contrato'}
                 editingId={crud.editingId}
-                submitLabel={crud.editingId ? 'Guardar Cambios' : 'Crear Contrato'}
+                submitLabel={subiendo ? 'Subiendo archivo...' : crud.editingId ? 'Guardar Cambios' : 'Crear Contrato'}
                 formId="contrato-form"
                 maxWidth="max-w-4xl"
             >
@@ -260,6 +420,9 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                                 onChange={(v) => updateField('proveedor_id', v)}
                                 placeholder="Seleccionar proveedor..."
                             />
+                            <button type="button" onClick={() => setCreandoProveedor(true)} className="mt-1.5 text-xs font-semibold text-neutral-500 hover:text-yellow-600">
+                                + Crear proveedor nuevo
+                            </button>
                         </FormField>
                     </div>
                 </FormSection>
@@ -267,12 +430,40 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                 <FormSection title="Servicio">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <FormField label="Tipo de servicio" required error={crud.formErrors.tipo_servicio}>
-                            <SearchableSelect
-                                options={TIPOS_SERVICIO_CONTRATO.map(t => ({ value: t, label: t }))}
-                                value={crud.formData.tipo_servicio}
-                                onChange={(v) => updateField('tipo_servicio', String(v))}
-                                placeholder="Seleccionar tipo..."
-                            />
+                            {creandoTipo ? (
+                                <div className="flex gap-2">
+                                    <input
+                                        type="text"
+                                        autoFocus
+                                        placeholder="Nombre del nuevo tipo"
+                                        className={inputClass()}
+                                        value={nuevoTipo}
+                                        onChange={e => setNuevoTipo(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter') { e.preventDefault(); guardarNuevoTipo(); }
+                                            if (e.key === 'Escape') { setCreandoTipo(false); setNuevoTipo(''); }
+                                        }}
+                                    />
+                                    <button type="button" onClick={guardarNuevoTipo} className="px-3 py-2 text-sm font-bold text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg whitespace-nowrap">
+                                        Guardar
+                                    </button>
+                                    <button type="button" onClick={() => { setCreandoTipo(false); setNuevoTipo(''); }} className="px-3 py-2 text-sm text-neutral-500 hover:text-neutral-900">
+                                        <X className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <>
+                                    <SearchableSelect
+                                        options={opcionesTipo}
+                                        value={crud.formData.tipo_servicio}
+                                        onChange={(v) => updateField('tipo_servicio', String(v))}
+                                        placeholder="Seleccionar tipo..."
+                                    />
+                                    <button type="button" onClick={() => setCreandoTipo(true)} className="mt-1.5 text-xs font-semibold text-neutral-500 hover:text-yellow-600">
+                                        + Crear tipo nuevo
+                                    </button>
+                                </>
+                            )}
                         </FormField>
                         <FormField label="Nº de póliza">
                             <input
@@ -293,6 +484,47 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                             />
                         </FormField>
                     </div>
+                </FormSection>
+
+                <FormSection title="Documento del contrato">
+                    {archivoActual && !archivo ? (
+                        <div className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5">
+                            <a
+                                href={getSecureUrl(archivoActual.url)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm font-semibold text-neutral-900 hover:text-yellow-600 min-w-0"
+                            >
+                                <FileText className="w-4 h-4 shrink-0" />
+                                <span className="truncate">{archivoActual.nombre}</span>
+                            </a>
+                            <button
+                                type="button"
+                                onClick={() => setArchivoActual(null)}
+                                title="Quitar archivo"
+                                className="p-1.5 rounded-lg text-neutral-400 hover:text-red-600 hover:bg-red-50 shrink-0"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            <input
+                                type="file"
+                                accept="application/pdf"
+                                onChange={e => setArchivo(e.target.files?.[0] || null)}
+                                className="block w-full text-sm text-neutral-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-yellow-400 file:text-neutral-950 hover:file:bg-yellow-500 file:cursor-pointer"
+                            />
+                            {archivo && (
+                                <p className="text-xs text-neutral-500">
+                                    Se subirá <span className="font-semibold">{archivo.name}</span> al guardar
+                                    {' · '}
+                                    <button type="button" onClick={() => setArchivo(null)} className="underline hover:text-neutral-900">quitar</button>
+                                </p>
+                            )}
+                            <p className="text-xs text-neutral-400">PDF, máximo 10 MB.</p>
+                        </div>
+                    )}
                 </FormSection>
 
                 <FormSection title="Fechas">
@@ -319,7 +551,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                 emptyMessage="No hay contratos registrados"
                 onRowClick={(row) => crud.openDetail(row)}
                 rowActions={(row) => [
-                    { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: (r) => crud.handleEdit(r) },
+                    { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: (r) => editarContrato(r) },
                     {
                         label: row.activo ? 'Desactivar' : 'Activar',
                         icon: row.activo ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />,
@@ -360,7 +592,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5 flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5" /> Comunidad</label>
-                                        <div className={readonlyClass}>{crud.selectedDetail.comunidades?.nombre_cdad || '—'}</div>
+                                        <div className={readonlyClass}>{crud.selectedDetail.comunidades ? etiquetaComunidad(crud.selectedDetail.comunidades.codigo, crud.selectedDetail.comunidades.nombre_cdad) : '—'}</div>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-semibold text-neutral-700 mb-1.5 flex items-center gap-1.5"><Truck className="w-3.5 h-3.5" /> Proveedor</label>
@@ -384,6 +616,37 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                                         <div className={`${readonlyClass} whitespace-pre-wrap`}>{crud.selectedDetail.descripcion || '—'}</div>
                                     </div>
                                 </div>
+                            </FormSection>
+
+                            <FormSection title="Documento del contrato">
+                                {crud.selectedDetail.archivo_url ? (
+                                    <div className="flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 flex-wrap">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FileText className="w-4 h-4 text-neutral-400 shrink-0" />
+                                            <span className="text-sm font-semibold text-neutral-900 truncate">
+                                                {crud.selectedDetail.archivo_nombre || 'Documento'}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <a
+                                                href={getSecureUrl(crud.selectedDetail.archivo_url)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="px-3 py-1.5 text-xs font-bold text-neutral-700 bg-white border border-neutral-200 rounded-lg hover:bg-neutral-100"
+                                            >
+                                                Ver
+                                            </a>
+                                            <a
+                                                href={urlDescarga(crud.selectedDetail.archivo_url, crud.selectedDetail.archivo_nombre || 'contrato.pdf')}
+                                                className="px-3 py-1.5 text-xs font-bold text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-lg flex items-center gap-1.5"
+                                            >
+                                                <Download className="w-3.5 h-3.5" /> Descargar
+                                            </a>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-neutral-400">Sin documento adjunto</p>
+                                )}
                             </FormSection>
 
                             <FormSection title="Fechas">
@@ -410,7 +673,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                         <div className="px-4 py-3 bg-white border-t border-neutral-100 flex items-center justify-between shrink-0 gap-2">
                             <ModalActionsMenu actions={[
                                 { label: 'Eliminar', icon: <Trash2 className="w-4 h-4" />, onClick: () => { crud.handleDeleteClick(crud.selectedDetail!.id); crud.closeDetail(); }, variant: 'danger' },
-                                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => { crud.handleEdit(crud.selectedDetail!); crud.closeDetail(); } },
+                                { label: 'Editar', icon: <Edit2 className="w-4 h-4" />, onClick: () => { editarContrato(crud.selectedDetail!); crud.closeDetail(); } },
                             ]} />
                             <button
                                 onClick={() => { crud.toggleActive(crud.selectedDetail!.id, crud.selectedDetail!.activo); crud.setSelectedDetail({ ...crud.selectedDetail!, activo: !crud.selectedDetail!.activo }); }}
@@ -423,6 +686,15 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                 </div>,
                 document.body
             )}
+
+            <NuevoProveedorModal
+                isOpen={creandoProveedor}
+                onClose={() => setCreandoProveedor(false)}
+                onCreado={(proveedor) => {
+                    setProveedores(prev => [...prev, proveedor].sort((a, b) => a.nombre.localeCompare(b.nombre)));
+                    updateField('proveedor_id', proveedor.id);
+                }}
+            />
 
             <DeleteConfirmationModal
                 isOpen={crud.showDeleteModal}

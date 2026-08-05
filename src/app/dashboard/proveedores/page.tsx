@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import { useCRUDPage } from '@/hooks/useCRUDPage';
 import { useContratosActivosCount } from '@/hooks/useContratosActivosCount';
 import ContratosTab, { ContratosPreselect } from './ContratosTab';
+import TiposServicioTab from './TiposServicioTab';
 import ContratosReadonlyList from '@/components/ContratosReadonlyList';
 import DataTable, { Column } from '@/components/DataTable';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -43,8 +44,15 @@ const defaultFormData = {
 type FormData = typeof defaultFormData;
 
 export default function ProveedoresPage() {
-    const [activeTab, setActiveTab] = useState<'proveedores' | 'contratos'>('proveedores');
+    const [activeTab, setActiveTab] = useState<'proveedores' | 'contratos' | 'tipos'>('proveedores');
     const [contratosPreselect, setContratosPreselect] = useState<ContratosPreselect | undefined>();
+    const [proveedorRecienCreado, setProveedorRecienCreado] = useState<Proveedor | null>(null);
+
+    const irANuevoContrato = (proveedorId: number) => {
+        setProveedorRecienCreado(null);
+        setContratosPreselect({ proveedorId, openForm: true });
+        setActiveTab('contratos');
+    };
 
     // Deep-link desde las fichas de Comunidad/Proveedor:
     // /dashboard/proveedores?tab=contratos&comunidad_id=X (&new=1)
@@ -70,6 +78,10 @@ export default function ProveedoresPage() {
         defaultFormData,
         orderBy: { column: 'nombre', ascending: true },
         nameField: 'nombre',
+        // Recién creado un proveedor, lo normal es querer registrar su contrato
+        onAfterSave: (creado) => {
+            if (creado) setProveedorRecienCreado(creado);
+        },
     });
 
     const handleFormSubmit = async (e: React.FormEvent) => {
@@ -160,7 +172,7 @@ export default function ProveedoresPage() {
 
     const readonlyClass = "w-full rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2.5 text-sm text-neutral-900";
 
-    const tabClass = (tab: 'proveedores' | 'contratos') =>
+    const tabClass = (tab: 'proveedores' | 'contratos' | 'tipos') =>
         `px-4 py-2.5 text-sm font-bold border-b-2 transition-colors ${activeTab === tab
             ? 'border-yellow-400 text-neutral-900'
             : 'border-transparent text-neutral-400 hover:text-neutral-700'}`;
@@ -168,11 +180,16 @@ export default function ProveedoresPage() {
     return (
         <div className="space-y-6">
             <div className="flex gap-1 border-b border-neutral-200">
+                {/* Al navegar a mano se limpia la preselección: si no, volver a
+                    Contratos reabriría el formulario del último atajo usado. */}
                 <button className={tabClass('proveedores')} onClick={() => setActiveTab('proveedores')}>Proveedores</button>
-                <button className={tabClass('contratos')} onClick={() => setActiveTab('contratos')}>Contratos</button>
+                <button className={tabClass('contratos')} onClick={() => { setContratosPreselect(undefined); setActiveTab('contratos'); }}>Contratos</button>
+                <button className={tabClass('tipos')} onClick={() => setActiveTab('tipos')}>Tipos de servicio</button>
             </div>
 
-            {activeTab === 'contratos' ? (
+            {activeTab === 'tipos' ? (
+                <TiposServicioTab />
+            ) : activeTab === 'contratos' ? (
                 <ContratosTab preselect={contratosPreselect} />
             ) : (
             <>
@@ -371,6 +388,34 @@ export default function ProveedoresPage() {
                 isDeleting={crud.isDeleting}
             />
             </>
+            )}
+
+            {/* Tras crear un proveedor, atajo para registrar ya su contrato */}
+            {crud.portalReady && proveedorRecienCreado && createPortal(
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000] flex justify-center items-end sm:items-center sm:p-6">
+                    <div className="bg-white w-full max-w-md rounded-t-2xl sm:rounded-xl shadow-2xl p-6">
+                        <h2 className="text-lg font-black text-neutral-900 tracking-tight">Proveedor creado</h2>
+                        <p className="text-sm text-neutral-600 mt-2">
+                            <span className="font-semibold">{proveedorRecienCreado.nombre}</span> ya está en la lista.
+                            ¿Quieres registrar ahora un contrato con este proveedor?
+                        </p>
+                        <div className="flex items-center justify-end gap-2 mt-6">
+                            <button
+                                onClick={() => setProveedorRecienCreado(null)}
+                                className="px-4 py-2.5 text-sm font-semibold text-neutral-600 hover:text-neutral-900"
+                            >
+                                Ahora no
+                            </button>
+                            <button
+                                onClick={() => irANuevoContrato(proveedorRecienCreado.id)}
+                                className="px-5 py-2.5 text-sm font-black text-neutral-900 bg-yellow-400 hover:bg-yellow-500 rounded-xl"
+                            >
+                                Crear contrato
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
             )}
         </div>
     );

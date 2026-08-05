@@ -1,6 +1,7 @@
-// Catálogo cerrado de tipos de servicio de contratos con proveedores.
-// La BD guarda TEXT libre, pero la UI solo permite estos valores (PRP-004).
-// Derivado de los tipos reales del histórico (Contratos.xls) consolidados.
+// OBSOLETO para la interfaz: el catálogo vivo es la tabla
+// `tipos_servicio_contrato` y se gestiona desde Proveedores → Tipos de servicio.
+// Esta lista solo la usa scripts/import-contratos.ts (importación histórica del
+// Excel) y coincide con la semilla de la migración. Editarla NO cambia la app.
 export const TIPOS_SERVICIO_CONTRATO = [
     'Seguro multirriesgo',
     'Electricidad',
