@@ -39,7 +39,7 @@ interface Contrato {
 
 // Fila con los datos anidados aplanados: el DataTable ordena por row[key],
 // así que sin esto las cabeceras Comunidad/Proveedor/Preaviso no ordenarían.
-type ContratoFila = Contrato & { comunidad: string; proveedor: string; preaviso: string };
+type ContratoFila = Contrato & { codigo: string; comunidad: string; proveedor: string; preaviso: string };
 
 const defaultFormData = {
     comunidad_id: '' as string | number,
@@ -151,7 +151,8 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
             })
             .map(c => ({
                 ...c,
-                comunidad: c.comunidades ? etiquetaComunidad(c.comunidades.codigo, c.comunidades.nombre_cdad) : '',
+                codigo: c.comunidades?.codigo || '',
+                comunidad: c.comunidades?.nombre_cdad || '',
                 proveedor: c.proveedores?.nombre || '',
                 preaviso: c.fecha_preaviso || '',
             }));
@@ -284,6 +285,16 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
 
     const columns: Column<ContratoFila>[] = [
         {
+            key: 'codigo',
+            label: 'Código',
+            render: (row) => (
+                <div className="flex items-start gap-3">
+                    <span className="mt-1 h-3.5 w-1.5 rounded-full bg-yellow-400" />
+                    <span className="font-semibold">{row.codigo || '—'}</span>
+                </div>
+            ),
+        },
+        {
             key: 'comunidad',
             label: 'Comunidad',
             // El DataTable solo busca en columnas visibles. Esta columna siempre lo
@@ -291,6 +302,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
             // el buscador encuentre también por descripción o nº de póliza.
             hideable: false,
             getSearchValue: (row) => [
+                row.codigo,
                 row.comunidad,
                 row.proveedor,
                 row.tipo_servicio,
@@ -300,12 +312,7 @@ export default function ContratosTab({ preselect }: { preselect?: ContratosPrese
                 row.fecha_vencimiento,
                 row.fecha_preaviso,
             ].filter(Boolean).join(' '),
-            render: (row) => (
-                <div className="flex items-start gap-3">
-                    <span className="mt-1 h-3.5 w-1.5 rounded-full bg-yellow-400" />
-                    <span className="font-semibold">{row.comunidad || '—'}</span>
-                </div>
-            ),
+            render: (row) => <span className="font-semibold">{row.comunidad || '—'}</span>,
         },
         {
             key: 'proveedor',
