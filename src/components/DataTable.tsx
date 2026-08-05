@@ -108,7 +108,18 @@ export default function DataTable<T extends Record<string, any>>({
                 const prefs = JSON.parse(saved);
                 if (prefs.pageSize) setPageSize(prefs.pageSize);
                 if (prefs.visibleColumns && prefs.visibleColumns.length > 0) {
-                    setVisibleColumns(new Set(prefs.visibleColumns));
+                    // Las columnas que se añaden después deben aparecer solas: sin
+                    // esto quedarían ocultas para siempre en quien ya tenga
+                    // preferencias guardadas. `knownColumns` distingue "columna
+                    // nueva" de "columna que el usuario ocultó a propósito".
+                    const conocidas: string[] = prefs.knownColumns ?? [
+                        ...prefs.visibleColumns,
+                        ...columns.filter(c => c.defaultVisible === false).map(c => c.key),
+                    ];
+                    const nuevas = columns
+                        .filter(c => !conocidas.includes(c.key) && c.defaultVisible !== false)
+                        .map(c => c.key);
+                    setVisibleColumns(new Set([...prefs.visibleColumns, ...nuevas]));
                 } else {
                     setVisibleColumns(new Set(columns.filter(c => c.defaultVisible !== false).map(c => c.key)));
                 }
@@ -123,8 +134,12 @@ export default function DataTable<T extends Record<string, any>>({
 
     useEffect(() => {
         if (!isInitialized || !prefKey) return;
-        localStorage.setItem(prefKey, JSON.stringify({ pageSize, visibleColumns: Array.from(visibleColumns) }));
-    }, [pageSize, visibleColumns, prefKey, isInitialized]);
+        localStorage.setItem(prefKey, JSON.stringify({
+            pageSize,
+            visibleColumns: Array.from(visibleColumns),
+            knownColumns: columns.map(c => c.key),
+        }));
+    }, [pageSize, visibleColumns, prefKey, isInitialized, columns]);
 
     // Close dropdown on outside click, scroll, or Escape
     useEffect(() => {
