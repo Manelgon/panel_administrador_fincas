@@ -99,6 +99,7 @@ export interface Incidencia {
   proveedor_id?: number;
   aviso_proveedor?: string | boolean;
   proveedor?: { nombre: string };
+  tiempo_total_segundos?: number;
 }
 
 // ============================================

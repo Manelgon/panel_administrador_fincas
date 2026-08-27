@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGlobalLoading } from '@/lib/globalLoading';
 import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'react-hot-toast';
-import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench, Mail } from 'lucide-react';
+import { Trash2, FileText, Check, Plus, Paperclip, Download, X, RotateCcw, Building, Users, Clock, Search, Filter, Loader2, AlertCircle, Eye, RefreshCw, Send, Save, Share2, MoreHorizontal, MessageSquare, MessageSquarePlus, ChevronDown, UserCog, Pause, CalendarClock, Pencil, Play, Square, Wrench, Mail, Timer } from 'lucide-react';
 import MsgImportModal from './MsgImportModal';
 import StartTaskFromTicketModal from '@/components/cronometraje/StartTaskFromTicketModal';
 import AddTimeFromIncidenciaModal from '@/components/cronometraje/AddTimeFromIncidenciaModal';
@@ -244,6 +244,7 @@ export default function IncidenciasPage() {
             if (error) throw error;
             toast.success(`Tarea finalizada · ${formatCreationElapsed(detailElapsed)}`);
             window.dispatchEvent(new Event('taskTimerChanged'));
+            refreshTiempos();
         } catch (e: any) {
             toast.error(e?.message || 'Error al parar la tarea');
         } finally {
@@ -461,7 +462,30 @@ export default function IncidenciasPage() {
         if (data) setComunidades(data);
     };
 
+    // Suma el tiempo cronometrado por incidencia (task_timers cerrados).
+    // Se pagina porque Supabase limita el numero de filas por request.
+    const fetchTiemposPorIncidencia = async (): Promise<Record<number, number>> => {
+        const pageSize = 1000;
+        const totales: Record<number, number> = {};
+        for (let from = 0; ; from += pageSize) {
+            const { data, error } = await supabase
+                .from('task_timers')
+                .select('incidencia_id, duration_seconds')
+                .not('incidencia_id', 'is', null)
+                .not('end_at', 'is', null)
+                .range(from, from + pageSize - 1);
+            if (error || !data || data.length === 0) break;
+            for (const t of data as { incidencia_id: number | null; duration_seconds: number | null }[]) {
+                if (t.incidencia_id == null) continue;
+                totales[t.incidencia_id] = (totales[t.incidencia_id] || 0) + (t.duration_seconds || 0);
+            }
+            if (data.length < pageSize) break;
+        }
+        return totales;
+    };
+
     const fetchIncidencias = async () => {
+        const tiemposPromise = fetchTiemposPorIncidencia();
         const { data, error } = await supabase
             .from('incidencias')
             .select(`
@@ -479,13 +503,21 @@ export default function IncidenciasPage() {
             toast.error('Error cargando incidencias');
         } else {
             // Map data to flatten nested objects for sorting
+            const tiempos = await tiemposPromise;
             const formattedData = (data || []).map((item: any) => ({
                 ...item,
                 comunidad: item.comunidades?.nombre_cdad || '',
-                codigo: item.comunidades?.codigo || ''
+                codigo: item.comunidades?.codigo || '',
+                tiempo_total_segundos: tiempos[item.id] || 0
             }));
             setIncidencias(formattedData);
         }
+    };
+
+    // Recalcula solo la columna de tiempo total sin recargar todas las incidencias
+    const refreshTiempos = async () => {
+        const tiempos = await fetchTiemposPorIncidencia();
+        setIncidencias(prev => prev.map(i => ({ ...i, tiempo_total_segundos: tiempos[i.id] || 0 })));
     };
 
     const handleFileUploads = async () => {
@@ -1675,6 +1707,23 @@ export default function IncidenciasPage() {
             sortable: false,
         },
         {
+            key: 'tiempo_total_segundos',
+            label: 'Tiempo Total',
+            render: (row) => {
+                const total = row.tiempo_total_segundos || 0;
+                if (!total) return <span className="text-neutral-400">-</span>;
+                const h = Math.floor(total / 3600);
+                const m = Math.floor((total % 3600) / 60);
+                const texto = h > 0 ? `${h}h ${m}m` : (m > 0 ? `${m}m` : `${total}s`);
+                return (
+                    <span className="inline-flex items-center gap-1.5 font-semibold whitespace-nowrap">
+                        <Timer className="w-3.5 h-3.5 text-neutral-500" />
+                        {texto}
+                    </span>
+                );
+            },
+        },
+        {
             key: 'dia_resuelto',
             label: 'Día Res.',
             render: (row) => row.dia_resuelto ? new Date(row.dia_resuelto).toLocaleDateString() : '-',
@@ -2843,7 +2892,7 @@ export default function IncidenciasPage() {
                             : (addTimeIncidencia.comunidad || undefined)
                     }
                     ticketLabel={`${addTimeIncidencia.nombre_cliente || 'Sin nombre'} · Ticket #${addTimeIncidencia.id}`}
-                    onClose={() => { setShowAddTimeModal(false); setAddTimeIncidencia(null); }}
+                    onClose={() => { setShowAddTimeModal(false); setAddTimeIncidencia(null); refreshTiempos(); }}
                 />
             )}
 
