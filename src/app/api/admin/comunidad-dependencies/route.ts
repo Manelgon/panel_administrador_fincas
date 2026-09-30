@@ -38,12 +38,13 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Comunidad no encontrada' }, { status: 404 });
     }
 
-    const [tickets, morosidad, reuniones, fichajes, empleados] = await Promise.all([
+    const [tickets, morosidad, reuniones, fichajes, empleados, checklists] = await Promise.all([
         supabaseAdmin.from('incidencias').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
         supabaseAdmin.from('morosidad').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
         supabaseAdmin.from('reuniones').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
         supabaseAdmin.from('task_timers').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
         supabaseAdmin.from('empleado_comunidad').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
+        supabaseAdmin.from('checklists').select('id', { count: 'exact', head: true }).eq('comunidad_id', id),
     ]);
 
     return NextResponse.json({
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
             reuniones: reuniones.count ?? 0,
             fichajes: fichajes.count ?? 0,
             empleados: empleados.count ?? 0,
+            checklists: checklists.count ?? 0,
         },
     });
 }

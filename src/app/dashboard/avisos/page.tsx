@@ -474,6 +474,19 @@ export default function AvisosPage() {
                                     <ArrowRight className="w-4 h-4" />
                                 </button>
                             )}
+                            {selectedNotification.entity_type === 'checklist' && selectedNotification.entity_id && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        router.push(`/dashboard/checklists/${selectedNotification.entity_id}`);
+                                    }}
+                                    className="px-6 py-3 text-sm font-bold text-neutral-900 bg-white border border-neutral-300 hover:bg-neutral-50 rounded-xl transition-all flex items-center gap-2"
+                                >
+                                    Ir al checklist
+                                    <ArrowRight className="w-4 h-4" />
+                                </button>
+                            )}
                             {selectedNotification.entity_type === 'vacation' && (
                                 <button
                                     type="button"

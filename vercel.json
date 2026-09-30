@@ -7,6 +7,10 @@
         {
             "path": "/api/cron/contratos-preaviso",
             "schedule": "0 6 * * *"
+        },
+        {
+            "path": "/api/cron/checklist-vencimientos",
+            "schedule": "0 6 * * *"
         }
     ],
     "headers": [

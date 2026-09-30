@@ -4,11 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
     Home, Building, AlertCircle, FileText, LogOut, Activity,
-    Users, Clock, X, Folder, Timer, ChevronRight, CalendarDays
+    Users, Clock, X, Folder, Timer, ChevronRight, CalendarDays, ListChecks
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import NotificationsBell from '@/components/NotificationsBell';
+import { useMisTareasChecklist } from '@/hooks/useMisTareasChecklist';
 
 interface SidebarProps {
     isOpen: boolean;
@@ -23,6 +24,7 @@ const SECTIONS = [
             { name: 'Clientes', href: '/dashboard/comunidades', icon: Building },
             { name: 'Proveedores', href: '/dashboard/proveedores', icon: Users },
             { name: 'Tareas', href: '/dashboard/incidencias', icon: AlertCircle },
+            { name: 'Checklists', href: '/dashboard/checklists', icon: ListChecks },
             { name: 'Deudas', href: '/dashboard/deudas', icon: Activity },
             { name: 'Crono. Tareas', href: '/dashboard/cronometraje', icon: Timer },
         ],
@@ -70,6 +72,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const [userEmail, setUserEmail] = useState('');
     const [isLocal, setIsLocal] = useState(false);
     const [companyName, setCompanyName] = useState('');
+    const misTareasChecklist = useMisTareasChecklist(pathname);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -251,6 +254,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                                     >
                                         <Icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                                         <span className="truncate flex-1">{item.name}</span>
+                                        {item.href === '/dashboard/checklists' && misTareasChecklist > 0 && (
+                                            <span
+                                                className="min-w-[20px] h-5 px-1.5 rounded-full bg-yellow-400 text-neutral-950 text-[11px] font-bold flex items-center justify-center flex-shrink-0"
+                                                title={`${misTareasChecklist} tareas de checklist pendientes asignadas a ti`}
+                                            >
+                                                {misTareasChecklist > 99 ? '99+' : misTareasChecklist}
+                                            </span>
+                                        )}
                                         {isActive && <ChevronRight className="w-3 h-3 flex-shrink-0 opacity-60" aria-hidden="true" />}
                                     </Link>
                                 );

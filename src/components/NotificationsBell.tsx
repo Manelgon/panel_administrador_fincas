@@ -134,7 +134,9 @@ export default function NotificationsBell({ align = 'right' }: NotificationsBell
 
                             toast((t) => (
                                 <div className="flex items-start gap-3 pointer-events-auto cursor-pointer" onClick={() => {
-                                    window.location.href = `/dashboard/incidencias/${n.entity_id}`;
+                                    window.location.href = n.entity_type === 'checklist'
+                                        ? `/dashboard/checklists/${n.entity_id}`
+                                        : `/dashboard/incidencias/${n.entity_id}`;
                                     toast.dismiss(t.id);
                                 }}>
                                     <div>

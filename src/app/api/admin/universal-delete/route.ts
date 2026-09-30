@@ -203,6 +203,13 @@ export async function POST(request: Request) {
             entityName = (data?.comunidades as any)?.nombre_cdad
                 ? `Tarea de ${(data?.comunidades as any).nombre_cdad}`
                 : 'Tarea (Todas las comunidades)';
+        } else if (type === 'checklist') {
+            const { data } = await supabaseAdmin.from('checklists').select('nombre, comunidades(nombre_cdad)').eq('id', id).single();
+            const comunidad = (data?.comunidades as unknown as { nombre_cdad: string } | null)?.nombre_cdad;
+            entityName = data ? [data.nombre, comunidad].filter(Boolean).join(' - ') : `Checklist #${id}`;
+        } else if (type === 'checklist_plantilla') {
+            const { data } = await supabaseAdmin.from('checklist_plantillas').select('nombre').eq('id', id).single();
+            entityName = data?.nombre || `Plantilla #${id}`;
         } else if (type === 'propietario') {
             const { data } = await supabaseAdmin.from('propietarios').select('nombre_cliente, apellid_cliente').eq('id', id).single();
             entityName = [data?.nombre_cliente, data?.apellid_cliente].filter(Boolean).join(' ') || `Propietario #${id}`;
@@ -249,6 +256,14 @@ export async function POST(request: Request) {
             deleteError = error;
         } else if (type === 'task_timer') {
             const { error } = await supabaseAdmin.from('task_timers').delete().eq('id', id);
+            deleteError = error;
+        } else if (type === 'checklist') {
+            // Tareas y responsables caen en cascada
+            const { error } = await supabaseAdmin.from('checklists').delete().eq('id', id);
+            deleteError = error;
+        } else if (type === 'checklist_plantilla') {
+            // Los checklists creados con ella se conservan (plantilla_id pasa a null)
+            const { error } = await supabaseAdmin.from('checklist_plantillas').delete().eq('id', id);
             deleteError = error;
         } else if (type === 'propietario') {
             // Derecho de supresión (art. 17 RGPD): se anonimiza en vez de borrar la

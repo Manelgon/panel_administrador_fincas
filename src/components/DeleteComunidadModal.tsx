@@ -10,6 +10,7 @@ type Counts = {
     reuniones: number;
     fichajes: number;
     empleados: number;
+    checklists: number;
 };
 
 export type ComunidadSummary = {
@@ -55,7 +56,7 @@ export default function DeleteComunidadModal({
 
     const isActive = comunidad.activo;
     const totalDependencies = counts
-        ? counts.tickets + counts.morosidad + counts.reuniones + counts.fichajes + counts.empleados
+        ? counts.tickets + counts.morosidad + counts.reuniones + counts.fichajes + counts.empleados + counts.checklists
         : 0;
     const codigoMatches = codigoConfirm.trim() === comunidad.codigo;
     const canSubmitDelete = codigoMatches && email.length > 0 && password.length > 0 && !isProcessing;
@@ -369,6 +370,7 @@ function DependencyList({ counts, total, variant = 'neutral' }: { counts: Counts
         { label: 'Reuniones', value: counts.reuniones },
         { label: 'Fichajes / tareas', value: counts.fichajes },
         { label: 'Empleados asignados', value: counts.empleados },
+        { label: 'Checklists', value: counts.checklists },
     ].filter((r) => r.value > 0);
 
     const valueClass = variant === 'danger' ? 'text-red-900' : 'text-neutral-900';

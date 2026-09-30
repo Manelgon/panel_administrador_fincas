@@ -25,6 +25,7 @@ type ComunidadCounts = {
     reuniones: number;
     fichajes: number;
     empleados: number;
+    checklists: number;
 };
 
 const defaultFormData = {

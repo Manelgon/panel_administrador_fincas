@@ -147,6 +147,8 @@ export default function ActividadPage() {
             aviso: 'Aviso',
             importacion_pdf: 'Importación PDF',
             reunion: 'Reunión',
+            checklist: 'Checklist',
+            checklist_plantilla: 'Plantilla de checklist',
         };
         return labels[entityType] || entityType;
     };

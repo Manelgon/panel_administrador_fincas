@@ -318,6 +318,8 @@ export const universalDeleteApiSchema = z.object({
     'contrato',
     'task_timer',
     'propietario',
+    'checklist',
+    'checklist_plantilla',
   ]),
   email: z.email('Email no válido').optional(),
   password: z.string().optional(),
