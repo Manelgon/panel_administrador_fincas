@@ -1,9 +1,8 @@
 'use client';
 
-import { useCallback } from 'react';
 import Link from 'next/link';
-import { Coins, CalendarDays, Palmtree } from 'lucide-react';
-import { cargarDeudasAbiertas, cargarReunionesProximas, cargarMisVacaciones } from '@/lib/miDia';
+import { Coins, CalendarDays, Palmtree, FileClock } from 'lucide-react';
+import { cargarDeudasAbiertas, cargarReunionesProximas, cargarMisVacaciones, cargarContratosPreaviso } from '@/lib/miDia';
 import BloqueMiDia, { type EdicionBloque } from './BloqueMiDia';
 import { useCarga, Pill, Fila, Vacio, ErrorCarga, Cargando, nombreComunidad, diasHasta, fechaCorta } from './comun';
 
@@ -68,9 +67,8 @@ const ESTADO_VAC: Record<string, { tono: 'verde' | 'ambar'; texto: string }> = {
     PENDIENTE: { tono: 'ambar', texto: 'Pendiente' },
 };
 
-export function BloqueVacaciones({ edicion, esAdmin }: { edicion: EdicionBloque; esAdmin: boolean }) {
-    const cargar = useCallback(() => cargarMisVacaciones(esAdmin), [esAdmin]);
-    const { datos, error } = useCarga(cargar);
+export function BloqueVacaciones({ edicion }: { edicion: EdicionBloque }) {
+    const { datos, error } = useCarga(cargarMisVacaciones);
 
     return (
         <BloqueMiDia titulo="Mis vacaciones" icono={Palmtree} edicion={edicion}
@@ -92,12 +90,43 @@ export function BloqueVacaciones({ edicion, esAdmin }: { edicion: EdicionBloque;
                             <span className="font-bold text-neutral-900">{datos.diasDisponibles}</span>
                         </Fila>
                     )}
-                    {esAdmin && !!datos.pendientesDeAprobar && (
-                        <Fila>
-                            <Link href="/dashboard/fichaje/admin" className="text-neutral-800 hover:underline">Solicitudes del equipo por aprobar</Link>
-                            <Pill tono="ambar">{datos.pendientesDeAprobar}</Pill>
+                </ul>
+            )}
+        </BloqueMiDia>
+    );
+}
+
+function PlazoPreaviso({ fecha }: { fecha: string }) {
+    const d = diasHasta(fecha);
+    if (d < 0) return <Pill tono="rojo">Preaviso vencido</Pill>;
+    if (d === 0) return <Pill tono="ambar">Preaviso hoy</Pill>;
+    return <Pill tono={d <= 7 ? 'ambar' : 'gris'}>En {d} {d === 1 ? 'día' : 'días'}</Pill>;
+}
+
+/** Contratos cuyo preaviso vence en 30 días o ya venció (con el contrato aún en vigor) */
+export function BloqueContratos({ edicion }: { edicion: EdicionBloque }) {
+    const { datos, error } = useCarga(cargarContratosPreaviso);
+
+    return (
+        <BloqueMiDia titulo="Contratos con preaviso" icono={FileClock} contador={datos?.total} general edicion={edicion}
+            enlace={{ href: '/dashboard/proveedores?tab=contratos', texto: 'Ver contratos' }}>
+            {error ? <ErrorCarga /> : !datos ? <Cargando /> : datos.items.length === 0 ? (
+                <Vacio>Ningún preaviso de contrato vence en los próximos 30 días.</Vacio>
+            ) : (
+                <ul>
+                    {datos.items.map(c => (
+                        <Fila key={c.id}>
+                            <div className="min-w-0 flex-1">
+                                <p className="font-medium text-neutral-800 truncate">
+                                    {[c.tipo_servicio, c.proveedor].filter(Boolean).join(' · ') || 'Contrato'}
+                                </p>
+                                <p className="text-xs text-neutral-500 truncate">
+                                    {nombreComunidad(c.comunidad)} · preaviso {fechaCorta(c.fecha_preaviso)}
+                                </p>
+                            </div>
+                            <PlazoPreaviso fecha={c.fecha_preaviso} />
                         </Fila>
-                    )}
+                    ))}
                 </ul>
             )}
         </BloqueMiDia>

@@ -9,9 +9,10 @@ import BloqueTareas from '@/components/mi-dia/BloqueTareas';
 import BloqueChecklist from '@/components/mi-dia/BloqueChecklist';
 import BloqueAvisos from '@/components/mi-dia/BloqueAvisos';
 import BloqueTrabajo from '@/components/mi-dia/BloqueTrabajo';
-import { BloqueDeudas, BloqueReuniones, BloqueVacaciones } from '@/components/mi-dia/BloquesGenerales';
+import BloqueVacacionesAdmin from '@/components/mi-dia/BloqueVacacionesAdmin';
+import { BloqueDeudas, BloqueReuniones, BloqueVacaciones, BloqueContratos } from '@/components/mi-dia/BloquesGenerales';
 
-type PropsBloque = { edicion: EdicionBloque; esAdmin: boolean };
+type PropsBloque = { edicion: EdicionBloque };
 
 const BLOQUES: Record<string, ComponentType<PropsBloque>> = {
     tareas: BloqueTareas,
@@ -21,7 +22,12 @@ const BLOQUES: Record<string, ComponentType<PropsBloque>> = {
     trabajo: BloqueTrabajo,
     reuniones: BloqueReuniones,
     vacaciones: BloqueVacaciones,
+    contratos: BloqueContratos,
+    vacacionesAdmin: BloqueVacacionesAdmin,
 };
+
+/** Bloques que solo ven los admins */
+const SOLO_ADMIN = ['vacacionesAdmin'];
 
 const ORDEN_INICIAL = Object.keys(BLOQUES);
 const PREFS_INICIALES: PrefsMiDia = { orden: ORDEN_INICIAL, ocultos: [] };
@@ -98,7 +104,9 @@ export default function MiDiaPage() {
         onDragEnd: () => setArrastrado(null),
     });
 
-    const visibles = prefs.orden.filter(id => editando || !prefs.ocultos.includes(id));
+    const visibles = prefs.orden
+        .filter(id => esAdmin || !SOLO_ADMIN.includes(id))
+        .filter(id => editando || !prefs.ocultos.includes(id));
     const hoy = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
     return (
@@ -133,7 +141,7 @@ export default function MiDiaPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
                     {visibles.map(id => {
                         const Bloque = BLOQUES[id];
-                        return <Bloque key={id} edicion={edicionDe(id)} esAdmin={esAdmin} />;
+                        return <Bloque key={id} edicion={edicionDe(id)} />;
                     })}
                 </div>
             )}

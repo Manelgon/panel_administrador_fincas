@@ -63,7 +63,25 @@ export interface ReunionProxima {
 export interface MisVacaciones {
     proximas: { id: number; date_from: string; date_to: string; status: string; type: string }[];
     diasDisponibles: number | null;
-    pendientesDeAprobar: number | null; // solo admins
+}
+
+export interface SolicitudVacaciones {
+    id: number;
+    persona: string;
+    type: string;
+    date_from: string;
+    date_to: string;
+    days_count: number;
+    comment_user: string | null;
+}
+
+export interface ContratoPreaviso {
+    id: number;
+    tipo_servicio: string | null;
+    proveedor: string | null;
+    fecha_preaviso: string;
+    fecha_vencimiento: string | null;
+    comunidad: ComunidadRef;
 }
 
 export interface Lista<T> { items: T[]; total: number }
@@ -318,10 +336,10 @@ export async function cargarReunionesProximas(dias = 7): Promise<ReunionProxima[
 
 // ---------- Vacaciones ----------
 
-export async function cargarMisVacaciones(esAdmin: boolean): Promise<MisVacaciones> {
+export async function cargarMisVacaciones(): Promise<MisVacaciones> {
     const id = await uid();
-    if (!id) return { proximas: [], diasDisponibles: null, pendientesDeAprobar: null };
-    const [prox, saldo, pendientes] = await Promise.all([
+    if (!id) return { proximas: [], diasDisponibles: null };
+    const [prox, saldo] = await Promise.all([
         supabase.from('vacation_requests')
             .select('id, date_from, date_to, status, type')
             .eq('user_id', id)
@@ -334,17 +352,73 @@ export async function cargarMisVacaciones(esAdmin: boolean): Promise<MisVacacion
             .eq('user_id', id)
             .eq('year', new Date().getFullYear())
             .maybeSingle(),
-        esAdmin
-            ? supabase.from('vacation_requests').select('id', { count: 'exact', head: true }).eq('status', 'PENDIENTE')
-            : Promise.resolve({ count: null }),
     ]);
     if (prox.error) throw prox.error;
     const s = saldo.data;
     return {
         proximas: prox.data ?? [],
         diasDisponibles: s ? Number(s.vacaciones_total ?? 0) - Number(s.vacaciones_usados ?? 0) : null,
-        pendientesDeAprobar: pendientes.count ?? null,
     };
+}
+
+// ---------- Vacaciones por aprobar (solo admins) ----------
+
+type SolicitudApi = Omit<SolicitudVacaciones, 'persona'> & {
+    status: string;
+    profiles: { nombre: string | null; apellido: string | null } | null;
+};
+
+/** Usa la misma API que Control Horario (valida que seas admin y trae el nombre de cada persona) */
+export async function cargarVacacionesPorAprobar(): Promise<SolicitudVacaciones[]> {
+    const res = await fetch('/api/admin/vacations/requests');
+    if (!res.ok) throw new Error('No se pudieron cargar las solicitudes');
+    const todas = await res.json() as SolicitudApi[];
+    return todas
+        .filter(r => r.status === 'PENDIENTE')
+        .sort((a, b) => a.date_from.localeCompare(b.date_from))
+        .map(r => ({
+            id: r.id, type: r.type, date_from: r.date_from, date_to: r.date_to,
+            days_count: r.days_count, comment_user: r.comment_user,
+            persona: [r.profiles?.nombre, r.profiles?.apellido].filter(Boolean).join(' ') || 'Sin nombre',
+        }));
+}
+
+/** Aprobar o rechazar: la API ajusta el saldo de días igual que desde Control Horario */
+export async function resolverSolicitud(requestId: number, status: 'APROBADA' | 'RECHAZADA') {
+    const adminId = await uid();
+    const res = await fetch('/api/admin/vacations/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminId, requestId, status, commentAdmin: null }),
+    });
+    if (!res.ok) throw new Error('No se pudo actualizar la solicitud');
+}
+
+// ---------- Contratos con preaviso (general) ----------
+
+/** Contratos activos cuyo preaviso vence en los próximos días o ya venció sin que el contrato haya terminado */
+export async function cargarContratosPreaviso(dias = 30, limite = 6): Promise<Lista<ContratoPreaviso>> {
+    const hasta = new Date();
+    hasta.setDate(hasta.getDate() + dias);
+    const { data, error, count } = await supabase
+        .from('contratos')
+        .select('id, tipo_servicio, fecha_preaviso, fecha_vencimiento, comunidades(codigo, nombre_cdad), proveedores(nombre)', { count: 'exact' })
+        .eq('activo', true)
+        .not('fecha_preaviso', 'is', null)
+        .lte('fecha_preaviso', hasta.toISOString().slice(0, 10))
+        .or(`fecha_vencimiento.is.null,fecha_vencimiento.gte.${HOY()}`)
+        .order('fecha_preaviso', { ascending: true })
+        .limit(limite);
+    if (error) throw error;
+    const items = (data ?? []).map(r => ({
+        id: r.id,
+        tipo_servicio: r.tipo_servicio,
+        fecha_preaviso: r.fecha_preaviso as string,
+        fecha_vencimiento: r.fecha_vencimiento,
+        comunidad: uno(r.comunidades as ComunidadRef | ComunidadRef[]),
+        proveedor: uno(r.proveedores as { nombre: string } | { nombre: string }[] | null)?.nombre ?? null,
+    }));
+    return { items, total: count ?? items.length };
 }
 
 // ---------- Preferencias de bloques ----------
