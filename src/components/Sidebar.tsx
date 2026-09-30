@@ -6,6 +6,7 @@ import {
     Home, Building, AlertCircle, FileText, LogOut, Activity,
     Users, Clock, X, Folder, Timer, ChevronRight, CalendarDays
 } from 'lucide-react';
+import { Sun } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import NotificationsBell from '@/components/NotificationsBell';
@@ -19,6 +20,7 @@ const SECTIONS = [
     {
         label: 'GESTIÓN',
         items: [
+            { name: 'Mi día', href: '/dashboard/mi-dia', icon: Sun },
             { name: 'Dashboard', href: '/dashboard', icon: Home },
             { name: 'Clientes', href: '/dashboard/comunidades', icon: Building },
             { name: 'Proveedores', href: '/dashboard/proveedores', icon: Users },
