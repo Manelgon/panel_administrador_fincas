@@ -17,7 +17,7 @@ interface Cabecera {
     nombre: string;
     descripcion: string;
     activo: boolean;
-    comunidad_id: number;
+    comunidad_id: number | null;
     comunidades: { codigo: string | null; nombre_cdad: string } | null;
     checklist_plantillas: { nombre: string } | null;
 }
@@ -56,7 +56,7 @@ export default function ChecklistDetallePage() {
 
     const comunidad = cabecera?.comunidades
         ? [cabecera.comunidades.codigo, cabecera.comunidades.nombre_cdad].filter(Boolean).join(' - ')
-        : '';
+        : 'Sin comunidad';
 
     const alternarArchivo = async () => {
         if (!cabecera) return;

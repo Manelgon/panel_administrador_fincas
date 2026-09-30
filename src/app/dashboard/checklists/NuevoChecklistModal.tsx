@@ -67,14 +67,13 @@ function Formulario({ comunidades, comunidadInicial, onClose, onCreado }: Props)
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const nuevosErrores: Record<string, string> = {};
-        if (!comunidadId) nuevosErrores.comunidad = 'Elige la comunidad';
         if (!nombre.trim()) nuevosErrores.nombre = 'El nombre es obligatorio';
         setErrores(nuevosErrores);
         if (Object.keys(nuevosErrores).length) return;
 
         setGuardando(true);
         const { data, error } = await supabase.rpc('crear_checklist', {
-            p_comunidad_id: comunidadId,
+            p_comunidad_id: comunidadId === '' ? null : comunidadId,
             p_nombre: nombre.trim(),
             p_descripcion: descripcion.trim(),
             p_plantilla_id: plantillaId === '' ? null : plantillaId,
@@ -92,8 +91,8 @@ function Formulario({ comunidades, comunidadInicial, onClose, onCreado }: Props)
             action: 'create',
             entityType: 'checklist',
             entityId: data as number,
-            entityName: `${nombre.trim()} - ${comunidad?.nombre ?? ''}`,
-            details: { plantilla_id: plantillaId || null, comunidad_id: comunidadId },
+            entityName: `${nombre.trim()} - ${comunidad?.nombre ?? 'Sin comunidad'}`,
+            details: { plantilla_id: plantillaId || null, comunidad_id: comunidadId || null },
         });
         toast.success('Checklist creado');
         onCreado(data as number);
@@ -106,18 +105,18 @@ function Formulario({ comunidades, comunidadInicial, onClose, onCreado }: Props)
             onClose={onClose}
             onSubmit={handleSubmit}
             title="Nuevo checklist"
-            subtitle="Elige la comunidad y, si quieres, una plantilla para copiar sus tareas"
+            subtitle="Elige la comunidad (o déjalo sin comunidad) y, si quieres, una plantilla para copiar sus tareas"
             editingId={null}
             submitLabel={guardando ? 'Creando...' : 'Crear checklist'}
             formId="nuevo-checklist-form"
         >
             <div className="space-y-4">
-                <FormField label="Comunidad" required error={errores.comunidad}>
+                <FormField label="Comunidad (opcional)" error={errores.comunidad}>
                     <SearchableSelect
-                        options={comunidades.map(c => ({ value: c.id, label: c.nombre }))}
+                        options={[{ value: '', label: 'Sin comunidad' }, ...comunidades.map(c => ({ value: c.id, label: c.nombre }))]}
                         value={comunidadId}
                         onChange={v => { setComunidadId(v === '' ? '' : Number(v)); setErrores(p => ({ ...p, comunidad: '' })); }}
-                        placeholder="Seleccionar comunidad..."
+                        placeholder="Sin comunidad"
                     />
                 </FormField>
 

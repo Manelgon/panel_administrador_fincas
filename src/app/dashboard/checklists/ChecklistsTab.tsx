@@ -25,7 +25,7 @@ interface FilaBD {
     descripcion: string;
     activo: boolean;
     created_at: string;
-    comunidad_id: number;
+    comunidad_id: number | null;
     comunidades: { codigo: string | null; nombre_cdad: string } | null;
     checklist_plantillas: { nombre: string } | null;
     checklist_items: { parent_id: number | null; hecho: boolean }[];
@@ -37,7 +37,7 @@ interface ChecklistFila {
     descripcion: string;
     activo: boolean;
     created_at: string;
-    comunidad_id: number;
+    comunidad_id: number | null;
     comunidad: string;
     plantilla: string;
     hechas: number;
@@ -52,7 +52,10 @@ const FILTROS = [
 ];
 
 const etiquetaComunidad = (c: { codigo: string | null; nombre_cdad: string } | null) =>
-    c ? (c.codigo ? `${c.codigo} - ${c.nombre_cdad}` : c.nombre_cdad) : '—';
+    c ? (c.codigo ? `${c.codigo} - ${c.nombre_cdad}` : c.nombre_cdad) : 'Sin comunidad';
+
+/** Valor del filtro para ver solo los checklists que no están ligados a ninguna comunidad */
+const SIN_COMUNIDAD = -1;
 
 export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPreselect }) {
     const router = useRouter();
@@ -101,7 +104,7 @@ export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPre
 
     const visibles = useMemo(() => filas.filter(f =>
         (filtroEstado === 'all' || (filtroEstado === 'activo') === f.activo) &&
-        (filtroComunidad === '' || f.comunidad_id === filtroComunidad),
+        (filtroComunidad === '' || f.comunidad_id === (filtroComunidad === SIN_COMUNIDAD ? null : filtroComunidad)),
     ), [filas, filtroEstado, filtroComunidad]);
 
     const alternarArchivo = async (fila: ChecklistFila) => {
@@ -185,7 +188,7 @@ export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPre
     return (
         <div className="space-y-6">
             <PageHeader
-                title="Checklists de comunidades"
+                title="Checklists"
                 onToggleForm={() => setModalNuevo(true)}
                 newButtonLabel="Nuevo checklist"
                 newButtonShortLabel="Nuevo"
@@ -195,7 +198,7 @@ export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPre
                 <FilterBar value={filtroEstado} onChange={setFiltroEstado} options={FILTROS} />
                 <div className="w-full sm:w-72 sm:ml-auto">
                     <SearchableSelect
-                        options={[{ value: '', label: 'Todas las comunidades' }, ...comunidades.map(c => ({ value: c.id, label: c.nombre }))]}
+                        options={[{ value: '', label: 'Todas las comunidades' }, { value: SIN_COMUNIDAD, label: 'Sin comunidad' }, ...comunidades.map(c => ({ value: c.id, label: c.nombre }))]}
                         value={filtroComunidad}
                         onChange={v => setFiltroComunidad(v === '' ? '' : Number(v))}
                         placeholder="Filtrar por comunidad"
@@ -226,7 +229,7 @@ export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPre
             <NuevoChecklistModal
                 isOpen={modalNuevo}
                 comunidades={comunidades}
-                comunidadInicial={preselect?.comunidadId ?? (filtroComunidad || undefined)}
+                comunidadInicial={preselect?.comunidadId ?? (filtroComunidad !== SIN_COMUNIDAD && filtroComunidad ? filtroComunidad : undefined)}
                 onClose={() => setModalNuevo(false)}
                 onCreado={id => router.push(`/dashboard/checklists/${id}`)}
             />
@@ -236,7 +239,7 @@ export default function ChecklistsTab({ preselect }: { preselect?: ChecklistsPre
                 onClose={() => setABorrar(null)}
                 onConfirm={confirmarBorrado}
                 itemType="checklist"
-                description={aBorrar ? `Se eliminará "${aBorrar.nombre}" de ${aBorrar.comunidad} con todas sus tareas. Si solo quieres quitarlo de la vista, mejor archívalo.` : undefined}
+                description={aBorrar ? `Se eliminará "${aBorrar.nombre}" (${aBorrar.comunidad}) con todas sus tareas. Si solo quieres quitarlo de la vista, mejor archívalo.` : undefined}
                 isDeleting={borrando}
             />
         </div>
