@@ -121,13 +121,17 @@ export default function InformesComunidadPage() {
         setLoadingFolders(true);
         try {
             const response = await fetch('/api/onedrive/folders');
-            if (!response.ok) throw new Error('Error al cargar comunidades');
+            if (!response.ok) {
+                const body = await response.json().catch(() => null);
+                throw new Error(body?.error || 'Error al cargar comunidades');
+            }
             const data = await response.json();
             setFolders(data || []);
             setShowGenerator(true);
         } catch (error) {
             console.error(error);
-            toast.error('No se pudieron cargar las carpetas de Outlook');
+            const detail = error instanceof Error ? error.message : '';
+            toast.error(`No se pudieron cargar las carpetas de Outlook${detail ? `: ${detail}` : ''}`);
         } finally {
             setLoadingFolders(false);
         }
