@@ -49,7 +49,7 @@ export default function BloqueChecklist({ edicion }: { edicion: EdicionBloque })
                                     aria-label={`Marcar como hecho: ${p.titulo}`} />
                                 <Link href={`/dashboard/checklists/${p.checklist_id}`} className="min-w-0 group">
                                     <p className="font-medium text-neutral-800 truncate group-hover:underline">{p.titulo}</p>
-                                    <p className="text-xs text-neutral-500 truncate">{nombreComunidad(p.comunidad)} · {p.checklist}</p>
+                                    <p className="text-xs text-neutral-500 truncate">{p.comunidad ? nombreComunidad(p.comunidad) : 'Sin comunidad'} · {p.checklist}</p>
                                 </Link>
                             </div>
                             <Plazo fecha={p.fecha_limite} />
