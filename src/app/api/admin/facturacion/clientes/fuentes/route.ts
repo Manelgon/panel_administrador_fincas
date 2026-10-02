@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 type Fuente = { id: string; nombre: string; nif: string | null; direccion: string | null; cp: string | null; ciudad: string | null; provincia: string | null; email: string | null };
 const tipoSchema = z.enum(["comunidad", "proveedor", "facturador"]);
 
+/** Solo los campos con valor: al refrescar no se pisa lo que se completó a mano en la agenda */
+const sinVacios = <T extends object>(o: T) => Object.fromEntries(Object.entries(o).filter(([, v]) => v !== null && v !== ""));
+
 async function buscar(tipo: z.infer<typeof tipoSchema>, q: string, id?: string): Promise<Fuente[]> {
     const like = `%${q.replace(/[%_,()]/g, " ").trim()}%`;
     if (tipo === "comunidad") {
@@ -56,17 +59,19 @@ export async function POST(req: Request) {
         const body = z.object({ tipo: tipoSchema, id: z.string().min(1) }).safeParse(await req.json());
         if (!body.success) return NextResponse.json({ error: "Datos no válidos" }, { status: 400 });
 
-        const { data: ya } = await supabaseAdmin.from("clientes_facturacion").select("*")
-            .eq("origen", body.data.tipo).eq("origen_id", body.data.id).maybeSingle();
-        if (ya) {
-            if (!ya.activo) await supabaseAdmin.from("clientes_facturacion").update({ activo: true }).eq("id", ya.id);
-            return NextResponse.json({ ok: true, cliente: { ...ya, activo: true } });
-        }
         const [f] = await buscar(body.data.tipo, "", body.data.id);
         if (!f) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
         const { id: origenId, ...datos } = f;
-        const { data, error } = await supabaseAdmin.from("clientes_facturacion")
-            .insert({ ...datos, nif: datos.nif?.trim().toUpperCase() || null, origen: body.data.tipo, origen_id: origenId }).select("*").single();
+        const fila = { ...datos, nif: datos.nif?.trim().toUpperCase() || null, activo: true };
+
+        // Si ya se importó antes, se refresca con los datos actuales del origen (p. ej. un CIF corregido)
+        const { data: ya } = await supabaseAdmin.from("clientes_facturacion").select("id")
+            .eq("origen", body.data.tipo).eq("origen_id", origenId).maybeSingle();
+        const { data, error } = ya
+            ? await supabaseAdmin.from("clientes_facturacion")
+                .update({ ...sinVacios(fila), activo: true, updated_at: new Date().toISOString() }).eq("id", ya.id).select("*").single()
+            : await supabaseAdmin.from("clientes_facturacion")
+                .insert({ ...fila, origen: body.data.tipo, origen_id: origenId }).select("*").single();
         if (error) throw error;
         return NextResponse.json({ ok: true, cliente: data });
     } catch (err: unknown) {

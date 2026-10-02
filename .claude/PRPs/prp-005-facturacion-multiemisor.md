@@ -131,6 +131,7 @@ Firma de registros, registro de eventos y exportación. Antes: confirmar con la 
 - [ ] Certificado digital de cada facturador para la firma (Fase 6). Nunca en el repo.
 - [ ] Quién figura como productor del software en la declaración responsable.
 - [ ] Qué pasa con las facturas ya emitidas en 2026 fuera del panel (solo se continúa la numeración; no se importan como registros).
+- [ ] **QR apagado** (2026-10-02, decisión de Manel): el PDF sale sin QR hasta que VeriFactu se aplique. Encenderlo con `FACTURACION_QR=si` y, a la vez, `VERIFACTU_ENV=prod` para que apunte a la AEAT real (hoy apuntaría a preproducción).
 
 ---
 

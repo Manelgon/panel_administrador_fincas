@@ -19,6 +19,13 @@ type Emisor = {
     origen_datos: "propio" | "ajustes_emisor";
 };
 
+/**
+ * QR tributario en el PDF: APAGADO por defecto hasta que VeriFactu se aplique de verdad.
+ * Se enciende con FACTURACION_QR=si en las variables del servidor. El registro encadenado
+ * y la URL del QR se siguen guardando igualmente; solo cambia si se imprime en la factura.
+ */
+const qrEnPdf = () => process.env.FACTURACION_QR?.trim().toLowerCase() === "si";
+
 export type ResultadoEmitir = { ok: true; facturaId: string; numero: string } | { error: string; status?: number };
 
 async function cargarBorrador(id: string) {
@@ -157,7 +164,7 @@ export async function completarFactura(facturaId: string): Promise<{ ok: true } 
         numero: f.numero, fecha: f.fecha_emision, emisor: imp.emisor, cliente: imp.cliente,
         lineas, retencionPct: Number(f.retencion_pct),
         logo: await descargar(BUCKET_ASSETS, imp.emisor.logo_path),
-        qrPng: qrUrl ? await generarQrPng(qrUrl) : null,
+        qrPng: qrUrl && qrEnPdf() ? await generarQrPng(qrUrl) : null,
     });
     const path = `${f.emisor_id}/${f.anio}/${f.numero.replace(/[^A-Za-z0-9_-]/g, "_")}.pdf`;
     const { error: up } = await supabaseAdmin.storage.from(BUCKET_PDF).upload(path, pdf, { contentType: "application/pdf", upsert: true });

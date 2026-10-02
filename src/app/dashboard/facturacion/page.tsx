@@ -6,6 +6,7 @@ import { toast } from "react-hot-toast";
 import { Loader2, FileText, Pencil, Trash2, RefreshCw } from "lucide-react";
 import { calcularTotales, moneda, type LineaEntrada } from "@/lib/facturacion/calculo";
 import { FacturacionHeader, useAdminGuard, api, errMsg, cardCls, selectCls, nombreFacturador, type Facturador } from "@/components/facturacion/shared";
+import ConfirmarDialog from "@/components/facturacion/ConfirmarDialog";
 
 type Factura = {
     id: string; emisor_id: string; numero: string; fecha_emision: string; cliente_nombre: string;
@@ -52,8 +53,9 @@ export default function FacturacionPage() {
         try { await api(`/api/admin/facturacion/facturas/${id}/completar`, { method: "POST" }); toast.success("Factura completada"); cargar(); }
         catch (e) { toast.error(errMsg(e)); } finally { setBusy(null); }
     };
+    const [borradorABorrar, setBorradorABorrar] = useState<string | null>(null);
     const borrarBorrador = async (id: string) => {
-        if (!confirm("¿Borrar este borrador?")) return;
+        setBorradorABorrar(null);
         try { await api(`/api/admin/facturacion/borradores/${id}`, { method: "DELETE" }); cargar(); }
         catch (e) { toast.error(errMsg(e)); }
     };
@@ -69,6 +71,10 @@ export default function FacturacionPage() {
 
     return (
         <div className="space-y-6">
+            <ConfirmarDialog open={borradorABorrar !== null} titulo="¿Borrar este borrador?" textoConfirmar="Borrar" peligro
+                onConfirmar={() => borradorABorrar && borrarBorrador(borradorABorrar)} onCancelar={() => setBorradorABorrar(null)}>
+                <p>El borrador no tiene valor fiscal; se elimina sin dejar rastro.</p>
+            </ConfirmarDialog>
             <FacturacionHeader />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -105,7 +111,7 @@ export default function FacturacionPage() {
                                 <div className="flex items-center gap-2 flex-shrink-0">
                                     <span className="font-medium">{moneda(calcularTotales(b.lineas, Number(b.retencion_pct)).aPagar)} €</span>
                                     <Link href={`/dashboard/facturacion/borrador/${b.id}`} className="p-1.5 text-neutral-500 hover:text-neutral-900" aria-label="Editar"><Pencil className="w-4 h-4" /></Link>
-                                    <button onClick={() => borrarBorrador(b.id)} className="p-1.5 text-neutral-500 hover:text-red-600" aria-label="Borrar"><Trash2 className="w-4 h-4" /></button>
+                                    <button onClick={() => setBorradorABorrar(b.id)} className="p-1.5 text-neutral-500 hover:text-red-600" aria-label="Borrar"><Trash2 className="w-4 h-4" /></button>
                                 </div>
                             </li>
                         ))}

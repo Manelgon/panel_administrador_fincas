@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { Loader2, Plus, Download, Pencil, Trash2, Search } from "lucide-react";
 import { ClienteForm, ImportarCliente } from "@/components/facturacion/ClienteForm";
+import ConfirmarDialog from "@/components/facturacion/ConfirmarDialog";
 import { FacturacionHeader, useAdminGuard, api, errMsg, cardCls, inputCls, btnPrimary, btnGhost, type Cliente } from "@/components/facturacion/shared";
 
 const ORIGEN: Record<string, string> = { manual: "Manual", comunidad: "Comunidad", proveedor: "Proveedor", facturador: "Facturador" };
@@ -23,8 +24,9 @@ export default function ClientesFacturacionPage() {
     }, []);
     useEffect(() => { if (ok) cargar(); }, [ok, cargar]);
 
+    const [aQuitar, setAQuitar] = useState<Cliente | null>(null);
     const quitar = async (c: Cliente) => {
-        if (!confirm(`¿Quitar a ${c.nombre} de la agenda? Sus facturas emitidas no cambian.`)) return;
+        setAQuitar(null);
         try {
             await api(`/api/admin/facturacion/clientes/${c.id}`, { method: "DELETE" });
             toast.success("Quitado de la agenda"); cargar();
@@ -36,6 +38,10 @@ export default function ClientesFacturacionPage() {
 
     return (
         <div className="space-y-6">
+            <ConfirmarDialog open={aQuitar !== null} titulo="¿Quitar de la agenda?" textoConfirmar="Quitar" peligro
+                onConfirmar={() => aQuitar && quitar(aQuitar)} onCancelar={() => setAQuitar(null)}>
+                <p>Se quitará a <strong>{aQuitar?.nombre}</strong> de la agenda. Sus facturas emitidas no cambian.</p>
+            </ConfirmarDialog>
             <FacturacionHeader />
             <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="relative w-full sm:w-72">
@@ -73,7 +79,7 @@ export default function ClientesFacturacionPage() {
                                 <td className="px-4 py-2 hidden md:table-cell text-neutral-500">{ORIGEN[c.origen] ?? c.origen}</td>
                                 <td className="px-4 py-2 text-right whitespace-nowrap">
                                     <button className="p-1.5 text-neutral-500 hover:text-neutral-900" aria-label="Editar" onClick={() => setModo(c)}><Pencil className="w-4 h-4" /></button>
-                                    <button className="p-1.5 text-neutral-500 hover:text-red-600" aria-label="Quitar" onClick={() => quitar(c)}><Trash2 className="w-4 h-4" /></button>
+                                    <button className="p-1.5 text-neutral-500 hover:text-red-600" aria-label="Quitar" onClick={() => setAQuitar(c)}><Trash2 className="w-4 h-4" /></button>
                                 </td>
                             </tr>
                         ))}

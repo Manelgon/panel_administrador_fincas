@@ -6,6 +6,8 @@ import { toast } from "react-hot-toast";
 import { Loader2, Plus, Trash2, Save, Eye, Send, UserPlus, Download } from "lucide-react";
 import { calcularTotales, moneda, type LineaEntrada } from "@/lib/facturacion/calculo";
 import { formatearNumero } from "@/lib/verifactu/numeracion";
+import SearchableSelect from "@/components/SearchableSelect";
+import ConfirmarDialog from "./ConfirmarDialog";
 import { ClienteForm, ImportarCliente } from "./ClienteForm";
 import { api, jsonInit, errMsg, inputCls, labelCls, cardCls, btnPrimary, btnDark, btnGhost, nombreFacturador, nifPendiente, type Facturador, type Cliente } from "./shared";
 
@@ -21,6 +23,7 @@ export default function EditorFactura({ borradorId }: { borradorId?: string }) {
     const [anio, setAnio] = useState(new Date().getFullYear());
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState<"" | "guardar" | "preview" | "emitir">("");
+    const [numeroAEmitir, setNumeroAEmitir] = useState<string | null>(null);
     const [panelCliente, setPanelCliente] = useState<"" | "nuevo" | "importar">("");
 
     const [emisorId, setEmisorId] = useState<string | null>(null);
@@ -73,8 +76,14 @@ export default function EditorFactura({ borradorId }: { borradorId?: string }) {
         if (tipo === "emitir") {
             if (!emisor?.serie) { toast.error("Configura la numeración de este facturador antes de emitir"); return; }
             const numero = formatearNumero({ prefijo: emisor.serie.prefijo, sep1: emisor.serie.sep1, anio: emisor.serie.anio_cifras, sep2: emisor.serie.sep2, digitos: emisor.serie.digitos }, Number(fecha.slice(0, 4)) || anio, emisor.siguiente ?? 1);
-            if (!confirm(`Se emitirá con ${nombreFacturador(emisor)} como ${numero} (aprox.).\n\nUna vez emitida no se puede modificar ni borrar: solo rectificar.\n\n¿Emitir?`)) return;
+            setNumeroAEmitir(numero);
+            return;
         }
+        await ejecutar(tipo);
+    };
+
+    const ejecutar = async (tipo: "guardar" | "preview" | "emitir") => {
+        setNumeroAEmitir(null);
         const win = tipo === "preview" ? window.open("", "_blank") : null;
         setBusy(tipo);
         try {
@@ -126,13 +135,15 @@ export default function EditorFactura({ borradorId }: { borradorId?: string }) {
                     </div>
                 )}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <label className="md:col-span-2"><span className={labelCls}>Cliente</span>
-                        <select className={inputCls} value={clienteId ?? ""} onChange={(e) => setClienteId(e.target.value || null)}>
-                            <option value="">Elige un cliente…</option>
-                            {clientes.map((c) => <option key={c.id} value={c.id}>{c.nombre}{c.nif ? ` · ${c.nif}` : " · sin NIF"}</option>)}
-                        </select>
+                    <div className="md:col-span-2"><span className={labelCls}>Cliente</span>
+                        <SearchableSelect
+                            options={clientes.map((c) => ({ value: c.id, label: `${c.nombre}${c.nif ? ` · ${c.nif}` : " · sin NIF"}` }))}
+                            value={clienteId ?? ""}
+                            onChange={(v) => setClienteId(v === "" ? null : String(v))}
+                            placeholder={clientes.length ? "Elige un cliente…" : "Agenda vacía: usa Importar o Nuevo"}
+                        />
                         {cliente && !cliente.nif && <span className="text-xs text-amber-600">Este cliente no tiene NIF: complétalo en Clientes para poder emitir.</span>}
-                    </label>
+                    </div>
                     <label><span className={labelCls}>Fecha de emisión</span>
                         <input type="date" className={inputCls} value={fecha} onChange={(e) => setFecha(e.target.value)} /></label>
                 </div>
@@ -183,6 +194,17 @@ export default function EditorFactura({ borradorId }: { borradorId?: string }) {
                 <button type="button" className={btnDark} disabled={!!busy} onClick={() => accion("preview")}>{busy === "preview" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} Vista previa</button>
                 <button type="button" className={btnPrimary} disabled={!!busy} onClick={() => accion("emitir")}>{busy === "emitir" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Emitir factura</button>
             </div>
+
+            <ConfirmarDialog open={numeroAEmitir !== null} titulo="¿Emitir la factura?" textoConfirmar="Emitir factura"
+                onConfirmar={() => ejecutar("emitir")} onCancelar={() => setNumeroAEmitir(null)}>
+                <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 bg-neutral-50 rounded-lg p-3 text-neutral-800">
+                    <dt className="text-neutral-500">Facturador</dt><dd className="font-medium">{emisor ? nombreFacturador(emisor) : ""}</dd>
+                    <dt className="text-neutral-500">Número</dt><dd className="font-mono font-medium">{numeroAEmitir} <span className="font-sans text-xs text-neutral-400">(aprox.)</span></dd>
+                    <dt className="text-neutral-500">Cliente</dt><dd className="font-medium">{cliente?.nombre ?? "Sin cliente"}</dd>
+                    <dt className="text-neutral-500">Total</dt><dd className="font-medium">{moneda(t.aPagar)} €</dd>
+                </dl>
+                <p>Una vez emitida <strong>no se puede modificar ni borrar</strong>: solo rectificar.</p>
+            </ConfirmarDialog>
         </div>
     );
 }
