@@ -6,7 +6,7 @@ import {
     Home, Building, AlertCircle, FileText, LogOut, Activity,
     Users, Clock, X, Folder, Timer, ChevronRight, CalendarDays, ListChecks
 } from 'lucide-react';
-import { Sun } from 'lucide-react';
+import { Sun, Receipt } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import NotificationsBell from '@/components/NotificationsBell';
@@ -54,6 +54,7 @@ const ADMIN_SECTION = {
         { name: 'Actividad', href: '/dashboard/actividad', icon: Activity },
         { name: 'Perfiles', href: '/dashboard/perfiles', icon: Users },
         { name: 'Control Horario', href: '/dashboard/fichaje/admin', icon: Clock },
+        { name: 'Facturación', href: '/dashboard/facturacion', icon: Receipt },
         { name: 'Ajustes Emisor', href: '/dashboard/ajustes-emisor', icon: Building },
     ],
 };
