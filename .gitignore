@@ -80,3 +80,14 @@ backup-pre-restore-*/
 # Documentos de prueba sueltos en raiz
 /*.pdf
 /*.docx
+
+# Datos de clientes sueltos (no forman parte del programa)
+/Contratos.xls
+/docs/*.msg
+
+# Registros de pruebas y configuracion local de Claude
+.playwright-mcp/
+.claude/launch.json
+
+# Textos legales con datos personales (NIF de autonomo)
+/docs/facturacion-textos-legales-pie.md
