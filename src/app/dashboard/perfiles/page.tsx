@@ -441,7 +441,7 @@ export default function PerfilesPage() {
                                     className={`w-full rounded-lg border bg-neutral-50/60 px-3 py-2 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-yellow-400/40 focus:border-yellow-400 focus:bg-white transition${createErrors.email ? 'border-red-400' : 'border-neutral-200'}`}
                                     value={createFormData.email}
                                     onChange={e => { setCreateFormData({ ...createFormData, email: e.target.value }); setCreateErrors(prev => ({ ...prev, email: '' })); }}
-                                    placeholder="usuario@serincosol.com"
+                                    placeholder="usuario@empresa.com"
                                     autoComplete="off"
                                 />
                                 {createErrors.email && <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-red-500"><AlertCircle className="w-3 h-3 shrink-0" />{createErrors.email}</p>}

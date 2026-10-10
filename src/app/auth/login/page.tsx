@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { Eye, EyeOff, LogIn, Mail, Lock } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Mail, Lock, Building2 } from 'lucide-react';
 
 export default function LoginPage() {
     return (
@@ -24,6 +24,7 @@ function LoginForm() {
     const [loading, setLoading] = useState(false);
     const [emisorName, setEmisorName] = useState('');
     const [logoPath, setLogoPath] = useState('');
+    const [emisorLoaded, setEmisorLoaded] = useState(false);
 
     // Force sign-out if redirected from proxy due to inactive/missing profile
     useEffect(() => {
@@ -42,7 +43,8 @@ function LoginForm() {
                 if (nombre) setEmisorName(nombre);
                 if (logoPath) setLogoPath(logoPath);
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => setEmisorLoaded(true));
     }, []);
 
     // Limpiar credenciales guardadas en localStorage (legacy — eliminado por seguridad)
@@ -136,11 +138,17 @@ function LoginForm() {
                                 border: '1px solid rgba(251,191,36,0.25)',
                             }}
                         >
-                            <img
-                                src={logoPath || '/serincosol-logo.png'}
-                                alt={emisorName ? `${emisorName} Logo` : 'Logo'}
-                                className="h-14 w-auto object-contain"
-                            />
+                            {logoPath ? (
+                                <img
+                                    src={logoPath}
+                                    alt={emisorName ? `${emisorName} Logo` : 'Logo'}
+                                    className="h-14 w-auto object-contain"
+                                />
+                            ) : (
+                                <div className="h-14 w-14 flex items-center justify-center" aria-hidden="true">
+                                    {emisorLoaded && <Building2 className="h-10 w-10 text-amber-500" />}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
@@ -185,7 +193,7 @@ function LoginForm() {
                                     e.currentTarget.style.border = '1px solid #e2e8f0';
                                     e.currentTarget.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.04)';
                                 }}
-                                placeholder="usuario@serincosol.com"
+                                placeholder="usuario@empresa.com"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />

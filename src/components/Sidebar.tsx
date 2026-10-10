@@ -163,7 +163,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                             aria-hidden="true"
                         />
                         <span className="text-xs font-bold tracking-widest uppercase" style={{ color: '#fbbf24' }}>
-                            {companyName || 'Serincosol'}
+                            {companyName || 'Panel de gestión'}
                         </span>
                     </div>
                     <div className="flex items-center gap-1">
