@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Propuesta · Firma electrónica · Serincosol</title>
+<style>
+  :root{ --azul:#1d4ed8; --azul-claro:#eff6ff; --gris:#475569; --linea:#e2e8f0; --verde:#16a34a; }
+  *{ box-sizing:border-box; }
+  body{ font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; color:#1e293b;
+        max-width:860px; margin:0 auto; padding:48px 32px; line-height:1.6; font-size:15px; }
+  h1{ font-size:26px; color:var(--azul); margin:0 0 4px; }
+  h2{ font-size:19px; color:var(--azul); margin:34px 0 10px; padding-bottom:6px; border-bottom:2px solid var(--linea); }
+  h3{ font-size:16px; margin:18px 0 6px; }
+  .meta{ color:var(--gris); font-size:13px; margin-bottom:6px; }
+  .cab{ background:var(--azul-claro); border-left:4px solid var(--azul); padding:16px 20px; border-radius:8px; margin:18px 0 8px; }
+  .cab p{ margin:2px 0; }
+  table{ width:100%; border-collapse:collapse; margin:14px 0; font-size:14px; }
+  th,td{ border:1px solid var(--linea); padding:9px 12px; text-align:left; vertical-align:top; }
+  th{ background:var(--azul-claro); color:#1e3a8a; font-weight:600; }
+  tr:nth-child(even) td{ background:#f8fafc; }
+  .nota{ background:#fffbeb; border-left:4px solid #f59e0b; padding:12px 16px; border-radius:6px; font-size:14px; margin:14px 0; }
+  .destacado{ background:#f0fdf4; border-left:4px solid var(--verde); padding:14px 18px; border-radius:6px; margin:14px 0; }
+  strong{ color:#0f172a; }
+  .estrella{ color:#f59e0b; }
+  ol,ul{ padding-left:22px; }
+  footer{ margin-top:40px; padding-top:14px; border-top:1px solid var(--linea); color:var(--gris); font-size:12px; }
+  @media print{ body{ padding:0; } h2{ page-break-after:avoid; } table{ page-break-inside:avoid; } }
+</style>
+</head>
+<body>
+
+<h1>Propuesta: Firma electrónica y comunicaciones certificadas</h1>
+<p class="meta">Incorporación al Panel de Gestión de Fincas</p>
+
+<div class="cab">
+  <p><strong>Para:</strong> Administración de Serincosol</p>
+  <p><strong>Asunto:</strong> Firma electrónica con validez legal y email/SMS certificado en el panel</p>
+  <p><strong>Fecha:</strong> Junio de 2026</p>
+</div>
+
+<h2>1. Resumen ejecutivo</h2>
+<p>Proponemos incorporar al panel de gestión la posibilidad de <strong>firmar documentos electrónicamente con plena validez legal</strong> (actas de junta, contratos con proveedores y contratos con presidentes de comunidad), así como <strong>enviar comunicaciones certificadas</strong> (convocatorias y notificaciones) con valor probatorio.</p>
+<p>Esto elimina desplazamientos, impresiones y firmas en papel, agiliza la gestión y deja constancia legal de cada envío y cada firma. La inversión es baja (<strong>desde ~360–720 €/año</strong>) y la implantación sencilla, porque el panel ya cuenta con la base técnica necesaria.</p>
+
+<h2>2. ¿Qué problema resuelve?</h2>
+<p>Hoy, cada acta o contrato exige imprimir, desplazarse, recoger firmas físicas y archivar papel. Esto implica:</p>
+<ul>
+  <li>Tiempo y desplazamientos del despacho y de los firmantes.</li>
+  <li>Riesgo de extravío y de documentos sin firmar.</li>
+  <li>Dificultad para <strong>demostrar</strong> que una convocatoria o notificación se envió en plazo (algo que la Ley de Propiedad Horizontal exige).</li>
+</ul>
+<p>Con firma electrónica y envío certificado, el presidente o el proveedor <strong>firma desde el móvil en segundos</strong>, y el sistema guarda automáticamente el documento firmado junto con las <strong>pruebas legales</strong> de identidad, fecha y entrega.</p>
+
+<h2>3. La decisión clave: ¿lo construimos o usamos un proveedor?</h2>
+<table>
+  <tr><th></th><th>Construirlo nosotros desde cero</th><th>Usar un proveedor especializado</th></tr>
+  <tr><td><strong>Validez legal de la firma</strong></td><td>Baja (firma "simple", fácil de impugnar)</td><td>Alta (firma avanzada con garantías)</td></tr>
+  <tr><td><strong>Email/SMS certificado</strong></td><td>Imposible legalmente sin un tercero</td><td>Sí, incluido</td></tr>
+  <tr><td><strong>Coste de desarrollo</strong></td><td>Alto (semanas de trabajo)</td><td>Bajo (integración sencilla)</td></tr>
+  <tr><td><strong>Mantenimiento legal</strong></td><td>A nuestra cuenta, para siempre</td><td>Lo asume el proveedor</td></tr>
+  <tr><td><strong>Si un firmante lo niega ante un juez</strong></td><td>Nos toca demostrarlo a nosotros</td><td>El proveedor aporta el certificado de evidencias</td></tr>
+</table>
+<p><strong>Conclusión:</strong> la validez legal de la firma avanzada y del email/SMS certificado <strong>solo la puede emitir un Prestador Cualificado de Servicios de Confianza</strong> (figura regulada por la UE). No se puede "fabricar" internamente. Por eso lo correcto es <strong>usar un proveedor para el núcleo legal e integrarlo en nuestro propio panel</strong>, de modo que los documentos sigan viviendo en Serincosol y todo quede automatizado.</p>
+<div class="nota">Empresas del sector como <strong>Fincatech</strong> funcionan exactamente así: no inventan la firma, integran a uno de estos proveedores y lo ofrecen dentro de su producto. Nosotros haríamos lo mismo, pero dentro de <strong>nuestro propio panel</strong>, manteniendo el control de los datos.</div>
+
+<h2>4. ¿Es legalmente válido?</h2>
+<ul>
+  <li>Se rige por el <strong>Reglamento europeo eIDAS (UE 910/2014)</strong> y la <strong>Ley española 6/2020</strong>.</li>
+  <li>Una firma <strong>no pierde validez por ser electrónica</strong> (art. 25 eIDAS).</li>
+  <li>Para nuestros documentos basta la <strong>Firma Electrónica Avanzada</strong>: vincula al firmante mediante código por SMS/email, sello de tiempo y registro de evidencias. <strong>No</strong> hace falta certificado digital ni DNI electrónico (se firma desde el móvil sin instalar nada).</li>
+  <li>En protección de datos (RGPD) bastará firmar el contrato de encargado con el proveedor y actualizar la política de privacidad; trámites estándar.</li>
+</ul>
+<table>
+  <tr><th>Documento</th><th>Quién firma</th><th>Nivel necesario</th></tr>
+  <tr><td>Actas de junta</td><td>Presidente + Secretario/Administrador</td><td>Avanzada + sello de tiempo</td></tr>
+  <tr><td>Contratos con proveedores</td><td>Administrador + proveedor</td><td>Avanzada</td></tr>
+  <tr><td>Contratos con presidentes</td><td>Despacho + presidente</td><td>Avanzada</td></tr>
+</table>
+
+<h2>5. Comparativa de proveedores y precios</h2>
+<table>
+  <tr><th>Proveedor</th><th>Qué incluye</th><th>Precio orientativo</th><th>Observaciones</th></tr>
+  <tr>
+    <td><strong>Firmafy</strong> <span class="estrella">★</span></td>
+    <td>Firma avanzada (6 evidencias), email y SMS certificado, plantillas, firma múltiple</td>
+    <td><strong>Business: 360 €/año</strong> (200 envíos, 2 usuarios)<br><strong>Enterprise: 720 €/año</strong> (500 envíos, 5 usuarios, API, 300 SMS)</td>
+    <td>Pensado para administradores de fincas. Mejor relación calidad-precio. La integración requiere el plan Enterprise (incluye API).</td>
+  </tr>
+  <tr>
+    <td><strong>Viafirma</strong></td>
+    <td>Firma avanzada/cualificada muy configurable, notificaciones electrónicas</td>
+    <td>A medida (según ellos, 70–80 % más barato que Signaturit)</td>
+    <td>Máxima flexibilidad técnica. Requiere presupuesto.</td>
+  </tr>
+  <tr>
+    <td><strong>Signaturit</strong></td>
+    <td>Todas las modalidades de firma, email certificado, máxima robustez</td>
+    <td>Desde ~10–50 €/usuario/mes + extras</td>
+    <td>Líder europeo, pero el coste sube rápido con el volumen.</td>
+  </tr>
+  <tr>
+    <td><strong>Lleida.net</strong></td>
+    <td>Especialista en email/SMS certificado con valor probatorio</td>
+    <td>Sistema de créditos (desde ~10 €)</td>
+    <td>Ideal como complemento si se hace mucho envío certificado.</td>
+  </tr>
+</table>
+<p class="meta">Precios orientativos a fecha de la propuesta; se confirmarán en demo/presupuesto.</p>
+
+<h2>6. Recomendación</h2>
+<div class="destacado">
+<p><strong>Contratar Firmafy (plan Enterprise) como motor de firma e integrarlo en nuestro panel.</strong></p>
+<ul>
+  <li>Cubre los tres tipos de documento, incluida la <strong>firma múltiple</strong> de las actas (presidente + secretario).</li>
+  <li>Incluye <strong>email y SMS certificado</strong> para convocatorias y notificaciones.</li>
+  <li><strong>Precio cerrado y predecible</strong> (720 €/año), sin sorpresas por usuario.</li>
+  <li>Orientado al sector de administración de fincas.</li>
+</ul>
+</div>
+<p>Antes de cerrar, se solicitará la <strong>prueba gratuita de Firmafy</strong> (7 días, sin tarjeta) y, en paralelo, <strong>presupuesto a Viafirma</strong> para comparar. Así la decisión final se toma con datos reales.</p>
+
+<h2>7. Estimación de coste anual</h2>
+<table>
+  <tr><th>Escenario</th><th>Volumen mensual</th><th>Plan recomendado</th><th>Coste anual</th></tr>
+  <tr><td>Uso bajo</td><td>Hasta ~15 firmas/mes</td><td>Firmafy Business</td><td><strong>~360 €/año</strong></td></tr>
+  <tr><td>Uso medio</td><td>~40 firmas/mes</td><td>Firmafy Enterprise</td><td><strong>~720 €/año</strong></td></tr>
+  <tr><td>Uso alto</td><td>&gt;40 firmas/mes</td><td>Enterprise + extras / Viafirma</td><td>Presupuesto a medida</td></tr>
+</table>
+<p>A esto se añade el trabajo de <strong>integración técnica en el panel</strong> (puntual; ya disponemos de gran parte de la base): conexión con el proveedor, pantallas de envío y seguimiento de firmas, y archivo automático del documento firmado.</p>
+<div class="nota">Para afinar el plan exacto necesitamos un dato: <strong>¿cuántas actas/contratos se firman al mes aproximadamente?</strong></div>
+
+<h2>8. Próximos pasos</h2>
+<ol>
+  <li><strong>Aprobación</strong> de la dirección para avanzar.</li>
+  <li>Solicitar <strong>prueba gratuita de Firmafy</strong> y <strong>presupuesto a Viafirma</strong>.</li>
+  <li>Confirmar el <strong>volumen mensual</strong> estimado para elegir plan.</li>
+  <li>Tramitar la parte legal (contrato de encargado + política de privacidad).</li>
+  <li><strong>Integrar</strong> la firma en el panel y formar al equipo.</li>
+</ol>
+
+<footer>
+Documento elaborado para la valoración interna de Serincosol. Las cifras de precios son orientativas y se confirmarán mediante demo y presupuesto antes de la contratación.
+</footer>
+
+</body>
+</html>
